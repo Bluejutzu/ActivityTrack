@@ -32,7 +32,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mx-auto mt-24 max-w-sm rounded-xl border border-border bg-panel p-6">
+    <div className="mx-auto mt-24 max-w-sm rounded-xl border border-border bg-panel p-6 animate-fade-up">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">{t("app.name")}</h1>
         <LangSwitcher />
@@ -46,30 +46,35 @@ export function LoginForm() {
           type="email"
           required
           placeholder={t("login.email")}
-          className="rounded-lg border border-border bg-bg px-3 py-2"
+          className="rounded-lg border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60 placeholder:text-muted/60"
         />
         <input
           name="password"
           type="password"
           required
           placeholder={t("login.password")}
-          className="rounded-lg border border-border bg-bg px-3 py-2"
+          className="rounded-lg border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60 placeholder:text-muted/60"
         />
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-accent px-3 py-2 font-medium text-white disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 font-medium text-white transition-colors duration-150 hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
+          {busy && (
+            <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          )}
           {flow === "signIn" ? t("login.submit") : t("login.signupSubmit")}
         </button>
       </form>
-      {error && <p className="mt-3 text-sm text-warn">{t("login.error")}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-warn animate-fade-up">{t("login.error")}</p>
+      )}
       <button
         onClick={() => {
           setFlow(flow === "signIn" ? "signUp" : "signIn");
           setError(false);
         }}
-        className="mt-4 text-sm text-accent"
+        className="mt-4 text-sm text-accent transition-colors duration-150 hover:text-accent/80 underline-offset-2 hover:underline"
       >
         {flow === "signIn" ? t("login.toSignup") : t("login.toSignin")}
       </button>

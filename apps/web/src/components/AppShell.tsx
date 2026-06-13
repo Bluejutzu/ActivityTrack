@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-panel">
+      <header className="sticky top-0 z-30 border-b border-border bg-panel/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
           <span className="font-semibold">{t("app.name")}</span>
           <nav className="flex flex-1 flex-wrap gap-1">
@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={n.href}
                   href={n.href}
-                  className={`rounded-md px-3 py-1.5 text-sm ${
+                  className={`rounded-md px-3 py-1.5 text-sm transition-colors duration-150 ${
                     active
                       ? "bg-accent/20 text-accent"
                       : "text-muted hover:text-fg"
@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           <button
             onClick={() => void signOut()}
-            className="rounded-md border border-border px-3 py-1.5 text-sm text-muted hover:text-fg"
+            className="rounded-md border border-border px-3 py-1.5 text-sm text-muted transition-colors duration-150 hover:text-fg hover:border-border/80"
           >
             {t("nav.signout")}
           </button>

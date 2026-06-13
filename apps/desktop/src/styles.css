@@ -10,6 +10,11 @@
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -32,6 +37,11 @@ body {
   padding: 18px;
   max-width: 520px;
   margin: 0 auto;
+}
+
+/* Fade-up entrance for each card render (login ↔ status transitions) */
+.panel {
+  animation: fade-up 250ms ease-out both;
 }
 
 header {
@@ -73,6 +83,13 @@ select {
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
+  transition: border-color 150ms ease, outline 150ms ease;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 input {
@@ -87,6 +104,18 @@ button {
   padding: 8px 14px;
   font-size: 14px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 150ms ease, transform 100ms ease, filter 150ms ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 button.secondary,
@@ -94,8 +123,13 @@ button.secondary,
   background: #2a3140;
 }
 
+button.secondary:hover:not(:disabled),
+.actions #lock:hover:not(:disabled) {
+  background: #333c4e;
+}
+
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -103,6 +137,11 @@ button:disabled {
   color: var(--warn);
   min-height: 18px;
   margin: 10px 0 0;
+}
+
+/* Error slides in when it first appears on re-render */
+.error.fade-up {
+  animation: fade-up 200ms ease-out both;
 }
 
 .lang {
@@ -125,11 +164,25 @@ button:disabled {
   font-weight: 600;
   font-size: 12px;
   background: #2a3140;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .badge.ok {
   background: rgba(46, 204, 113, 0.18);
   color: var(--ok);
+}
+
+/* Pulsing dot for the "active" badge */
+.badge.ok::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .badge.warn {
@@ -168,8 +221,55 @@ table.samples td {
   font-variant-numeric: tabular-nums;
 }
 
+table.samples tbody tr {
+  transition: background-color 100ms ease;
+}
+
+table.samples tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .actions {
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* Login button spinner */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+  flex-shrink: 0;
+}
+
+/* Thin scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Keyframes */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -5,13 +5,18 @@ import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatTime } from "@/lib/format";
+import { SkeletonCard } from "@/components/Skeleton";
 
 export default function OverviewPage() {
   const { t, lang } = useI18n();
   const team = useQuery(api.stats.teamOverview);
 
   if (team === undefined) {
-    return <p className="text-muted">{t("common.loading")}</p>;
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+    );
   }
 
   return (
@@ -21,7 +26,7 @@ export default function OverviewPage() {
         <p className="text-muted">{t("overview.empty")}</p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {team.map((d) => {
+          {team.map((d, index) => {
             const state = !d.online
               ? "offline"
               : d.active
@@ -43,13 +48,17 @@ export default function OverviewPage() {
               <Link
                 key={d.deviceId}
                 href={`/timeline/${encodeURIComponent(d.deviceId)}`}
-                className="rounded-xl border border-border bg-panel p-4 transition hover:border-accent/50"
+                className="animate-fade-up rounded-xl border border-border bg-panel p-4 transition-all duration-200 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5 hover:-translate-y-0.5"
+                style={{ animationDelay: `${index * 40}ms` }}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">
                     {d.personName ?? d.hostname}
                   </span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge}`}>
+                  <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge}`}>
+                    {state === "working" && (
+                      <span className="inline-block h-2 w-2 rounded-full bg-ok animate-pulse-dot" />
+                    )}
                     {label}
                   </span>
                 </div>

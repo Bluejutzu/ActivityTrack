@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatTime, todayLocalDay } from "@/lib/format";
+import { SkeletonCard, SkeletonRow } from "@/components/Skeleton";
 
 export default function TimelinePage({
   params,
@@ -24,16 +25,32 @@ export default function TimelinePage({
 
   const todayStats = daily?.[0];
 
+  if (samples === undefined) {
+    return (
+      <section>
+        <div className="mb-5 flex gap-3">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <tbody>{[...Array(8)].map((_, i) => <SkeletonRow key={i} />)}</tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section>
-      <Link href="/" className="text-sm text-accent">
-        ← {t("timeline.back")}
+      <Link href="/" className="group text-sm text-accent">
+        <span className="transition-transform duration-150 group-hover:-translate-x-0.5">←</span> {t("timeline.back")}
       </Link>
       <h1 className="mb-1 mt-2 text-xl font-semibold">{t("timeline.heading")}</h1>
       <p className="mb-4 font-mono text-xs text-muted">{deviceId}</p>
 
       {todayStats && (
-        <div className="mb-5 flex gap-3">
+        <div className="mb-5 flex gap-3 animate-fade-up">
           <div className="rounded-xl border border-border bg-panel px-4 py-3">
             <p className="text-xs text-muted">{t("common.active")}</p>
             <p className="text-lg text-ok">
@@ -49,9 +66,7 @@ export default function TimelinePage({
         </div>
       )}
 
-      {samples === undefined ? (
-        <p className="text-muted">{t("common.loading")}</p>
-      ) : samples.length === 0 ? (
+      {samples.length === 0 ? (
         <p className="text-muted">{t("timeline.empty")}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -65,7 +80,7 @@ export default function TimelinePage({
             </thead>
             <tbody>
               {samples.map((s) => (
-                <tr key={s._id} className="border-t border-border">
+                <tr key={s._id} className="border-t border-border transition-colors duration-100 hover:bg-panel/30">
                   <td className="px-3 py-2 tabular-nums">
                     {formatTime(s.capturedAt, lang)}
                   </td>

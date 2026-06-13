@@ -4,6 +4,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { useState, type ReactNode } from "react";
 import { I18nProvider } from "@/lib/i18n";
+import { ToastProvider } from "@/components/Toast";
 
 /**
  * Client-side providers: the Convex realtime client + Convex Auth (password)
@@ -30,7 +31,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ConvexAuthProvider client={client}>
-      <I18nProvider>{children}</I18nProvider>
+      <I18nProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </I18nProvider>
     </ConvexAuthProvider>
   );
 }

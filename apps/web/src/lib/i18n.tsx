@@ -141,6 +141,14 @@ const de: Dict = {
   "devices.slots.empty": "Noch keine Codes. Erstellen Sie einen, um ein neues Gerät einzuschreiben.",
   "devices.slots.note": "Tragen Sie diesen Code in die config.json des Trackers ein — er wird beim ersten Start automatisch verwendet.",
   "devices.slots.heading.devices": "Alle Geräte",
+
+  "users.roleUpdated": "Rolle aktualisiert.",
+  "people.updated": "Gespeichert.",
+  "people.deleted": "Mitarbeiter gelöscht.",
+  "devices.approved": "Gerät genehmigt.",
+  "devices.disabled": "Gerät deaktiviert.",
+  "devices.linked": "Mitarbeiter zugeordnet.",
+  "devices.slotRevoked": "Code widerrufen.",
 };
 
 const en: Dict = {
@@ -264,6 +272,14 @@ const en: Dict = {
   "devices.slots.empty": "No codes yet. Create one to enroll a new device.",
   "devices.slots.note": "Add this code to the tracker’s config.json — it will be used automatically on first launch.",
   "devices.slots.heading.devices": "All Devices",
+
+  "users.roleUpdated": "Role updated.",
+  "people.updated": "Saved.",
+  "people.deleted": "Person deleted.",
+  "devices.approved": "Device approved.",
+  "devices.disabled": "Device disabled.",
+  "devices.linked": "Person linked.",
+  "devices.slotRevoked": "Code revoked.",
 };
 
 const DICTS: Record<Lang, Dict> = { de, en };

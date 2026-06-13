@@ -49,7 +49,7 @@ function wireLangSwitcher(rerender: () => void): void {
 
 function renderLogin(error?: string): void {
   app.innerHTML = `
-    <div class="card">
+    <div class="card panel">
       <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
       <h2>${t("login.heading")}</h2>
       <p class="hint">${t("login.hint")}</p>
@@ -57,7 +57,7 @@ function renderLogin(error?: string): void {
         <input id="pw" type="password" placeholder="${t("login.password")}" autofocus />
         <button type="submit" id="submit">${t("login.submit")}</button>
       </form>
-      <p class="error" id="error">${error ?? ""}</p>
+      ${error ? `<p class="error fade-up" id="error">${error}</p>` : `<p class="error" id="error"></p>`}
     </div>`;
   wireLangSwitcher(() => renderLogin(error));
 
@@ -67,7 +67,7 @@ function renderLogin(error?: string): void {
     const pw = (document.getElementById("pw") as HTMLInputElement).value;
     const btn = document.getElementById("submit") as HTMLButtonElement;
     btn.disabled = true;
-    btn.textContent = t("login.checking");
+    btn.innerHTML = `<span class="spinner"></span> ${t("login.checking")}`;
     try {
       const result = await invoke<VerifyResult>("verify_password", { password: pw });
       if (result === "ok") {
@@ -128,7 +128,7 @@ async function renderStatus(): Promise<void> {
     .join("");
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card panel">
       <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
       <div class="badges">
         <span class="badge ${s.active ? "ok" : "muted"}">${

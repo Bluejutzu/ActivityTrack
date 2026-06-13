@@ -1,10 +1,9 @@
 "use client";
 
-import { useConvexAuth } from "convex/react";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { useConvexAuth, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { LoginForm } from "@/components/LoginForm";
 import { AppShell } from "@/components/AppShell";
-import { useI18n } from "@/lib/i18n";
+import { SkeletonCard } from "@/components/Skeleton";
 import type { ReactNode } from "react";
 
 /**
@@ -13,14 +12,22 @@ import type { ReactNode } from "react";
  * by Convex — these checks only control which affordances render.
  */
 export default function DashLayout({ children }: { children: ReactNode }) {
-  // Touch the hook so the bundle wires up auth state subscriptions eagerly.
   useConvexAuth();
-  const { t } = useI18n();
 
   return (
     <>
       <AuthLoading>
-        <div className="mt-24 text-center text-muted">{t("common.loading")}</div>
+        <div className="min-h-screen">
+          <div className="h-12 border-b border-border bg-panel animate-pulse" />
+          <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+            <div className="h-7 w-40 rounded-md bg-border/40" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
       </AuthLoading>
       <Unauthenticated>
         <LoginForm />
