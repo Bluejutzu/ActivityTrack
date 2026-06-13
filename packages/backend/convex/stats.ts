@@ -41,9 +41,22 @@ export const teamOverview = query({
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .collect();
 
+    // Batch-load linked people once (the per-device sample/stats lookups below
+    // stay per-device — batching those would need a schema change).
+    const personIds = [
+      ...new Set(devices.flatMap((d) => (d.personId ? [d.personId] : []))),
+    ];
+    const peopleById = new Map(
+      (await Promise.all(personIds.map((id) => ctx.db.get(id)))).flatMap((p) =>
+        p ? [[p._id, p] as const] : [],
+      ),
+    );
+
     return Promise.all(
       devices.map(async (device) => {
-        const person = device.personId ? await ctx.db.get(device.personId) : null;
+        const person = device.personId
+          ? (peopleById.get(device.personId) ?? null)
+          : null;
         const latest = await latestSample(ctx, device.deviceId);
         const tzOffset = latest?.tzOffsetMinutes ?? 0;
         const day = localDay(now, tzOffset);

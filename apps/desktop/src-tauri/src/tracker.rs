@@ -6,18 +6,43 @@ use crate::host;
 use crate::idle::get_idle_ms;
 use crate::model::{ActivitySample, UiSample, AGENT_VERSION};
 use crate::queue::SampleQueue;
-use crate::sender::send_batch;
+use crate::sender;
 use crate::state::AppState;
 
 // Keep only the most recent N samples in memory for the debug UI table.
 const UI_SAMPLE_HISTORY: usize = 20;
 
-/// Spawn the background tracking loop on its own OS thread. It polls idle time,
-/// enqueues a sample, and periodically flushes the on-disk queue to Convex —
-/// independent of whether the tray UI is open. Allocation-light and resilient:
-/// a failed flush keeps the batch; nothing here can panic the UI thread.
+/// Spawn the background tracking loop on its own OS thread. It first enrolls (if
+/// needed), then polls idle time, enqueues a sample, and periodically flushes
+/// the on-disk queue to Convex — independent of whether the tray UI is open.
+/// Doing enrollment here (rather than before the Tauri builder) means the tray
+/// icon appears instantly even if the backend is slow or down. Allocation-light
+/// and resilient: a failed flush keeps the batch; nothing here panics the UI.
 pub fn start(state: Arc<AppState>) {
     thread::spawn(move || {
+        // First-boot enrollment, in the background. The flush guard below keeps
+        // us from sending until this succeeds; local recording starts anyway.
+        if !state.can_send() && state.config.can_register() {
+            let code = state.config.enrollment_code.clone().unwrap_or_default();
+            match sender::register_device(
+                &state.config.convex_url,
+                &state.config.bootstrap_key,
+                &code,
+                &state.device_id,
+                &state.hostname,
+                &state.windows_user,
+                AGENT_VERSION,
+            ) {
+                Ok(key) => state.set_device_key(key),
+                Err(e) => {
+                    eprintln!("ActivityTrack: enrollment failed: {e}");
+                    // Surfaced in the tray UI; can't report to the backend yet
+                    // (reporting needs the device key we just failed to get).
+                    state.push_error("tracker.enroll_failed", e);
+                }
+            }
+        }
+
         let queue = SampleQueue::new(state.config.max_queue_size);
         let poll = Duration::from_millis(state.config.poll_interval_ms.max(1_000));
         let flush_every = Duration::from_millis(state.config.flush_interval_ms.max(1_000));
@@ -92,16 +117,25 @@ fn record(state: &AppState, queue: &SampleQueue) {
 /// Flush the queue. Ok(true) = sent a batch, Ok(false) = nothing to do (not
 /// enrolled or empty), Err(msg) = a send was attempted and failed.
 fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
-    if !state.config.can_send() {
+    if !state.can_send() {
         return Ok(false);
     }
     let pending = queue.read_all();
     if pending.is_empty() {
         return Ok(false);
     }
-    match send_batch(&state.config, &pending) {
+    let Some(device_key) = state.device_key() else {
+        return Ok(false);
+    };
+
+    match sender::send_batch(&state.config.convex_url, &device_key, &pending) {
         Ok(()) => {
-            queue.remove_first(pending.len());
+            // Drop the flushed samples; if rewriting the queue fails, surface it
+            // — otherwise they'd be re-sent next flush and double-counted.
+            if let Err(err) = queue.remove_first(pending.len()) {
+                state.push_error("tracker.queue_io", err.clone());
+                state.report_event("error", "tracker.queue_io", &err);
+            }
             let mut s = state.status.lock().expect("status mutex poisoned");
             s.online = true;
             s.last_error = None;

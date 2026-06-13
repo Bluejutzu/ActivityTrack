@@ -39,9 +39,16 @@ export default function PeoplePage() {
   async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    await create({ name: name.trim(), email: email.trim() || undefined });
-    setName("");
-    setEmail("");
+    // create() returns undefined on failure (the toast surfaces it) — only
+    // clear the form once the person was actually added.
+    const created = await create({
+      name: name.trim(),
+      email: email.trim() || undefined,
+    });
+    if (created) {
+      setName("");
+      setEmail("");
+    }
   }
 
   return (

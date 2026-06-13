@@ -19,12 +19,23 @@ export const list = query({
   handler: async (ctx) => {
     await requireViewer(ctx);
     const devices = await ctx.db.query("devices").collect();
-    return Promise.all(
-      devices.map(async (d) => {
-        const person = d.personId ? await ctx.db.get(d.personId) : null;
-        return { ...d, personName: person?.name ?? null };
-      }),
+
+    // Batch-load the linked people once instead of one get() per device.
+    const personIds = [
+      ...new Set(devices.flatMap((d) => (d.personId ? [d.personId] : []))),
+    ];
+    const peopleById = new Map(
+      (await Promise.all(personIds.map((id) => ctx.db.get(id)))).flatMap((p) =>
+        p ? [[p._id, p] as const] : [],
+      ),
     );
+
+    return devices.map((d) => ({
+      ...d,
+      personName: d.personId
+        ? (peopleById.get(d.personId)?.name ?? null)
+        : null,
+    }));
   },
 });
 

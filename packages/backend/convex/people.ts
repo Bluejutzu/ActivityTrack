@@ -59,7 +59,7 @@ export const remove = mutation({
     // Unlink devices first so we don't leave dangling personId references.
     const linked = await ctx.db
       .query("devices")
-      .filter((q) => q.eq(q.field("personId"), personId))
+      .withIndex("by_personId", (q) => q.eq("personId", personId))
       .collect();
     for (const d of linked) {
       await ctx.db.patch(d._id, { personId: undefined });

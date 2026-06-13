@@ -139,6 +139,8 @@ async function renderStatus(): Promise<void> {
     .join("");
 
   // Friendly label for a known error code, falling back to the raw code.
+  // The result is escaped at the render site (the code is machine-generated,
+  // but a t()-miss would echo it verbatim, so escape defensively).
   const errorLabel = (code: string): string => {
     const key = `error.code.${code}`;
     const label = t(key);
@@ -155,8 +157,8 @@ async function renderStatus(): Promise<void> {
           <tbody>${s.recentErrors
             .map(
               (e) =>
-                `<tr><td>${fmtTime(e.at)}</td><td>${errorLabel(
-                  e.code,
+                `<tr><td>${fmtTime(e.at)}</td><td>${escapeHtml(
+                  errorLabel(e.code),
                 )}</td><td class="err-detail">${escapeHtml(e.message)}</td></tr>`,
             )
             .join("")}</tbody>
@@ -178,7 +180,7 @@ async function renderStatus(): Promise<void> {
       </div>
       <p class="error" id="poll-error"></p>
       <table class="kv">${rows
-        .map(([k, val]) => `<tr><th>${k}</th><td>${val}</td></tr>`)
+        .map(([k, val]) => `<tr><th>${k}</th><td>${escapeHtml(val)}</td></tr>`)
         .join("")}</table>
       <h2>${t("status.recent")}</h2>
       <table class="samples">

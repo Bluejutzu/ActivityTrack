@@ -5,24 +5,12 @@ import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatTime, roleAtLeast, type Role } from "@/lib/format";
+import {
+  SEVERITY_DOT_CLASS as SEV_DOT,
+  SEVERITY_BADGE_CLASS as SEV_BADGE,
+} from "@/lib/ui";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
 import { SkeletonCard, SkeletonRow } from "@/components/Skeleton";
-
-type Severity = "info" | "warning" | "error" | "critical";
-
-const SEV_DOT: Record<Severity, string> = {
-  info: "bg-muted",
-  warning: "bg-warn",
-  error: "bg-danger",
-  critical: "bg-danger",
-};
-
-const SEV_BADGE: Record<Severity, string> = {
-  info: "bg-muted/10 text-muted",
-  warning: "bg-warn/15 text-warn",
-  error: "bg-danger/15 text-danger",
-  critical: "bg-danger/25 text-danger",
-};
 
 /** Friendly one-liner for an event code, falling back gracefully. */
 function friendly(

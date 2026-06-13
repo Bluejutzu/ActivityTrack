@@ -28,6 +28,28 @@ export function formatTime(ms: number | null | undefined, lang: Lang): string {
   return new Date(ms).toLocaleString(lang);
 }
 
+/** "in 3 Tagen" / "3d ago" style relative time for a past/future instant. */
+export function formatRelativeTime(ts: number, lang: Lang): string {
+  const diff = ts - Date.now();
+  const abs = Math.abs(diff);
+  const future = diff > 0;
+  const h = Math.floor(abs / 3_600_000);
+  const m = Math.floor((abs % 3_600_000) / 60_000);
+  const d = Math.floor(h / 24);
+
+  if (d >= 1) {
+    if (lang === "de")
+      return future ? `in ${d} Tag${d > 1 ? "en" : ""}` : `vor ${d} Tag${d > 1 ? "en" : ""}`;
+    return future ? `in ${d}d` : `${d}d ago`;
+  }
+  if (h >= 1) {
+    if (lang === "de") return future ? `in ${h} Std.` : `vor ${h} Std.`;
+    return future ? `in ${h}h` : `${h}h ago`;
+  }
+  if (lang === "de") return future ? `in ${m} Min.` : `vor ${m} Min.`;
+  return future ? `in ${m}m` : `${m}m ago`;
+}
+
 /** YYYY-MM-DD for an instant in a given tz offset (minutes, JS convention). */
 export function localDay(at: number, tzOffsetMinutes = 0): string {
   return new Date(at - tzOffsetMinutes * 60_000).toISOString().slice(0, 10);

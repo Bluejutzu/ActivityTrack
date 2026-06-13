@@ -1,16 +1,18 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::host;
 use crate::model::{AgentStatus, UiError, UiSample, AGENT_VERSION};
+use crate::paths::{app_dir, device_key_file};
 use crate::sender;
 
 /// Keep the last N local errors for the debug UI.
 const RECENT_ERRORS_MAX: usize = 25;
-/// Don't report to the backend more than once per this interval (per device).
-/// Server-side dedup collapses the rest; this just bounds outbound chatter.
+/// Don't report the SAME code to the backend more than once per this interval.
+/// Server-side dedup collapses the rest; this just bounds outbound chatter
+/// while still letting distinct problems through independently.
 const BACKEND_REPORT_INTERVAL: Duration = Duration::from_secs(300);
 
 /// Live, mutable tracker state shared between the background loop (writer) and
@@ -42,15 +44,19 @@ impl Default for Status {
 }
 
 /// Process-wide application state managed by Tauri and shared with the tracker
-/// thread (via Arc). Config + identity are immutable after startup.
+/// thread (via Arc). Config + identity are immutable after startup; the device
+/// key is acquired at runtime (enrollment happens in the background), so it
+/// lives behind a Mutex.
 pub struct AppState {
     pub config: Config,
     pub device_id: String,
     pub hostname: String,
     pub windows_user: String,
     pub status: Mutex<Status>,
-    /// Last time we reported any event to the backend (rate-limit gate).
-    last_report: Mutex<Option<Instant>>,
+    /// Per-device key issued by the backend at enrollment; None until enrolled.
+    device_key: Mutex<Option<String>>,
+    /// Last time we reported each event code to the backend (rate-limit gate).
+    last_report: Mutex<HashMap<String, Instant>>,
 }
 
 impl AppState {
@@ -59,6 +65,7 @@ impl AppState {
         device_id: String,
         hostname: String,
         windows_user: String,
+        device_key: Option<String>,
     ) -> Self {
         AppState {
             config,
@@ -66,8 +73,43 @@ impl AppState {
             hostname,
             windows_user,
             status: Mutex::new(Status::default()),
-            last_report: Mutex::new(None),
+            device_key: Mutex::new(device_key),
+            last_report: Mutex::new(HashMap::new()),
         }
+    }
+
+    /// The current device key, if enrolled.
+    pub fn device_key(&self) -> Option<String> {
+        self.device_key.lock().expect("device_key mutex poisoned").clone()
+    }
+
+    /// Store a freshly-issued device key (in memory) and persist it to disk.
+    /// In-memory is set first so `can_send` flips immediately; a write failure
+    /// is surfaced as a (reportable) warning rather than lost.
+    pub fn set_device_key(&self, key: String) {
+        {
+            let mut k = self.device_key.lock().expect("device_key mutex poisoned");
+            *k = Some(key.clone());
+        }
+        let _ = std::fs::create_dir_all(app_dir());
+        if let Err(e) = std::fs::write(device_key_file(), &key) {
+            let msg = format!(
+                "Enrolled, but the device key could not be saved to disk ({e}); \
+                 re-enrollment will be required after restart."
+            );
+            self.push_error("tracker.queue_io", msg.clone());
+            self.report_event("warning", "tracker.queue_io", &msg);
+        }
+    }
+
+    /// True if the device is enrolled and configured to send samples.
+    pub fn can_send(&self) -> bool {
+        !self.config.convex_url.is_empty() && self.device_key().is_some()
+    }
+
+    /// True if the config is usable (either already enrolled or can enroll).
+    pub fn is_configured(&self) -> bool {
+        self.can_send() || self.config.can_register()
     }
 
     /// Record a local error so it surfaces in the tray UI. Never swallowed: the
@@ -88,23 +130,32 @@ impl AppState {
 
     /// Best-effort report of a local problem to the central event log, so IT
     /// sees it on the dashboard's System Health page. Requires enrollment (the
-    /// device key authenticates the call) and is rate-limited; failures here are
-    /// intentionally ignored — reporting must never cascade.
+    /// device key authenticates the call) and is rate-limited PER CODE, so a
+    /// recurring `send_failed` can't muffle a distinct `queue_io`. Failures here
+    /// are intentionally ignored — reporting must never cascade.
     pub fn report_event(&self, severity: &str, code: &str, message: &str) {
-        if !self.config.can_send() {
-            return;
-        }
+        let device_key = match self.device_key() {
+            Some(k) if !self.config.convex_url.is_empty() => k,
+            _ => return,
+        };
         {
             let mut last = self.last_report.lock().expect("report mutex poisoned");
             let now = Instant::now();
-            if let Some(prev) = *last {
-                if now.duration_since(prev) < BACKEND_REPORT_INTERVAL {
+            if let Some(prev) = last.get(code) {
+                if now.duration_since(*prev) < BACKEND_REPORT_INTERVAL {
                     return;
                 }
             }
-            *last = Some(now);
+            last.insert(code.to_string(), now);
         }
-        let _ = sender::report_event(&self.config, severity, code, message, &self.hostname);
+        let _ = sender::report_event(
+            &self.config.convex_url,
+            &device_key,
+            severity,
+            code,
+            message,
+            &self.hostname,
+        );
     }
 
     pub fn snapshot(&self) -> AgentStatus {
@@ -120,8 +171,8 @@ impl AppState {
             last_sent_at: s.last_sent_at,
             last_error: s.last_error.clone(),
             convex_url: self.config.convex_url.clone(),
-            configured: self.config.is_configured(),
-            enrolled: self.config.device_key.is_some(),
+            configured: self.is_configured(),
+            enrolled: self.device_key().is_some(),
             agent_version: AGENT_VERSION.to_string(),
             last_samples: s.last_samples.iter().cloned().collect(),
             recent_errors: s.recent_errors.iter().cloned().collect(),

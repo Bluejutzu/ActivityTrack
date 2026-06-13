@@ -19,9 +19,9 @@ impl SampleQueue {
     }
 
     /// Append a sample to the on-disk queue. Returns an error string if the
-    /// sample couldn't be persisted (e.g. %ProgramData% locked down) so the
-    /// caller can surface it instead of silently losing data. `trim` is
-    /// best-effort recovery and does not fail the enqueue.
+    /// sample couldn't be persisted (e.g. %ProgramData% locked down) or the
+    /// cap couldn't be enforced, so the caller can surface it instead of
+    /// silently losing data.
     pub fn enqueue(&self, sample: &ActivitySample) -> Result<(), String> {
         let line = serde_json::to_string(sample).map_err(|e| e.to_string())?;
         let mut f = OpenOptions::new()
@@ -30,8 +30,7 @@ impl SampleQueue {
             .open(queue_file())
             .map_err(|e| format!("cannot open queue file: {e}"))?;
         writeln!(f, "{line}").map_err(|e| format!("cannot write to queue: {e}"))?;
-        self.trim();
-        Ok(())
+        self.trim()
     }
 
     pub fn read_all(&self) -> Vec<ActivitySample> {
@@ -48,8 +47,10 @@ impl SampleQueue {
         self.read_all().len()
     }
 
-    /// Persist the remaining (un-sent) samples after a flush.
-    fn replace(&self, samples: &[ActivitySample]) {
+    /// Persist the remaining (un-sent) samples after a flush. Returns Err on an
+    /// IO failure so the caller can surface it — a silent failure here would
+    /// leave already-sent samples on disk to be re-sent (and double-counted).
+    fn replace(&self, samples: &[ActivitySample]) -> Result<(), String> {
         let mut buf = String::new();
         for s in samples {
             if let Ok(line) = serde_json::to_string(s) {
@@ -57,25 +58,27 @@ impl SampleQueue {
                 buf.push('\n');
             }
         }
-        let _ = fs::write(queue_file(), buf);
+        fs::write(queue_file(), buf).map_err(|e| format!("cannot rewrite queue: {e}"))
     }
 
     /// Drop the first `n` samples (the ones we just flushed), keeping any that
     /// were enqueued during the flush.
-    pub fn remove_first(&self, n: usize) {
+    pub fn remove_first(&self, n: usize) -> Result<(), String> {
         if n == 0 {
-            return;
+            return Ok(());
         }
         let all = self.read_all();
         let keep = if n >= all.len() { &[][..] } else { &all[n..] };
-        self.replace(keep);
+        self.replace(keep)
     }
 
-    fn trim(&self) {
+    fn trim(&self) -> Result<(), String> {
         let all = self.read_all();
         if all.len() > self.max_size {
             let start = all.len() - self.max_size;
-            self.replace(&all[start..]);
+            self.replace(&all[start..])
+        } else {
+            Ok(())
         }
     }
 }
