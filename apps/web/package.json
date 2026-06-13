@@ -1,0 +1,15 @@
+{
+  "name": "@activitytrack/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ActivityTrack admin dashboard — Next.js (App Router) + TypeScript. Login + RBAC, live activity views, daily stats.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "comment": "PLACEHOLDER — bootstrap with `pnpm create next-app@latest` (TS, App Router, Tailwind) per PLAN.md §Web app, then wire Convex + auth. Dependencies (next, react, convex, auth provider) are added at bootstrap time.",
+  "dependencies": {},
+  "devDependencies": {}
+}

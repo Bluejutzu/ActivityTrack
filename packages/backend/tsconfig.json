@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": []
+  },
+  "include": ["convex/**/*.ts"],
+  "exclude": ["convex/_generated"]
+}

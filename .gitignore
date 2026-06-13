@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# Desktop packaging artifacts
+apps/desktop/release/
+apps/desktop/installer/Output/
+*.exe
+!**/vendor/node.exe
+
+# Convex generated
+**/convex/_generated/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,18 @@
+{
+  "name": "activitytrack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ActivityTrack — lightweight Windows activity monitoring for small teams (headless desktop agent + Convex backend + Next.js admin dashboard).",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @activitytrack/web dev",
+    "dev:desktop": "pnpm --filter @activitytrack/desktop dev",
+    "dev:backend": "pnpm --filter @activitytrack/backend dev",
+    "build": "pnpm -r build",
+    "build:installer": "pnpm --filter @activitytrack/desktop build:installer",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

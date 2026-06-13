@@ -1,0 +1,20 @@
+{
+  "name": "@activitytrack/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Convex backend: schema, validating ingest endpoint, queries/mutations, auth + RBAC. Shared by the web dashboard.",
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@activitytrack/shared": "workspace:*",
+    "convex": "^1.16.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
