@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter activitytrack build:vercel"
+  "buildCommand": "pnpm -w build:vercel"
 }
