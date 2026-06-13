@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter @activitytrack/backend exec convex deploy --cmd 'pnpm --filter @activitytrack/web build'"
+  "buildCommand": "pnpm --filter activitytrack build:vercel"
 }
