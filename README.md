@@ -1,49 +1,88 @@
 # ActivityTrack
 
 Lightweight, self-hosted activity monitoring for a small team of Windows
-machines. A headless desktop agent reports whether the logged-in coworker is
-actively using their PC (active vs. idle — **no screenshots, no keystroke
-content**), a Convex backend validates and stores it, and a Next.js dashboard
-lets IT and managers see who's working and for how long.
+machines. A tray-resident desktop tracker reports whether the logged-in
+coworker is actively using their PC (active vs. idle — **no screenshots, no
+keystroke content**), a Convex backend validates and stores it, and a Next.js
+dashboard lets IT and managers see who's working and for how long.
 
 > ⚠️ **Workplace monitoring.** Deploy only on company-owned devices and tell
 > staff it's running. Check local labor/privacy law before rolling out. The
-> agent deliberately records *activity timing only* — never key content or
+> tracker deliberately records *activity timing only* — never key content or
 > screen contents.
 
 ## Monorepo layout
 
 ```
 apps/
-  desktop/      Headless Windows agent (Node + koffi). No UI. Ships as an installer.
-  web/          Next.js + TS admin dashboard (login + RBAC).   [placeholder]
+  desktop/      Tray-resident Windows tracker (Tauri + Rust). Hidden on startup,
+                UI locked behind a dashboard-set password. Ships as an installer.
+  web/          Next.js + TS admin dashboard (login + RBAC, German/English).
 packages/
   backend/      Convex schema, validating /ingest endpoint, queries, auth/RBAC.
-  shared/       Shared TS types + zod wire contract (agent ⇄ backend).
+  shared/       Shared TS types + zod wire contract (tracker ⇄ backend).
 ```
 
 ## How it works
 
-1. **Agent** mints a per-device UUID in `%ProgramData%\ActivityTrack`, polls
-   Win32 `GetLastInputInfo` for idle time, and POSTs small samples to Convex.
-   Runs as a logon scheduled task (interactive session, normal privileges).
-2. **Backend** authenticates the agent by shared key, re-validates every sample
-   server-side, auto-registers new devices as `pending`, and rolls up daily
-   active/idle stats.
+1. **Tracker** (Tauri) mints a per-device UUID in `%ProgramData%\ActivityTrack`,
+   polls Win32 `GetLastInputInfo` for idle time, and POSTs small samples to
+   Convex. It launches at logon (interactive session — required for idle
+   detection), lives in the system tray, and starts **hidden**. Opening it
+   shows a status/debug panel **locked behind a password set in the dashboard**.
+   German and English are both available.
+2. **Backend** authenticates the tracker by shared key, re-validates every
+   sample server-side, auto-registers new devices as `pending`, and rolls up
+   daily active/idle stats. The tracker does **zero** business validation.
 3. **Dashboard** shows live status + daily stats behind a login, with roles:
    `it_admin` (IT — manage everything), `manager` (boss — manage people/views),
-   `viewer`.
+   `viewer` (read-only). UI in German (default) or English.
 
-See [`PLAN.md`](./PLAN.md) for the full build plan and open decisions.
+See [`PLAN.md`](./PLAN.md) for the full build plan and decisions.
 
 ## Getting started
 
 ```bash
 pnpm install
-pnpm dev:backend   # convex dev (creates the deployment + env)
-pnpm dev:desktop   # run the agent locally
-pnpm dev:web       # dashboard (after it's bootstrapped — see apps/web/README.md)
+
+# 1. Backend — provisions a Convex dev deployment and generates convex/_generated
+pnpm dev:backend
+#    Then set the deployment env vars:
+#      npx convex env set ACTIVITYTRACK_INGEST_KEY <a-long-random-secret>
+#    and initialise Convex Auth (JWT keys) once:
+#      npx @convex-dev/auth
+
+# 2. Web dashboard — copy the deployment URL into apps/web/.env.local as
+#    NEXT_PUBLIC_CONVEX_URL, then:
+pnpm dev:web
+#    The first account you register becomes it_admin. Set the tracker debug
+#    password under Settings.
+
+# 3. Tracker — create %ProgramData%\ActivityTrack\config.json with the Convex
+#    URL + ingest key (the installer does this for you), then on Windows:
+pnpm --filter @activitytrack/desktop tauri:dev
 ```
 
-Releases of the desktop installer are built by `.github/workflows/release.yml`
-on every `v*` tag and attached to the GitHub Release.
+## Releases
+
+`.github/workflows/release.yml` builds the Windows tracker installer (Tauri /
+NSIS) on every `v*` tag and attaches it to the GitHub Release.
+
+**Before your first release:** Set these GitHub repository secrets so the
+installer is pre-configured:
+
+```bash
+gh secret set ACTIVITYTRACK_CONVEX_URL --body "https://<deployment>.convex.cloud"
+gh secret set ACTIVITYTRACK_INGEST_KEY --body "<a-long-random-secret>"
+```
+
+These values are injected into the installer's `config.json` at build time (stored
+securely in GitHub, never exposed in logs or the source repo). When users install
+the `.exe`, the configuration is ready—no manual setup needed.
+
+## Verification status
+
+`pnpm -r typecheck` is clean; the Rust tracker passes `cargo check` and the web
+dashboard builds with `next build`. The Windows-only syscalls (idle detection,
+timezone) compile in the Windows release job, and the installer `.exe` is
+produced there — they can't be built from a Linux dev box.
