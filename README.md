@@ -68,6 +68,18 @@ pnpm --filter @activitytrack/desktop tauri:dev
 `.github/workflows/release.yml` builds the Windows tracker installer (Tauri /
 NSIS) on every `v*` tag and attaches it to the GitHub Release.
 
+**Before your first release:** Set these GitHub repository secrets so the
+installer is pre-configured:
+
+```bash
+gh secret set ACTIVITYTRACK_CONVEX_URL --body "https://<deployment>.convex.cloud"
+gh secret set ACTIVITYTRACK_INGEST_KEY --body "<a-long-random-secret>"
+```
+
+These values are injected into the installer's `config.json` at build time (stored
+securely in GitHub, never exposed in logs or the source repo). When users install
+the `.exe`, the configuration is ready—no manual setup needed.
+
 ## Verification status
 
 `pnpm -r typecheck` is clean; the Rust tracker passes `cargo check` and the web

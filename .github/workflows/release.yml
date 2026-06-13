@@ -33,6 +33,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Create the pre-configured config.json from GitHub secrets.
+      # This will be bundled into the installer and copied to %ProgramData%
+      # on installation. The installer uses these values by default.
+      - name: Create installer config
+        run: |
+          mkdir -p apps/desktop/src-tauri/bundle/nsis/config-staging
+          $configJson = @{
+            convexUrl = "${{ secrets.ACTIVITYTRACK_CONVEX_URL }}"
+            ingestKey = "${{ secrets.ACTIVITYTRACK_INGEST_KEY }}"
+          } | ConvertTo-Json
+          $configJson | Out-File -Encoding UTF8 -FilePath "apps/desktop/src-tauri/bundle/nsis/config-staging/config.json"
+        shell: pwsh
+
       # Builds the frontend (beforeBuildCommand) + the Rust app, bundles the
       # NSIS installer, and uploads it to the release for this tag.
       - uses: tauri-apps/tauri-action@v0

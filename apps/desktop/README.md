@@ -24,7 +24,7 @@ input".
 
 ## Configuration
 
-Per-machine `%ProgramData%\ActivityTrack\config.json` (the installer writes it):
+The tracker reads from `%ProgramData%\ActivityTrack\config.json`:
 
 ```json
 {
@@ -34,8 +34,25 @@ Per-machine `%ProgramData%\ActivityTrack\config.json` (the installer writes it):
 ```
 
 Optional timing overrides: `pollIntervalMs` (15000), `idleThresholdMs` (60000),
-`flushIntervalMs` (30000), `maxQueueSize` (5000). For local dev the secrets can
-come from `ACTIVITYTRACK_CONVEX_URL` / `ACTIVITYTRACK_INGEST_KEY` env vars.
+`flushIntervalMs` (30000), `maxQueueSize` (5000).
+
+### Installation & secrets
+
+**Released installer** (Windows users):
+- The `.exe` is pre-configured with `convexUrl` + `ingestKey` baked in
+- The installer copies `config.json` to `%ProgramData%\ActivityTrack` during setup
+- No manual config needed; just run the installer and it works
+
+**Local development** (build from source):
+1. Set env vars: `ACTIVITYTRACK_CONVEX_URL` and `ACTIVITYTRACK_INGEST_KEY` (or
+   create `config.json` manually in `%ProgramData%\ActivityTrack`)
+2. Run `pnpm --filter @activitytrack/desktop tauri:dev`
+
+**Release workflow** (CI/CD):
+- Set GitHub repo secrets: `ACTIVITYTRACK_CONVEX_URL` and `ACTIVITYTRACK_INGEST_KEY`
+  (via `gh secret set` or repo settings)
+- Push a tag `v*` → the workflow builds a pre-configured installer and uploads it
+  to the Release
 
 ## Develop / build
 
