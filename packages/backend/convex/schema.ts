@@ -100,4 +100,24 @@ export default defineSchema({
     value: v.string(),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  deviceSlots: defineTable({
+    code: v.string(),
+    label: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    usedByDeviceId: v.optional(v.string()),
+  })
+    .index("by_code", ["code"])
+    .index("by_createdAt", ["createdAt"]),
+
+  deviceKeys: defineTable({
+    deviceId: v.string(),
+    keyHash: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_keyHash", ["keyHash"])
+    .index("by_deviceId", ["deviceId"]),
 });

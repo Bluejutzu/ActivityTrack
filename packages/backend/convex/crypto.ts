@@ -67,3 +67,20 @@ export async function verifyPassword(
   const candidate = toB64(await pbkdf2(password, salt, iterations));
   return safeEqual(candidate, parts[3]!);
 }
+
+/** Generate a 64-hex-char (32-byte) random device key. Call only from httpAction/action contexts. */
+export function generateDeviceKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** SHA-256 hex digest of a device key for storage. Call only from httpAction/action contexts. */
+export async function hashDeviceKey(key: string): Promise<string> {
+  const bytes = new TextEncoder().encode(key);
+  const hash = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

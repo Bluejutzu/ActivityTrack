@@ -119,6 +119,28 @@ const de: Dict = {
   "common.forbidden": "Keine Berechtigung für diese Ansicht.",
   "footer.privacy":
     "Datenschutz: ActivityTrack erfasst nur Aktivitätszeiten (aktiv/inaktiv) auf firmeneigenen Geräten — keine Screenshots, keine Tastatureingaben. Mitarbeiter sind informiert.",
+
+  "devices.slots.heading": "Einschreibungs-Codes",
+  "devices.slots.create": "Neuer Code",
+  "devices.slots.label": "Bezeichnung (optional)",
+  "devices.slots.labelPlaceholder": "z. B. „Für Johann Smith"",
+  "devices.slots.expiry": "Gültig für",
+  "devices.slots.expiry24": "24 Stunden",
+  "devices.slots.expiry48": "48 Stunden",
+  "devices.slots.expiry7d": "7 Tage",
+  "devices.slots.cancel": "Abbrechen",
+  "devices.slots.copy": "Kopieren",
+  "devices.slots.copied": "Kopiert!",
+  "devices.slots.revoke": "Widerrufen",
+  "devices.slots.status.active": "Aktiv",
+  "devices.slots.status.used": "Eingelöst",
+  "devices.slots.status.expired": "Abgelaufen",
+  "devices.slots.status.revoked": "Widerrufen",
+  "devices.slots.expires": "Läuft ab",
+  "devices.slots.usedAt": "Eingelöst",
+  "devices.slots.empty": "Noch keine Codes. Erstellen Sie einen, um ein neues Gerät einzuschreiben.",
+  "devices.slots.note": "Tragen Sie diesen Code in die config.json des Trackers ein — er wird beim ersten Start automatisch verwendet.",
+  "devices.slots.heading.devices": "Alle Geräte",
 };
 
 const en: Dict = {
@@ -220,6 +242,28 @@ const en: Dict = {
   "common.forbidden": "You do not have permission to view this.",
   "footer.privacy":
     "Privacy: ActivityTrack records activity timing only (active/idle) on company-owned devices — no screenshots, no keystrokes. Staff are informed.",
+
+  "devices.slots.heading": "Enrollment Codes",
+  "devices.slots.create": "New Code",
+  "devices.slots.label": "Label (optional)",
+  "devices.slots.labelPlaceholder": "e.g. “For John Smith’s PC”",
+  "devices.slots.expiry": "Valid for",
+  "devices.slots.expiry24": "24 hours",
+  "devices.slots.expiry48": "48 hours",
+  "devices.slots.expiry7d": "7 days",
+  "devices.slots.cancel": "Cancel",
+  "devices.slots.copy": "Copy",
+  "devices.slots.copied": "Copied!",
+  "devices.slots.revoke": "Revoke",
+  "devices.slots.status.active": "Active",
+  "devices.slots.status.used": "Used",
+  "devices.slots.status.expired": "Expired",
+  "devices.slots.status.revoked": "Revoked",
+  "devices.slots.expires": "Expires",
+  "devices.slots.usedAt": "Used",
+  "devices.slots.empty": "No codes yet. Create one to enroll a new device.",
+  "devices.slots.note": "Add this code to the tracker’s config.json — it will be used automatically on first launch.",
+  "devices.slots.heading.devices": "All Devices",
 };
 
 const DICTS: Record<Lang, Dict> = { de, en };
