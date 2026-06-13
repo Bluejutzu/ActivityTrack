@@ -17,6 +17,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
+use crate::model::AGENT_VERSION;
 use crate::state::{AppState, Status};
 
 fn show_main(app: &tauri::AppHandle) {
@@ -29,14 +30,52 @@ fn show_main(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Build immutable app state and kick off the tracker before the UI exists —
-    // tracking must run whether or not anyone opens the window.
-    let config = config::load_config();
+    // Load config (reads config.json + device.key file).
+    let mut config = config::load_config();
+
+    let device_id = device::get_or_create_device_id();
+    let hostname = host::hostname();
+    let windows_user = host::windows_user();
+
+    // Auto-enroll on first boot if we have an enrollment code but no device key.
+    // This is a blocking network call before the UI starts — intentional, so the
+    // tracker is sending data by the time the tray icon appears.
+    if !config.can_send() && config.can_register() {
+        let code = config.enrollment_code.clone().unwrap_or_default();
+        match sender::register_device(
+            &config.convex_url,
+            &config.bootstrap_key,
+            &code,
+            &device_id,
+            &hostname,
+            &windows_user,
+            AGENT_VERSION,
+        ) {
+            Ok(key) => {
+                let key_path = paths::device_key_file();
+                let _ = std::fs::create_dir_all(paths::app_dir());
+                match std::fs::write(&key_path, &key) {
+                    Ok(()) => {
+                        config.device_key = Some(key);
+                    }
+                    Err(e) => {
+                        eprintln!("ActivityTrack: cannot persist device key: {e}");
+                        // Still set in-memory so this session can send data.
+                        config.device_key = Some(key);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("ActivityTrack: enrollment failed: {e}");
+            }
+        }
+    }
+
     let state = Arc::new(AppState {
         config,
-        device_id: device::get_or_create_device_id(),
-        hostname: host::hostname(),
-        windows_user: host::windows_user(),
+        device_id,
+        hostname,
+        windows_user,
         status: Mutex::new(Status::default()),
     });
     tracker::start(state.clone());
@@ -52,10 +91,8 @@ pub fn run() {
             commands::verify_password
         ])
         .setup(|app| {
-            // Launch on logon so the tracker is always present.
             let _ = app.autolaunch().enable();
 
-            // System-tray icon with a minimal menu. Left-click opens the window.
             let open = MenuItem::with_id(app, "open", "Open ActivityTrack", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &quit])?;
@@ -90,8 +127,6 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the window hides it to the tray instead of quitting, so
-            // the tracker keeps running. Quit only via the tray menu.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let _ = window.hide();
                 api.prevent_close();

@@ -55,6 +55,7 @@ impl AppState {
             last_error: s.last_error.clone(),
             convex_url: self.config.convex_url.clone(),
             configured: self.config.is_configured(),
+            enrolled: self.config.device_key.is_some(),
             agent_version: AGENT_VERSION.to_string(),
             last_samples: s.last_samples.iter().cloned().collect(),
         }

@@ -123,7 +123,7 @@ const de: Dict = {
   "devices.slots.heading": "Einschreibungs-Codes",
   "devices.slots.create": "Neuer Code",
   "devices.slots.label": "Bezeichnung (optional)",
-  "devices.slots.labelPlaceholder": "z. B. „Für Johann Smith"",
+  "devices.slots.labelPlaceholder": "z. B. „Für Johann Smith“",
   "devices.slots.expiry": "Gültig für",
   "devices.slots.expiry24": "24 Stunden",
   "devices.slots.expiry48": "48 Stunden",

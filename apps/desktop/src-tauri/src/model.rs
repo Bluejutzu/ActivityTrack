@@ -41,6 +41,7 @@ pub struct AgentStatus {
     pub last_error: Option<String>,
     pub convex_url: String,
     pub configured: bool,
+    pub enrolled: bool,
     pub agent_version: String,
     pub last_samples: Vec<UiSample>,
 }

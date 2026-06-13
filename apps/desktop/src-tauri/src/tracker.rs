@@ -74,6 +74,9 @@ fn record(state: &AppState, queue: &SampleQueue) {
 }
 
 fn flush(state: &AppState, queue: &SampleQueue) {
+    if !state.config.can_send() {
+        return;
+    }
     let pending = queue.read_all();
     if pending.is_empty() {
         return;

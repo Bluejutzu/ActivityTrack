@@ -30,3 +30,7 @@ pub fn config_file() -> PathBuf {
 pub fn queue_file() -> PathBuf {
     app_dir().join("queue.jsonl")
 }
+
+pub fn device_key_file() -> PathBuf {
+    app_dir().join("device.key")
+}
