@@ -36,6 +36,47 @@ pub fn send_batch(config: &Config, batch: &[ActivitySample]) -> Result<(), Strin
     }
 }
 
+/// Report a local operational event to /agent/event using the device key, so
+/// the dashboard's System Health page can show it centrally. Best-effort: the
+/// caller ignores the result.
+pub fn report_event(
+    config: &Config,
+    severity: &str,
+    code: &str,
+    message: &str,
+    hostname: &str,
+) -> Result<(), String> {
+    let device_key = config
+        .device_key
+        .as_deref()
+        .ok_or_else(|| "not enrolled".to_string())?;
+    if config.convex_url.is_empty() {
+        return Err("not configured".into());
+    }
+
+    let url = format!("{}/agent/event", config.convex_url.trim_end_matches('/'));
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(10))
+        .build();
+
+    let response = agent
+        .post(&url)
+        .set("authorization", &format!("Bearer {}", device_key))
+        .set("content-type", "application/json")
+        .send_json(json!({
+            "severity": severity,
+            "code": code,
+            "message": message,
+            "hostname": hostname,
+        }));
+
+    match response {
+        Ok(_) => Ok(()),
+        Err(ureq::Error::Status(c, _)) => Err(format!("HTTP {c}")),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Register this device using a one-time enrollment code. Returns the
 /// device-specific key to store and use for future /ingest calls.
 pub fn register_device(

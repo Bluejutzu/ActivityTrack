@@ -149,6 +149,86 @@ const de: Dict = {
   "devices.disabled": "Gerät deaktiviert.",
   "devices.linked": "Mitarbeiter zugeordnet.",
   "devices.slotRevoked": "Code widerrufen.",
+
+  "nav.health": "Systemstatus",
+
+  // Error toasts — shown when an action fails. Keyed by the backend error code.
+  "error.generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+  "error.network": "Keine Verbindung zum Server. Bitte später erneut versuchen.",
+  "error.auth.required": "Bitte erneut anmelden.",
+  "error.auth.forbidden": "Dafür fehlt Ihnen die Berechtigung.",
+  "error.notFound.device": "Das Gerät wurde nicht gefunden (evtl. bereits gelöscht).",
+  "error.notFound.person": "Der Mitarbeiter wurde nicht gefunden.",
+  "error.notFound.user": "Der Benutzer wurde nicht gefunden.",
+  "error.notFound.slot": "Der Code wurde nicht gefunden.",
+  "error.notFound.event": "Der Eintrag wurde nicht gefunden.",
+  "error.validation.password_short": "Das Passwort muss mindestens 6 Zeichen haben.",
+  "error.user.cannot_demote_self":
+    "Sie können sich nicht selbst die IT-Administratorrolle entziehen.",
+
+  // System health page.
+  "health.heading": "Systemstatus",
+  "health.subtitle": "Verbindung der Geräte und gemeldete Störungen auf einen Blick.",
+  "health.allGood.title": "Alles in Ordnung",
+  "health.allGood.body": "Alle Geräte melden sich und es liegen keine offenen Störungen vor.",
+  "health.attention.title": "{count} Sache(n) brauchen Aufmerksamkeit",
+  "health.attention.body": "Eine Übersicht finden Sie unten.",
+  "health.offline.heading": "Geräte, die sich nicht melden",
+  "health.offline.lastSeen": "Zuletzt gesehen {time}",
+  "health.offline.for": "seit {duration} offline",
+  "health.offline.unassigned": "Nicht zugewiesenes Gerät",
+  "health.issues.heading": "Gemeldete Störungen",
+  "health.issues.none": "Keine offenen Störungen.",
+  "health.issues.occurrences": "{count}×",
+  "health.issues.lastAt": "zuletzt {time}",
+  "health.resolve": "Erledigt",
+  "health.resolved": "Als erledigt markiert.",
+  "health.detail.heading": "Technische Details (nur IT)",
+  "health.detail.toggleOpen": "Nur offene anzeigen",
+  "health.detail.toggleAll": "Alle anzeigen",
+  "health.detail.severity": "Schwere",
+  "health.detail.event": "Ereignis",
+  "health.detail.message": "Meldung",
+  "health.detail.source": "Quelle",
+  "health.detail.device": "Gerät",
+  "health.detail.count": "Anzahl",
+  "health.detail.lastAt": "Zuletzt",
+  "health.detail.status": "Status",
+  "health.detail.empty": "Keine Ereignisse protokolliert.",
+  "health.detail.statusOpen": "Offen",
+  "health.detail.statusResolved": "Erledigt",
+  "health.sev.info": "Info",
+  "health.sev.warning": "Warnung",
+  "health.sev.error": "Fehler",
+  "health.sev.critical": "Kritisch",
+  "health.src.backend": "Server",
+  "health.src.tracker": "Gerät",
+  "health.src.dashboard": "Dashboard",
+
+  // Plain-language descriptions per event code (for non-technical viewers).
+  "health.friendly.ingest.unauthorized":
+    "Ein unbekanntes oder gesperrtes Gerät hat versucht, Daten zu senden.",
+  "health.friendly.ingest.bad_payload":
+    "Ein Gerät hat fehlerhafte Daten gesendet.",
+  "health.friendly.enroll.unauthorized":
+    "Eine nicht autorisierte Installation hat versucht, sich zu registrieren.",
+  "health.friendly.enroll.code_invalid":
+    "Ein ungültiger oder abgelaufener Einschreibungs-Code wurde verwendet.",
+  "health.friendly.tracker.send_failed":
+    "Ein Computer kann den Server nicht erreichen, um Daten zu senden.",
+  "health.friendly.tracker.enroll_failed":
+    "Die Ersteinrichtung eines Computers ist fehlgeschlagen.",
+  "health.friendly.tracker.queue_io":
+    "Ein Computer kann seine Daten lokal nicht zwischenspeichern.",
+  "health.friendly.dashboard.crash":
+    "Im Dashboard ist ein unerwarteter Fehler aufgetreten.",
+  "health.friendly.unknown": "Ein Problem wurde gemeldet.",
+
+  // ErrorBoundary fallback.
+  "errorBoundary.title": "Etwas ist schiefgelaufen",
+  "errorBoundary.body":
+    "Dieser Bereich konnte nicht geladen werden. Das Problem wurde automatisch an die IT gemeldet.",
+  "errorBoundary.retry": "Erneut versuchen",
 };
 
 const en: Dict = {
@@ -280,6 +360,85 @@ const en: Dict = {
   "devices.disabled": "Device disabled.",
   "devices.linked": "Person linked.",
   "devices.slotRevoked": "Code revoked.",
+
+  "nav.health": "System health",
+
+  // Error toasts — shown when an action fails. Keyed by the backend error code.
+  "error.generic": "Something went wrong. Please try again.",
+  "error.network": "Can't reach the server. Please try again shortly.",
+  "error.auth.required": "Please sign in again.",
+  "error.auth.forbidden": "You don't have permission to do that.",
+  "error.notFound.device": "That device was not found (it may have been removed).",
+  "error.notFound.person": "That person was not found.",
+  "error.notFound.user": "That user was not found.",
+  "error.notFound.slot": "That code was not found.",
+  "error.notFound.event": "That entry was not found.",
+  "error.validation.password_short": "The password must be at least 6 characters.",
+  "error.user.cannot_demote_self":
+    "You can't remove your own IT admin role.",
+
+  // System health page.
+  "health.heading": "System health",
+  "health.subtitle": "Device connectivity and reported issues at a glance.",
+  "health.allGood.title": "All systems normal",
+  "health.allGood.body": "Every device is reporting and there are no open issues.",
+  "health.attention.title": "{count} thing(s) need attention",
+  "health.attention.body": "See the breakdown below.",
+  "health.offline.heading": "Devices that have gone quiet",
+  "health.offline.lastSeen": "Last seen {time}",
+  "health.offline.for": "offline for {duration}",
+  "health.offline.unassigned": "Unassigned device",
+  "health.issues.heading": "Reported issues",
+  "health.issues.none": "No open issues.",
+  "health.issues.occurrences": "{count}×",
+  "health.issues.lastAt": "last {time}",
+  "health.resolve": "Resolve",
+  "health.resolved": "Marked as resolved.",
+  "health.detail.heading": "Technical detail (IT only)",
+  "health.detail.toggleOpen": "Open only",
+  "health.detail.toggleAll": "Show all",
+  "health.detail.severity": "Severity",
+  "health.detail.event": "Event",
+  "health.detail.message": "Message",
+  "health.detail.source": "Source",
+  "health.detail.device": "Device",
+  "health.detail.count": "Count",
+  "health.detail.lastAt": "Last",
+  "health.detail.status": "Status",
+  "health.detail.empty": "No events logged.",
+  "health.detail.statusOpen": "Open",
+  "health.detail.statusResolved": "Resolved",
+  "health.sev.info": "Info",
+  "health.sev.warning": "Warning",
+  "health.sev.error": "Error",
+  "health.sev.critical": "Critical",
+  "health.src.backend": "Server",
+  "health.src.tracker": "Device",
+  "health.src.dashboard": "Dashboard",
+
+  // Plain-language descriptions per event code (for non-technical viewers).
+  "health.friendly.ingest.unauthorized":
+    "An unknown or blocked device tried to send data.",
+  "health.friendly.ingest.bad_payload": "A device sent malformed data.",
+  "health.friendly.enroll.unauthorized":
+    "An unauthorized install tried to register.",
+  "health.friendly.enroll.code_invalid":
+    "An invalid or expired enrollment code was used.",
+  "health.friendly.tracker.send_failed":
+    "A computer can't reach the server to send data.",
+  "health.friendly.tracker.enroll_failed":
+    "A computer's initial setup failed.",
+  "health.friendly.tracker.queue_io":
+    "A computer can't buffer its data locally.",
+  "health.friendly.dashboard.crash":
+    "The dashboard hit an unexpected error.",
+  "health.friendly.unknown": "An issue was reported.",
+
+  // ErrorBoundary fallback.
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.body":
+    "This area couldn't be loaded. The problem was automatically reported to IT.",
+  "errorBoundary.retry": "Try again",
 };
 
 const DICTS: Record<Lang, Dict> = { de, en };
@@ -288,7 +447,8 @@ const STORAGE_KEY = "activitytrack.lang";
 interface I18nValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
-  t: (key: string) => string;
+  /** Translate `key`, interpolating `{name}`-style placeholders from `vars`. */
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -312,7 +472,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string) => DICTS[lang][key] ?? DICTS.en[key] ?? key,
+    (key: string, vars?: Record<string, string | number>) => {
+      const raw = DICTS[lang][key] ?? DICTS.en[key] ?? key;
+      if (!vars) return raw;
+      return raw.replace(/\{(\w+)\}/g, (_, name: string) =>
+        name in vars ? String(vars[name]) : `{${name}}`,
+      );
+    },
     [lang],
   );
 

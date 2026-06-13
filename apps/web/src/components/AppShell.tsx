@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: "/", labelKey: "nav.overview", minRole: "viewer" },
   { href: "/devices", labelKey: "nav.devices", minRole: "viewer" },
   { href: "/people", labelKey: "nav.people", minRole: "viewer" },
+  { href: "/health", labelKey: "nav.health", minRole: "viewer" },
   { href: "/users", labelKey: "nav.users", minRole: "it_admin" },
   { href: "/audit", labelKey: "nav.audit", minRole: "it_admin" },
   { href: "/settings", labelKey: "nav.settings", minRole: "it_admin" },

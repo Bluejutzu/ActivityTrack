@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireViewer, requireManager } from "./rbac";
 import { writeAudit } from "./audit";
+import { appError } from "./errors";
 
 /** All people (coworkers being tracked). Readable by any signed-in viewer+. */
 export const list = query({
@@ -37,7 +38,7 @@ export const update = mutation({
   handler: async (ctx, { personId, name, email, active }) => {
     const actor = await requireManager(ctx);
     const person = await ctx.db.get(personId);
-    if (!person) throw new Error("Person not found");
+    if (!person) throw appError("notFound.person", "Person not found");
     await ctx.db.patch(personId, {
       ...(name !== undefined ? { name } : {}),
       ...(email !== undefined ? { email } : {}),
@@ -53,7 +54,7 @@ export const remove = mutation({
   handler: async (ctx, { personId }) => {
     const actor = await requireManager(ctx);
     const person = await ctx.db.get(personId);
-    if (!person) throw new Error("Person not found");
+    if (!person) throw appError("notFound.person", "Person not found");
 
     // Unlink devices first so we don't leave dangling personId references.
     const linked = await ctx.db

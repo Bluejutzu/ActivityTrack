@@ -2,6 +2,7 @@ import { query, mutation, internalQuery, internalMutation } from "./_generated/s
 import { v } from "convex/values";
 import { requireViewer, requireManager, requireAdmin } from "./rbac";
 import { writeAudit } from "./audit";
+import { appError } from "./errors";
 
 function generateSlotCode(): string {
   const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -45,7 +46,7 @@ export const approve = mutation({
   handler: async (ctx, { deviceId }) => {
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
-    if (!device) throw new Error("Device not found");
+    if (!device) throw appError("notFound.device", "Device not found");
     await ctx.db.patch(deviceId, { status: "active" });
     await writeAudit(ctx, actor._id, "device.approve", device.hostname);
   },
@@ -57,7 +58,7 @@ export const disable = mutation({
   handler: async (ctx, { deviceId }) => {
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
-    if (!device) throw new Error("Device not found");
+    if (!device) throw appError("notFound.device", "Device not found");
     await ctx.db.patch(deviceId, { status: "disabled" });
     await writeAudit(ctx, actor._id, "device.disable", device.hostname);
   },
@@ -72,10 +73,10 @@ export const link = mutation({
   handler: async (ctx, { deviceId, personId }) => {
     const actor = await requireManager(ctx);
     const device = await ctx.db.get(deviceId);
-    if (!device) throw new Error("Device not found");
+    if (!device) throw appError("notFound.device", "Device not found");
     if (personId) {
       const person = await ctx.db.get(personId);
-      if (!person) throw new Error("Person not found");
+      if (!person) throw appError("notFound.person", "Person not found");
     }
     await ctx.db.patch(deviceId, { personId: personId ?? undefined });
     await writeAudit(
@@ -128,7 +129,7 @@ export const revokeSlot = mutation({
   handler: async (ctx, { slotId }) => {
     const actor = await requireAdmin(ctx);
     const slot = await ctx.db.get(slotId);
-    if (!slot) throw new Error("Slot not found");
+    if (!slot) throw appError("notFound.slot", "Slot not found");
     await ctx.db.patch(slotId, {
       usedAt: Date.now(),
       usedByDeviceId: "__revoked__",

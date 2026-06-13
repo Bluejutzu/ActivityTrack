@@ -229,6 +229,13 @@ table.samples tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
+table.errors .err-detail {
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-word;
+  max-width: 240px;
+}
+
 .actions {
   display: flex;
   gap: 8px;

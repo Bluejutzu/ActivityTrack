@@ -93,6 +93,39 @@ export default defineSchema({
     at: v.number(),
   }).index("by_at", ["at"]),
 
+  // Operational error/health events from every surface (backend, tracker,
+  // dashboard). Deduplicated: a recurring failure bumps `count`/`lastAt` on a
+  // single open row instead of spawning thousands. `message`/`context` carry
+  // the technical detail for IT; the dashboard renders a plain-language
+  // version from `code` for non-technical viewers. Never store secrets here.
+  systemEvents: defineTable({
+    severity: v.union(
+      v.literal("info"),
+      v.literal("warning"),
+      v.literal("error"),
+      v.literal("critical"),
+    ),
+    code: v.string(), // machine code, e.g. "ingest.unauthorized"
+    source: v.union(
+      v.literal("backend"),
+      v.literal("tracker"),
+      v.literal("dashboard"),
+    ),
+    message: v.string(), // technical detail (for IT)
+    deviceId: v.optional(v.string()),
+    hostname: v.optional(v.string()),
+    context: v.optional(v.string()), // extra technical context (freeform/JSON)
+    count: v.number(), // how many times this collapsed event has occurred
+    firstAt: v.number(),
+    lastAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id("users")),
+  })
+    .index("by_lastAt", ["lastAt"])
+    // Open (unresolved) rows for a code+device — used for dedup lookups.
+    .index("by_open", ["resolvedAt", "code", "deviceId"])
+    .index("by_resolvedAt", ["resolvedAt", "lastAt"]),
+
   // Singleton-ish key/value settings (e.g. hashed debug-tool password). Keyed
   // by `key`; written only by it_admin.
   settings: defineTable({

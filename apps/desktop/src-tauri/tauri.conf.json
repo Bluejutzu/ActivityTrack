@@ -42,7 +42,7 @@
     "windows": {
       "nsis": {
         "installMode": "perMachine",
-        "installerScript": "bundle/nsis/installer.nsh"
+        "installerHooks": "bundle/nsis/installer.nsh"
       }
     }
   },

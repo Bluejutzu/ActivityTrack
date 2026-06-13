@@ -1,14 +1,14 @@
-; Custom NSIS installer script for ActivityTrack
-; Handles copying the pre-built config.json to %ProgramData%\ActivityTrack
+; Custom NSIS installer hooks for ActivityTrack.
+; Tauri injects these macros at the matching points of its generated installer.
+; We use the post-install hook to seed %ProgramData%\ActivityTrack\config.json
+; from the config bundled into the install dir (which the release workflow fills
+; from GitHub secrets at build time) — without overwriting an existing config.
 
-!macro preLaunchCommand
-  ; Create the ActivityTrack config directory in %ProgramData%
-  CreateDirectory "$%ProgramData%\ActivityTrack"
-
-  ; Copy config.json from the bundle to %ProgramData% (only if it doesn't exist)
+!macro NSIS_HOOK_POSTINSTALL
+  CreateDirectory "$PROGRAMDATA\ActivityTrack"
   ${If} ${FileExists} "$INSTDIR\config.json"
-    IfFileExists "$%ProgramData%\ActivityTrack\config.json" skipConfigCopy
-      CopyFiles "$INSTDIR\config.json" "$%ProgramData%\ActivityTrack\config.json"
-    skipConfigCopy:
+    ${IfNot} ${FileExists} "$PROGRAMDATA\ActivityTrack\config.json"
+      CopyFiles /SILENT "$INSTDIR\config.json" "$PROGRAMDATA\ActivityTrack\config.json"
+    ${EndIf}
   ${EndIf}
 !macroend

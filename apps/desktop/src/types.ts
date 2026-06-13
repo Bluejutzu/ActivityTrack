@@ -5,6 +5,12 @@ export interface AgentSample {
   capturedAt: number;
 }
 
+export interface AgentError {
+  at: number;
+  code: string;
+  message: string;
+}
+
 export interface AgentStatus {
   deviceId: string;
   hostname: string;
@@ -17,8 +23,10 @@ export interface AgentStatus {
   lastError: string | null;
   convexUrl: string;
   configured: boolean;
+  enrolled: boolean;
   agentVersion: string;
   lastSamples: AgentSample[];
+  recentErrors: AgentError[];
 }
 
 export type VerifyResult = "ok" | "wrong" | "unset" | "network";

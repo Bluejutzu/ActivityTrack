@@ -26,6 +26,16 @@ pub struct UiSample {
     pub captured_at: u64,
 }
 
+/// A recorded local error, shown in the debug UI so a technician on the machine
+/// can see *what* failed and when — not just the most recent message.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiError {
+    pub at: u64,
+    pub code: String,
+    pub message: String,
+}
+
 /// Snapshot returned to the tray UI by the `get_status` command.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,6 +54,7 @@ pub struct AgentStatus {
     pub enrolled: bool,
     pub agent_version: String,
     pub last_samples: Vec<UiSample>,
+    pub recent_errors: Vec<UiError>,
 }
 
 pub const AGENT_VERSION: &str = env!("CARGO_PKG_VERSION");

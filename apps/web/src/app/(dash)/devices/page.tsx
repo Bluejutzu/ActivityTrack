@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { formatTime, roleAtLeast, type Role } from "@/lib/format";
+import { useMutationWithToast } from "@/lib/useMutationWithToast";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ const STATUS_BADGE: Record<SlotStatus, string> = {
 
 function CreateSlotForm({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
-  const createSlot = useMutation(api.devices.createDeviceSlot);
+  const createSlot = useMutationWithToast(api.devices.createDeviceSlot);
   const [label, setLabel] = useState("");
   const [hours, setHours] = useState(48);
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ function CreateSlotForm({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       const c = await createSlot({ label: label.trim() || undefined, expiresInHours: hours });
-      setCode(c);
+      if (c) setCode(c);
     } finally {
       setBusy(false);
     }
@@ -170,7 +171,7 @@ function SlotCard({
   };
 }) {
   const { t, lang } = useI18n();
-  const revoke = useMutation(api.devices.revokeSlot);
+  const revoke = useMutationWithToast(api.devices.revokeSlot);
   const [copied, setCopied] = useState(false);
   const status = slotStatus(slot);
   const isActive = status === "active";
@@ -226,7 +227,12 @@ function SlotCard({
             {copied ? t("devices.slots.copied") : t("devices.slots.copy")}
           </button>
           <button
-            onClick={() => void revoke({ slotId: slot._id as Parameters<typeof revoke>[0]["slotId"] })}
+            onClick={() =>
+              void revoke(
+                { slotId: slot._id as Parameters<typeof revoke>[0]["slotId"] },
+                { success: t("devices.slotRevoked") },
+              )
+            }
             className="rounded-lg px-3 py-1.5 text-sm text-danger hover:bg-danger/10 transition-colors"
           >
             {t("devices.slots.revoke")}
@@ -246,9 +252,9 @@ export default function DevicesPage() {
   const people = useQuery(api.people.list);
   const slots = useQuery(api.devices.listSlots);
 
-  const approve = useMutation(api.devices.approve);
-  const disable = useMutation(api.devices.disable);
-  const link = useMutation(api.devices.link);
+  const approve = useMutationWithToast(api.devices.approve);
+  const disable = useMutationWithToast(api.devices.disable);
+  const link = useMutationWithToast(api.devices.link);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -352,12 +358,15 @@ export default function DevicesPage() {
                         <select
                           value={d.personId ?? ""}
                           onChange={(e) =>
-                            void link({
-                              deviceId: d._id,
-                              personId: e.target.value
-                                ? (e.target.value as (typeof people)[number]["_id"])
-                                : null,
-                            })
+                            void link(
+                              {
+                                deviceId: d._id,
+                                personId: e.target.value
+                                  ? (e.target.value as (typeof people)[number]["_id"])
+                                  : null,
+                              },
+                              { success: t("devices.linked") },
+                            )
                           }
                           className="rounded-md border border-border bg-bg px-2 py-1 text-sm"
                         >
@@ -379,7 +388,12 @@ export default function DevicesPage() {
                           <div className="flex gap-2">
                             {d.status !== "active" && (
                               <button
-                                onClick={() => void approve({ deviceId: d._id })}
+                                onClick={() =>
+                                  void approve(
+                                    { deviceId: d._id },
+                                    { success: t("devices.approved") },
+                                  )
+                                }
                                 className="rounded-md bg-ok/10 px-2.5 py-1 text-xs font-medium text-ok hover:bg-ok/20"
                               >
                                 {t("devices.approve")}
@@ -387,7 +401,12 @@ export default function DevicesPage() {
                             )}
                             {d.status !== "disabled" && (
                               <button
-                                onClick={() => void disable({ deviceId: d._id })}
+                                onClick={() =>
+                                  void disable(
+                                    { deviceId: d._id },
+                                    { success: t("devices.disabled") },
+                                  )
+                                }
                                 className="rounded-md bg-danger/10 px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/20"
                               >
                                 {t("devices.disable")}

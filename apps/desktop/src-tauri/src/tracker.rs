@@ -22,6 +22,9 @@ pub fn start(state: Arc<AppState>) {
         let poll = Duration::from_millis(state.config.poll_interval_ms.max(1_000));
         let flush_every = Duration::from_millis(state.config.flush_interval_ms.max(1_000));
         let mut last_flush = Instant::now();
+        // Consecutive flush failures; we only escalate to the backend once a
+        // few in a row confirm it's not a momentary blip (laptop asleep, etc.).
+        let mut fail_streak: u32 = 0;
 
         // Capture one sample immediately so a freshly-started agent shows up.
         record(&state, &queue);
@@ -31,7 +34,16 @@ pub fn start(state: Arc<AppState>) {
             record(&state, &queue);
 
             if last_flush.elapsed() >= flush_every {
-                flush(&state, &queue);
+                match flush(&state, &queue) {
+                    Ok(_) => fail_streak = 0,
+                    Err(err) => {
+                        fail_streak += 1;
+                        if fail_streak >= 3 {
+                            // Throttled + best-effort inside report_event.
+                            state.report_event("error", "tracker.send_failed", &err);
+                        }
+                    }
+                }
                 last_flush = Instant::now();
             }
         }
@@ -57,7 +69,11 @@ fn build_sample(state: &AppState) -> (ActivitySample, bool, u64) {
 
 fn record(state: &AppState, queue: &SampleQueue) {
     let (sample, active, idle_ms) = build_sample(state);
-    queue.enqueue(&sample);
+    if let Err(err) = queue.enqueue(&sample) {
+        // Local buffering failed — surface it and (throttled) tell the backend.
+        state.push_error("tracker.queue_io", err.clone());
+        state.report_event("error", "tracker.queue_io", &err);
+    }
 
     let mut s = state.status.lock().expect("status mutex poisoned");
     s.active = active;
@@ -73,13 +89,15 @@ fn record(state: &AppState, queue: &SampleQueue) {
     }
 }
 
-fn flush(state: &AppState, queue: &SampleQueue) {
+/// Flush the queue. Ok(true) = sent a batch, Ok(false) = nothing to do (not
+/// enrolled or empty), Err(msg) = a send was attempted and failed.
+fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
     if !state.config.can_send() {
-        return;
+        return Ok(false);
     }
     let pending = queue.read_all();
     if pending.is_empty() {
-        return;
+        return Ok(false);
     }
     match send_batch(&state.config, &pending) {
         Ok(()) => {
@@ -89,12 +107,18 @@ fn flush(state: &AppState, queue: &SampleQueue) {
             s.last_error = None;
             s.last_sent_at = Some(host::now_ms());
             s.queue_length = queue.len();
+            Ok(true)
         }
         Err(err) => {
-            let mut s = state.status.lock().expect("status mutex poisoned");
-            s.online = false;
-            s.last_error = Some(err);
-            s.queue_length = queue.len();
+            {
+                let mut s = state.status.lock().expect("status mutex poisoned");
+                s.online = false;
+                s.queue_length = queue.len();
+            }
+            // Always surface locally (even the first failure); escalation to the
+            // backend is gated by the caller's fail streak.
+            state.push_error("tracker.send_failed", err.clone());
+            Err(err)
         }
     }
 }

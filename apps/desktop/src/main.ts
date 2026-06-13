@@ -27,6 +27,14 @@ function fmtTime(ms: number | null): string {
   return new Date(ms).toLocaleTimeString(getLang());
 }
 
+/** Escape text destined for innerHTML — error messages are arbitrary strings. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function langSwitcher(): string {
   const lang = getLang();
   return `
@@ -100,6 +108,9 @@ async function renderStatus(): Promise<void> {
   try {
     s = await invoke<AgentStatus>("get_status");
   } catch {
+    // Don't freeze silently — show a transient note and let the next tick retry.
+    const note = document.getElementById("poll-error");
+    if (note) note.textContent = t("status.pollError");
     return;
   }
 
@@ -127,6 +138,30 @@ async function renderStatus(): Promise<void> {
     )
     .join("");
 
+  // Friendly label for a known error code, falling back to the raw code.
+  const errorLabel = (code: string): string => {
+    const key = `error.code.${code}`;
+    const label = t(key);
+    return label === key ? code : label;
+  };
+
+  const errorsSection =
+    s.recentErrors.length === 0
+      ? `<p class="hint">${t("status.noErrors")}</p>`
+      : `<table class="samples errors">
+          <thead><tr><th>${t("errors.time")}</th><th>${t(
+            "errors.what",
+          )}</th><th>${t("errors.detail")}</th></tr></thead>
+          <tbody>${s.recentErrors
+            .map(
+              (e) =>
+                `<tr><td>${fmtTime(e.at)}</td><td>${errorLabel(
+                  e.code,
+                )}</td><td class="err-detail">${escapeHtml(e.message)}</td></tr>`,
+            )
+            .join("")}</tbody>
+        </table>`;
+
   app.innerHTML = `
     <div class="card panel">
       <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
@@ -137,7 +172,11 @@ async function renderStatus(): Promise<void> {
         <span class="badge ${s.online ? "ok" : "warn"}">${
           s.online ? t("status.online") : t("status.offline")
         }</span>
+        <span class="badge ${s.enrolled ? "ok" : "warn"}">${
+          s.enrolled ? t("status.enrolled") : t("status.notEnrolled")
+        }</span>
       </div>
+      <p class="error" id="poll-error"></p>
       <table class="kv">${rows
         .map(([k, val]) => `<tr><th>${k}</th><td>${val}</td></tr>`)
         .join("")}</table>
@@ -148,6 +187,8 @@ async function renderStatus(): Promise<void> {
         )}</th><th>${t("samples.idle")}</th></tr></thead>
         <tbody>${samplesRows}</tbody>
       </table>
+      <h2>${t("status.errors")}</h2>
+      ${errorsSection}
       <div class="actions">
         <button id="refresh">${t("status.refresh")}</button>
         <button id="lock">${t("status.lock")}</button>

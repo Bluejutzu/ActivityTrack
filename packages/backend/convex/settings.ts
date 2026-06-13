@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import { requireAdmin } from "./rbac";
 import { writeAudit } from "./audit";
 import { hashPassword } from "./crypto";
+import { appError } from "./errors";
 
 const DEBUG_PASSWORD_KEY = "debugToolPasswordHash";
 
@@ -62,10 +63,10 @@ export const setDebugPassword = action({
   handler: async (ctx, { password }) => {
     const me = await ctx.runQuery(api.users.me, {});
     if (!me || me.role !== "it_admin") {
-      throw new Error("Forbidden: requires it_admin role");
+      throw appError("auth.forbidden", "Forbidden: requires it_admin role");
     }
     if (password.length < 6) {
-      throw new Error("Password must be at least 6 characters");
+      throw appError("validation.password_short", "Password must be at least 6 characters");
     }
     const hash = await hashPassword(password);
     await ctx.runMutation(internal.settings.store, {

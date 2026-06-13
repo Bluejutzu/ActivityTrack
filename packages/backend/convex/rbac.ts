@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { appError } from "./errors";
 
 /**
  * Server-side RBAC. Roles are NEVER trusted from the client — every privileged
@@ -26,7 +27,7 @@ export async function currentUser(ctx: QueryCtx): Promise<Doc<"users"> | null> {
 /** Throw unless someone is signed in; returns their user row. */
 export async function requireUser(ctx: QueryCtx): Promise<Doc<"users">> {
   const user = await currentUser(ctx);
-  if (!user) throw new Error("Not authenticated");
+  if (!user) throw appError("auth.required", "Not authenticated");
   return user;
 }
 
@@ -41,7 +42,7 @@ export async function requireRole(
 ): Promise<Doc<"users">> {
   const user = await requireUser(ctx);
   if (rankOf(user) < RANK[min]) {
-    throw new Error(`Forbidden: requires ${min} role`);
+    throw appError("auth.forbidden", `Forbidden: requires ${min} role`);
   }
   return user;
 }

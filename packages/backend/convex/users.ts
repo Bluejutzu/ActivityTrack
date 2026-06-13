@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { currentUser, requireAdmin } from "./rbac";
 import { writeAudit } from "./audit";
+import { appError } from "./errors";
 
 /** The signed-in user (role + identity) for the dashboard shell. Null if out. */
 export const me = query({
@@ -47,10 +48,10 @@ export const setRole = mutation({
   handler: async (ctx, { userId, role }) => {
     const actor = await requireAdmin(ctx);
     if (userId === actor._id && role !== "it_admin") {
-      throw new Error("You cannot remove your own it_admin role");
+      throw appError("user.cannot_demote_self", "You cannot remove your own it_admin role");
     }
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw appError("notFound.user", "User not found");
     await ctx.db.patch(userId, { role });
     await writeAudit(ctx, actor._id, "user.setRole", `${target.email ?? userId} -> ${role}`);
   },

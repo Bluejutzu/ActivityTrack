@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ingestPayloadSchema, type ActivitySample } from "@activitytrack/shared";
 import { z } from "zod";
@@ -13,6 +14,33 @@ const MAX_PAST_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const http = httpRouter();
 
 /**
+ * Log an operational event from an HTTP action. HTTP actions can't touch the db
+ * directly, so we hop through the internal `events.record` mutation. Best-effort
+ * — a logging failure must never break the request being handled.
+ */
+async function logBackendEvent(
+  ctx: ActionCtx,
+  event: {
+    severity: "info" | "warning" | "error" | "critical";
+    code: string;
+    message: string;
+    deviceId?: string;
+    hostname?: string;
+    context?: string;
+  },
+): Promise<void> {
+  try {
+    await ctx.runMutation(internal.events.record, {
+      source: "backend",
+      ...event,
+    });
+  } catch {
+    // Swallowing here is intentional and the ONLY place we do: the event log is
+    // a diagnostic side-channel and must not take down ingest/enrollment.
+  }
+}
+
+/**
  * POST /ingest — authenticated by per-device key (issued at enrollment).
  * The device key is hashed and looked up in the deviceKeys table. Only
  * samples matching the authenticated deviceId are accepted.
@@ -23,6 +51,11 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "ingest.unauthorized",
+        message: "Ingest rejected: missing or malformed Authorization header.",
+      });
       return new Response("unauthorized", { status: 401 });
     }
     const rawKey = authHeader.slice(7);
@@ -32,6 +65,12 @@ http.route({
       { keyHash },
     );
     if (!deviceId) {
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "ingest.unauthorized",
+        message:
+          "Ingest rejected: device key did not match any enrolled device (unknown, revoked, or disabled).",
+      });
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -39,11 +78,24 @@ http.route({
     try {
       body = await request.json();
     } catch {
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "ingest.bad_payload",
+        message: "Ingest rejected: request body was not valid JSON.",
+        deviceId,
+      });
       return new Response("bad request", { status: 400 });
     }
 
     const parsed = ingestPayloadSchema.safeParse(body);
     if (!parsed.success) {
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "ingest.bad_payload",
+        message: "Ingest rejected: payload failed schema validation.",
+        deviceId,
+        context: JSON.stringify(parsed.error.issues.slice(0, 5)),
+      });
       return new Response("bad request", { status: 400 });
     }
 
@@ -93,6 +145,12 @@ http.route({
     const expected = process.env.ACTIVITYTRACK_INGEST_KEY;
     const authHeader = request.headers.get("authorization");
     if (!expected || authHeader !== `Bearer ${expected}`) {
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "enroll.unauthorized",
+        message:
+          "Enrollment rejected: bootstrap key missing or incorrect (a build with the wrong/absent ACTIVITYTRACK_INGEST_KEY tried to register).",
+      });
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -121,6 +179,14 @@ http.route({
         used: "enrollment code already used",
         expired: "enrollment code has expired",
       };
+      await logBackendEvent(ctx, {
+        severity: "warning",
+        code: "enroll.code_invalid",
+        message: `Enrollment rejected for "${hostname}": ${reasons[validation.reason] ?? "invalid code"}.`,
+        deviceId,
+        hostname,
+        context: `code=${enrollmentCode} reason=${validation.reason}`,
+      });
       return new Response(reasons[validation.reason] ?? "invalid code", {
         status: 404,
       });
@@ -139,6 +205,60 @@ http.route({
     });
 
     return Response.json({ deviceKey: rawKey });
+  }),
+});
+
+const agentEventSchema = z.object({
+  severity: z.enum(["info", "warning", "error", "critical"]),
+  code: z.string().min(1).max(64),
+  message: z.string().min(1).max(2000),
+  hostname: z.string().max(255).optional(),
+});
+
+/**
+ * POST /agent/event — the tracker reports its own operational problems
+ * (repeated send failures, local IO errors). Authenticated by the device key
+ * so events are attributed to a real enrolled device. The tracker is expected
+ * to rate-limit itself; dedup on the server bounds the rest.
+ */
+http.route({
+  path: "/agent/event",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response("unauthorized", { status: 401 });
+    }
+    const keyHash = await hashDeviceKey(authHeader.slice(7));
+    const deviceId = await ctx.runQuery(
+      internal.devices.lookupDeviceByKeyHash,
+      { keyHash },
+    );
+    if (!deviceId) {
+      return new Response("unauthorized", { status: 401 });
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response("bad request", { status: 400 });
+    }
+    const parsed = agentEventSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response("bad request", { status: 400 });
+    }
+
+    await ctx.runMutation(internal.events.record, {
+      source: "tracker",
+      severity: parsed.data.severity,
+      code: parsed.data.code,
+      message: parsed.data.message,
+      deviceId,
+      hostname: parsed.data.hostname,
+    });
+
+    return Response.json({ ok: true });
   }),
 });
 

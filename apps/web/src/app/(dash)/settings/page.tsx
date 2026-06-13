@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
+import { errorMessage } from "@/lib/errors";
 import { Skeleton } from "@/components/Skeleton";
 
 export default function SettingsPage() {
@@ -35,6 +36,8 @@ export default function SettingsPage() {
       await setDebugPassword({ password: pw });
       setPw("");
       setSaved(true);
+    } catch (err) {
+      setError(errorMessage(t, err));
     } finally {
       setBusy(false);
     }

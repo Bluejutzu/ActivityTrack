@@ -18,17 +18,20 @@ impl SampleQueue {
         SampleQueue { max_size }
     }
 
-    pub fn enqueue(&self, sample: &ActivitySample) {
-        if let Ok(line) = serde_json::to_string(sample) {
-            if let Ok(mut f) = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(queue_file())
-            {
-                let _ = writeln!(f, "{line}");
-            }
-        }
+    /// Append a sample to the on-disk queue. Returns an error string if the
+    /// sample couldn't be persisted (e.g. %ProgramData% locked down) so the
+    /// caller can surface it instead of silently losing data. `trim` is
+    /// best-effort recovery and does not fail the enqueue.
+    pub fn enqueue(&self, sample: &ActivitySample) -> Result<(), String> {
+        let line = serde_json::to_string(sample).map_err(|e| e.to_string())?;
+        let mut f = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(queue_file())
+            .map_err(|e| format!("cannot open queue file: {e}"))?;
+        writeln!(f, "{line}").map_err(|e| format!("cannot write to queue: {e}"))?;
         self.trim();
+        Ok(())
     }
 
     pub fn read_all(&self) -> Vec<ActivitySample> {

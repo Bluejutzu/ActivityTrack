@@ -1,24 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { roleAtLeast, type Role } from "@/lib/format";
 import type { GenericId } from "convex/values";
 import { SkeletonRow } from "@/components/Skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { useToast } from "@/lib/useToast";
+import { useMutationWithToast } from "@/lib/useMutationWithToast";
 
 export default function PeoplePage() {
   const { t } = useI18n();
   const me = useQuery(api.users.me);
   const people = useQuery(api.people.list);
-  const create = useMutation(api.people.create);
-  const update = useMutation(api.people.update);
-  const remove = useMutation(api.people.remove);
-
-  const toast = useToast();
+  const create = useMutationWithToast(api.people.create);
+  const update = useMutationWithToast(api.people.update);
+  const remove = useMutationWithToast(api.people.remove);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -94,8 +92,9 @@ export default function PeoplePage() {
                     checked={p.active}
                     disabled={!canEdit}
                     onChange={(e) => {
-                      void update({ personId: p._id, active: e.target.checked }).then(() =>
-                        toast(t("people.updated"), "ok")
+                      void update(
+                        { personId: p._id, active: e.target.checked },
+                        { success: t("people.updated") },
                       );
                     }}
                   />
@@ -122,8 +121,10 @@ export default function PeoplePage() {
         confirmLabel={t("people.delete")}
         onConfirm={async () => {
           if (deleteTarget) {
-            await remove({ personId: deleteTarget });
-            toast(t("people.deleted"), "ok");
+            await remove(
+              { personId: deleteTarget },
+              { success: t("people.deleted") },
+            );
           }
           setDeleteTarget(null);
         }}

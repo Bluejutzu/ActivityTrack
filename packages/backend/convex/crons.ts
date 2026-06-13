@@ -14,4 +14,11 @@ crons.daily(
   {},
 );
 
+crons.daily(
+  "prune old resolved events",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.events.purgeOldEvents,
+  {},
+);
+
 export default crons;
