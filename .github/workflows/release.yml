@@ -1,7 +1,7 @@
-name: Release desktop agent
+name: Release tracker
 
-# Builds the Windows installer and attaches it to a GitHub Release whenever a
-# v* tag is pushed (e.g. git tag v0.1.0 && git push --tags).
+# Builds the Windows tracker installer (Tauri / NSIS) and attaches it to a
+# GitHub Release whenever a v* tag is pushed (e.g. git tag v0.1.0 && git push --tags).
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - "v*"
 
 jobs:
-  build-installer:
+  build-tracker:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -25,19 +25,22 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
       - run: pnpm install --frozen-lockfile
 
-      - name: Build agent
-        run: pnpm --filter @activitytrack/desktop build
-
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Build installer
-        run: pnpm --filter @activitytrack/desktop build:installer
-
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      # Builds the frontend (beforeBuildCommand) + the Rust app, bundles the
+      # NSIS installer, and uploads it to the release for this tag.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: apps/desktop/installer/Output/*.exe
-          generate_release_notes: true
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "ActivityTrack ${{ github.ref_name }}"
+          releaseDraft: false
+          prerelease: false

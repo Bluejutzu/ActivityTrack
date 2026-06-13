@@ -9,11 +9,10 @@ out/
 .next/
 *.tsbuildinfo
 
-# Desktop packaging artifacts
-apps/desktop/release/
-apps/desktop/installer/Output/
+# Desktop (Tauri) build artifacts
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
 *.exe
-!**/vendor/node.exe
 
 # Convex generated
 **/convex/_generated/

@@ -4,6 +4,19 @@
 > configs, skeletons). This plan describes what to build to completion. Skeleton
 > files referenced below already exist and have `TODO`s where work goes.
 
+> **Build addendum (decisions made during implementation).** The desktop
+> tracker was changed from the originally-planned headless Node agent to a
+> **Tauri app** that *is* the tracker: it runs in Rust, lives in the system
+> tray, starts **hidden** at logon, and POSTs samples to Convex exactly like the
+> Node agent would have. Its UI is **locked behind a password set in the
+> dashboard** (hashed in Convex `settings`, verified via the keyed
+> `/agent/verify-password` endpoint) and shows status + local debug info. The
+> separate Phase-4 Tauri "debug tool" is therefore folded into this one app.
+> Both the **dashboard and the tracker UI ship German (default) + English**.
+> Auth is **Convex Auth (password)**; raw-sample retention is **90 days**;
+> sampling defaults are unchanged. The trust boundary is unchanged — all
+> validation is server-side in Convex.
+
 ## Context
 
 A small company (~10 coworkers, must scale up) wants to run its **own**

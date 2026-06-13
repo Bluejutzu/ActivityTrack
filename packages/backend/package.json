@@ -4,6 +4,12 @@
   "private": true,
   "description": "Convex backend: schema, validating ingest endpoint, queries/mutations, auth + RBAC. Shared by the web dashboard.",
   "type": "module",
+  "exports": {
+    "./convex/_generated/api": {
+      "types": "./convex/_generated/api.d.ts",
+      "default": "./convex/_generated/api.js"
+    }
+  },
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
