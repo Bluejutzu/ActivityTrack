@@ -3,7 +3,8 @@
   "compilerOptions": {
     "moduleResolution": "Bundler",
     "noEmit": true,
-    "types": []
+    "types": [],
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["convex/**/*.ts"],
   "exclude": ["convex/_generated"]
