@@ -1,5 +1,4 @@
 import { defineSchema, defineTable } from "convex/server";
-import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 /**
@@ -10,30 +9,27 @@ import { v } from "convex/values";
  * derived from it — devices must be claimed/approved by an admin, and people
  * are linked to devices in the dashboard, not by the agent.
  *
- * Auth: Convex Auth (`@convex-dev/auth`) owns the `users`/`authAccounts`/...
- * tables via `authTables`. We extend the provided `users` table with a `role`
- * column so RBAC lives next to the identity it gates.
+ * Auth: Clerk owns identity; Convex verifies the Clerk JWT (see auth.config.ts).
+ * We keep a local `users` row per Clerk account — keyed by the Clerk `subject`
+ * (the JWT `sub` claim) — so RBAC and `v.id("users")` references live next to
+ * the identity they gate. Rows are upserted by `users.store` on first sign-in.
  */
 export default defineSchema({
-  // --- Convex Auth managed tables (users, authAccounts, authSessions, ...) ---
-  ...authTables,
-
-  // Override the auth-provided `users` table to add our dashboard role. The
-  // base columns (name, email, image, ...) are still permitted; Convex Auth
-  // writes them on sign-up. `role` defaults are assigned in auth.ts callbacks.
+  // One row per Clerk account. `subject` is the Clerk user id (JWT `sub`); it's
+  // the join key between the Clerk session and our RBAC. `role` defaults are
+  // assigned in `users.store` (first user → it_admin, everyone else → viewer).
   users: defineTable({
+    subject: v.string(),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     image: v.optional(v.string()),
-    emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
-    isAnonymous: v.optional(v.boolean()),
     // Dashboard role hierarchy: it_admin > manager > viewer.
     role: v.optional(
       v.union(v.literal("it_admin"), v.literal("manager"), v.literal("viewer")),
     ),
-  }).index("email", ["email"]),
+  })
+    .index("by_subject", ["subject"])
+    .index("email", ["email"]),
 
   // Physical machines. A device auto-registers as "pending" on first sample;
   // an admin approves it and (optionally) links it to a person.

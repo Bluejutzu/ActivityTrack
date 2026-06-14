@@ -1,4 +1,3 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { appError } from "./errors";
@@ -6,6 +5,10 @@ import { appError } from "./errors";
 /**
  * Server-side RBAC. Roles are NEVER trusted from the client — every privileged
  * query/mutation resolves the caller's user row here and checks its `role`.
+ *
+ * Identity comes from the verified Clerk JWT (`ctx.auth.getUserIdentity()`); we
+ * look up the local `users` row by its `subject` (the JWT `sub` claim). The row
+ * is provisioned by `users.store` on first sign-in.
  *
  * Hierarchy: it_admin > manager > viewer (higher rank ⊃ lower capabilities).
  */
@@ -17,11 +20,22 @@ const RANK: Record<Role, number> = {
   it_admin: 2,
 };
 
+/** Look up the local user row for a Clerk subject, or null. */
+export async function userBySubject(
+  ctx: QueryCtx,
+  subject: string,
+): Promise<Doc<"users"> | null> {
+  return await ctx.db
+    .query("users")
+    .withIndex("by_subject", (q) => q.eq("subject", subject))
+    .unique();
+}
+
 /** The signed-in user's row, or null if not authenticated / not provisioned. */
 export async function currentUser(ctx: QueryCtx): Promise<Doc<"users"> | null> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) return null;
-  return await ctx.db.get(userId);
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return await userBySubject(ctx, identity.subject);
 }
 
 /** Throw unless someone is signed in; returns their user row. */

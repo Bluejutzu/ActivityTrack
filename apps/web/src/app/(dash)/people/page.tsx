@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { Plus, Trash2 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { roleAtLeast, type Role } from "@/lib/format";
 import type { GenericId } from "convex/values";
-import { SkeletonRow } from "@/components/Skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function PeoplePage() {
   const { t } = useI18n();
@@ -20,27 +32,19 @@ export default function PeoplePage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<GenericId<"people"> | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GenericId<"people"> | null>(
+    null,
+  );
 
   const canEdit = roleAtLeast((me?.role ?? "viewer") as Role, "manager");
 
   if (people === undefined) {
-    return (
-      <section>
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <tbody>{[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}</tbody>
-          </table>
-        </div>
-      </section>
-    );
+    return <Skeleton className="h-64 w-full" />;
   }
 
   async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    // create() returns undefined on failure (the toast surfaces it) — only
-    // clear the form once the person was actually added.
     const created = await create({
       name: name.trim(),
       email: email.trim() || undefined,
@@ -52,48 +56,51 @@ export default function PeoplePage() {
   }
 
   return (
-    <section>
-      <h1 className="mb-4 text-xl font-semibold">{t("people.heading")}</h1>
-
+    <section className="space-y-5">
       {canEdit && (
-        <form
-          onSubmit={onAdd}
-          className="mb-5 flex flex-wrap gap-2 rounded-xl border border-border bg-panel p-3 animate-fade-up"
-        >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("people.name")}
-            className="flex-1 rounded-md border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60"
-          />
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t("people.email")}
-            className="flex-1 rounded-md border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60"
-          />
-          <button className="rounded-md bg-accent px-4 py-2 text-white transition-colors duration-150 hover:bg-accent/80 active:scale-95">
-            {t("people.add")}
-          </button>
-        </form>
+        <Card className="animate-fade-up">
+          <CardContent className="p-3">
+            <form
+              onSubmit={onAdd}
+              className="flex flex-col gap-2 sm:flex-row sm:items-center"
+            >
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("people.name")}
+                className="sm:flex-1"
+              />
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("people.email")}
+                className="sm:flex-1"
+              />
+              <Button type="submit" className="sm:w-auto">
+                <Plus className="h-4 w-4" />
+                {t("people.add")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-panel text-left text-muted">
-            <tr>
-              <th className="px-3 py-2">{t("people.name")}</th>
-              <th className="px-3 py-2">{t("people.email")}</th>
-              <th className="px-3 py-2">{t("people.active")}</th>
-              {canEdit && <th className="px-3 py-2" />}
-            </tr>
-          </thead>
-          <tbody>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("people.name")}</TableHead>
+              <TableHead>{t("people.email")}</TableHead>
+              <TableHead>{t("people.active")}</TableHead>
+              {canEdit && <TableHead />}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {people.map((p) => (
-              <tr key={p._id} className="border-t border-border transition-colors duration-100 hover:bg-panel/30">
-                <td className="px-3 py-2">{p.name}</td>
-                <td className="px-3 py-2 text-muted">{p.email ?? "—"}</td>
-                <td className="px-3 py-2">
+              <TableRow key={p._id}>
+                <TableCell className="text-fg">{p.name}</TableCell>
+                <TableCell className="text-muted">{p.email ?? "—"}</TableCell>
+                <TableCell>
                   <input
                     type="checkbox"
                     checked={p.active}
@@ -105,22 +112,25 @@ export default function PeoplePage() {
                       );
                     }}
                   />
-                </td>
+                </TableCell>
                 {canEdit && (
-                  <td className="px-3 py-2 text-right">
-                    <button
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setDeleteTarget(p._id)}
-                      className="text-xs text-danger transition-colors duration-150 hover:text-danger/80"
+                      className="text-danger hover:text-danger hover:bg-danger/10"
+                      aria-label={t("people.delete")}
                     >
-                      {t("people.delete")}
-                    </button>
-                  </td>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
       <ConfirmDialog
         open={deleteTarget !== null}

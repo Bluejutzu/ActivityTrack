@@ -1,14 +1,17 @@
 "use client";
 
-import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexReactClient } from "convex/react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useState, type ReactNode } from "react";
 import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/Toast";
 
 /**
- * Client-side providers: the Convex realtime client + Convex Auth (password)
- * wrap the whole app, with i18n inside so every component can translate.
+ * Client-side providers. Clerk owns identity; Convex verifies the Clerk JWT via
+ * `ConvexProviderWithClerk`. i18n + toasts live inside so every component can
+ * translate and surface errors. The Clerk publishable key is read from
+ * `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` automatically.
  */
 export function Providers({ children }: { children: ReactNode }) {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -30,10 +33,12 @@ export function Providers({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ConvexAuthProvider client={client}>
-      <I18nProvider>
-        <ToastProvider>{children}</ToastProvider>
-      </I18nProvider>
-    </ConvexAuthProvider>
+    <ClerkProvider>
+      <ConvexProviderWithClerk client={client} useAuth={useAuth}>
+        <I18nProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </I18nProvider>
+      </ConvexProviderWithClerk>
+    </ClerkProvider>
   );
 }

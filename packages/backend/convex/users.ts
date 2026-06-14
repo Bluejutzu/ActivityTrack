@@ -1,8 +1,48 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { currentUser, requireAdmin } from "./rbac";
+import { currentUser, requireAdmin, userBySubject } from "./rbac";
 import { writeAudit } from "./audit";
 import { appError } from "./errors";
+
+/**
+ * Upsert the local user row for the signed-in Clerk account. Called once by the
+ * dashboard after authentication so a `users` row (and a role) exists for RBAC.
+ *
+ * Role bootstrapping: the very first account becomes `it_admin` so the
+ * deployment is usable out of the box; everyone after defaults to `viewer` and
+ * must be promoted by an admin. Profile fields are refreshed from the JWT on
+ * every call; the role is only ever set here on creation (never downgraded).
+ */
+export const store = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw appError("auth.required", "Not authenticated");
+
+    const email = identity.email ?? undefined;
+    const name = identity.name ?? identity.nickname ?? undefined;
+    const image = (identity.pictureUrl as string | undefined) ?? undefined;
+
+    const existing = await userBySubject(ctx, identity.subject);
+    if (existing) {
+      // Keep profile fields fresh; leave the role untouched.
+      await ctx.db.patch(existing._id, { email, name, image });
+      return existing._id;
+    }
+
+    // First account in the deployment becomes it_admin; the rest are viewers.
+    const anyUser = await ctx.db.query("users").first();
+    const role = anyUser ? "viewer" : "it_admin";
+
+    return await ctx.db.insert("users", {
+      subject: identity.subject,
+      email,
+      name,
+      image,
+      role,
+    });
+  },
+});
 
 /** The signed-in user (role + identity) for the dashboard shell. Null if out. */
 export const me = query({

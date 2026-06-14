@@ -4,7 +4,6 @@ import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ingestPayloadSchema, type ActivitySample } from "@activitytrack/shared";
 import { z } from "zod";
-import { auth } from "./auth";
 import { verifyPassword, generateDeviceKey, hashDeviceKey } from "./crypto";
 import { DEBUG_PASSWORD_SETTING_KEY } from "./settings";
 
@@ -314,7 +313,5 @@ http.route({
     });
   }),
 });
-
-auth.addHttpRoutes(http);
 
 export default http;
