@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { t, getLang, setLang, type Lang } from "./i18n.js";
-import type { AgentStatus, VerifyResult } from "./types.js";
+import type { AgentStatus, AgentSample, AgentError, VerifyResult } from "./types.js";
 
 /**
  * Tray UI controller. The window is hidden on startup (tray-only); when shown
@@ -12,6 +12,7 @@ import type { AgentStatus, VerifyResult } from "./types.js";
 const app = document.getElementById("app")!;
 let unlocked = false;
 let pollTimer: number | undefined;
+let needsFullRender = true;
 
 function fmtDuration(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -47,11 +48,11 @@ function langSwitcher(): string {
     </label>`;
 }
 
-function wireLangSwitcher(rerender: () => void): void {
+function wireLangSwitcher(onchange: () => void): void {
   const sel = document.getElementById("lang") as HTMLSelectElement | null;
   sel?.addEventListener("change", () => {
     setLang(sel.value as Lang);
-    rerender();
+    onchange();
   });
 }
 
@@ -97,9 +98,144 @@ function renderLogin(error?: string): void {
 }
 
 async function startStatus(): Promise<void> {
+  needsFullRender = true;
   await renderStatus();
   window.clearInterval(pollTimer);
   pollTimer = window.setInterval(renderStatus, 3000);
+}
+
+function renderSampleRows(samples: AgentSample[]): string {
+  return samples
+    .map(
+      (sm) =>
+        `<tr><td>${fmtTime(sm.capturedAt)}</td><td>${
+          sm.active ? t("status.active") : t("status.idle")
+        }</td><td>${fmtDuration(sm.idleMs)}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderErrorsSection(errors: AgentError[]): string {
+  const errorLabel = (code: string): string => {
+    const key = `error.code.${code}`;
+    const label = t(key);
+    return label === key ? code : label;
+  };
+
+  if (errors.length === 0) {
+    return `<p class="hint">${t("status.noErrors")}</p>`;
+  }
+  return `<table class="samples errors">
+    <thead><tr><th>${t("errors.time")}</th><th>${t("errors.what")}</th><th>${t("errors.detail")}</th></tr></thead>
+    <tbody>${errors
+      .map(
+        (e) =>
+          `<tr><td>${fmtTime(e.at)}</td><td>${escapeHtml(errorLabel(e.code))}</td><td class="err-detail">${escapeHtml(e.message)}</td></tr>`,
+      )
+      .join("")}</tbody>
+  </table>`;
+}
+
+function renderStatusFull(s: AgentStatus): void {
+  const rows: Array<[string, string, string?]> = [
+    [t("status.host"), escapeHtml(s.hostname)],
+    [t("status.user"), escapeHtml(s.windowsUser)],
+    [t("status.device"), escapeHtml(s.deviceId)],
+    [t("status.idleFor"), fmtDuration(s.idleMs), "kv-idle"],
+    [t("status.queue"), String(s.queueLength), "kv-queue"],
+    [t("status.lastSent"), fmtTime(s.lastSentAt), "kv-last-sent"],
+    [t("status.lastError"), escapeHtml(s.lastError ?? t("status.none")), "kv-last-error"],
+    [t("status.convexUrl"), escapeHtml(s.convexUrl || t("status.notConfigured"))],
+    [t("status.version"), escapeHtml(s.agentVersion)],
+  ];
+
+  app.innerHTML = `
+    <div id="status-panel" class="card panel">
+      <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
+      <div class="badges">
+        <span id="badge-active" class="badge ${s.active ? "ok" : "muted"}">${
+          s.active ? t("status.active") : t("status.idle")
+        }</span>
+        <span id="badge-online" class="badge ${s.online ? "ok" : "warn"}">${
+          s.online ? t("status.online") : t("status.offline")
+        }</span>
+        <span id="badge-enrolled" class="badge ${s.enrolled ? "ok" : "warn"}">${
+          s.enrolled ? t("status.enrolled") : t("status.notEnrolled")
+        }</span>
+      </div>
+      <p class="error" id="poll-error"></p>
+      <table class="kv">${rows
+        .map(([k, val, id]) => `<tr><th>${k}</th><td${id ? ` id="${id}"` : ""}>${val}</td></tr>`)
+        .join("")}</table>
+      <h2>${t("status.recent")}</h2>
+      <table class="samples">
+        <thead><tr><th>${t("samples.time")}</th><th>${t(
+          "samples.state",
+        )}</th><th>${t("samples.idle")}</th></tr></thead>
+        <tbody id="samples-tbody">${renderSampleRows(s.lastSamples)}</tbody>
+      </table>
+      <h2>${t("status.errors")}</h2>
+      <div id="errors-section">${renderErrorsSection(s.recentErrors)}</div>
+      <div class="actions">
+        <button id="refresh">${t("status.refresh")}</button>
+        <button id="lock">${t("status.lock")}</button>
+      </div>
+    </div>`;
+
+  wireLangSwitcher(() => {
+    needsFullRender = true;
+    renderStatus();
+  });
+  document.getElementById("refresh")?.addEventListener("click", renderStatus);
+  document.getElementById("lock")?.addEventListener("click", async () => {
+    unlocked = false;
+    window.clearInterval(pollTimer);
+    await getCurrentWindow().hide();
+    renderLogin();
+  });
+}
+
+/** Update only the values that change on each poll tick — no DOM rebuild. */
+function patchStatus(s: AgentStatus): void {
+  const setText = (id: string, text: string) => {
+    const el = document.getElementById(id);
+    if (el && el.textContent !== text) el.textContent = text;
+  };
+  const setBadge = (
+    id: string,
+    ok: boolean,
+    okLabel: string,
+    warnLabel: string,
+    warnClass = "warn",
+  ) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cls = `badge ${ok ? "ok" : warnClass}`;
+    const text = ok ? okLabel : warnLabel;
+    if (el.className !== cls) el.className = cls;
+    if (el.textContent !== text) el.textContent = text;
+  };
+
+  setBadge("badge-active", s.active, t("status.active"), t("status.idle"), "muted");
+  setBadge("badge-online", s.online, t("status.online"), t("status.offline"));
+  setBadge("badge-enrolled", s.enrolled, t("status.enrolled"), t("status.notEnrolled"));
+
+  setText("kv-idle", fmtDuration(s.idleMs));
+  setText("kv-queue", String(s.queueLength));
+  setText("kv-last-sent", fmtTime(s.lastSentAt));
+  setText("kv-last-error", s.lastError ?? t("status.none"));
+
+  const samplesTbody = document.getElementById("samples-tbody");
+  if (samplesTbody) {
+    const html = renderSampleRows(s.lastSamples);
+    if (samplesTbody.innerHTML !== html) samplesTbody.innerHTML = html;
+  }
+
+  const errorsSection = document.getElementById("errors-section");
+  if (errorsSection) {
+    const html = renderErrorsSection(s.recentErrors);
+    if (errorsSection.innerHTML !== html) errorsSection.innerHTML = html;
+  }
 }
 
 async function renderStatus(): Promise<void> {
@@ -108,104 +244,17 @@ async function renderStatus(): Promise<void> {
   try {
     s = await invoke<AgentStatus>("get_status");
   } catch {
-    // Don't freeze silently — show a transient note and let the next tick retry.
     const note = document.getElementById("poll-error");
     if (note) note.textContent = t("status.pollError");
     return;
   }
 
-  const rows: Array<[string, string]> = [
-    [t("status.host"), s.hostname],
-    [t("status.user"), s.windowsUser],
-    [t("status.device"), s.deviceId],
-    [t("status.idleFor"), fmtDuration(s.idleMs)],
-    [t("status.queue"), String(s.queueLength)],
-    [t("status.lastSent"), fmtTime(s.lastSentAt)],
-    [t("status.lastError"), s.lastError ?? t("status.none")],
-    [
-      t("status.convexUrl"),
-      s.configured ? s.convexUrl : t("status.notConfigured"),
-    ],
-    [t("status.version"), s.agentVersion],
-  ];
-
-  const samplesRows = s.lastSamples
-    .map(
-      (sm) =>
-        `<tr><td>${fmtTime(sm.capturedAt)}</td><td>${
-          sm.active ? t("status.active") : t("status.idle")
-        }</td><td>${fmtDuration(sm.idleMs)}</td></tr>`,
-    )
-    .join("");
-
-  // Friendly label for a known error code, falling back to the raw code.
-  // The result is escaped at the render site (the code is machine-generated,
-  // but a t()-miss would echo it verbatim, so escape defensively).
-  const errorLabel = (code: string): string => {
-    const key = `error.code.${code}`;
-    const label = t(key);
-    return label === key ? code : label;
-  };
-
-  const errorsSection =
-    s.recentErrors.length === 0
-      ? `<p class="hint">${t("status.noErrors")}</p>`
-      : `<table class="samples errors">
-          <thead><tr><th>${t("errors.time")}</th><th>${t(
-            "errors.what",
-          )}</th><th>${t("errors.detail")}</th></tr></thead>
-          <tbody>${s.recentErrors
-            .map(
-              (e) =>
-                `<tr><td>${fmtTime(e.at)}</td><td>${escapeHtml(
-                  errorLabel(e.code),
-                )}</td><td class="err-detail">${escapeHtml(e.message)}</td></tr>`,
-            )
-            .join("")}</tbody>
-        </table>`;
-
-  app.innerHTML = `
-    <div class="card panel">
-      <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
-      <div class="badges">
-        <span class="badge ${s.active ? "ok" : "muted"}">${
-          s.active ? t("status.active") : t("status.idle")
-        }</span>
-        <span class="badge ${s.online ? "ok" : "warn"}">${
-          s.online ? t("status.online") : t("status.offline")
-        }</span>
-        <span class="badge ${s.enrolled ? "ok" : "warn"}">${
-          s.enrolled ? t("status.enrolled") : t("status.notEnrolled")
-        }</span>
-      </div>
-      <p class="error" id="poll-error"></p>
-      <table class="kv">${rows
-        .map(([k, val]) => `<tr><th>${k}</th><td>${escapeHtml(val)}</td></tr>`)
-        .join("")}</table>
-      <h2>${t("status.recent")}</h2>
-      <table class="samples">
-        <thead><tr><th>${t("samples.time")}</th><th>${t(
-          "samples.state",
-        )}</th><th>${t("samples.idle")}</th></tr></thead>
-        <tbody>${samplesRows}</tbody>
-      </table>
-      <h2>${t("status.errors")}</h2>
-      ${errorsSection}
-      <div class="actions">
-        <button id="refresh">${t("status.refresh")}</button>
-        <button id="lock">${t("status.lock")}</button>
-      </div>
-    </div>`;
-
-  wireLangSwitcher(renderStatus);
-  document.getElementById("refresh")?.addEventListener("click", renderStatus);
-  document.getElementById("lock")?.addEventListener("click", async () => {
-    unlocked = false;
-    window.clearInterval(pollTimer);
-    // Hide back to the tray and re-lock.
-    await getCurrentWindow().hide();
-    renderLogin();
-  });
+  if (!needsFullRender && document.getElementById("status-panel")) {
+    patchStatus(s);
+  } else {
+    renderStatusFull(s);
+    needsFullRender = false;
+  }
 }
 
 setLang(getLang());
