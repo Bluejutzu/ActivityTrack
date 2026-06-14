@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
-import { useI18n, type Lang } from "@/lib/i18n";
-import { formatTime, roleAtLeast, type Role } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { formatRelativeTime, formatTime, roleAtLeast, type Role } from "@/lib/format";
+import { DEVICE_STATUS_CLASS, type DeviceStatus } from "@/lib/ui";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -20,26 +21,6 @@ function slotStatus(slot: {
   if (slot.usedAt !== undefined) return "used";
   if (slot.expiresAt < Date.now()) return "expired";
   return "active";
-}
-
-function relativeTime(ts: number, lang: Lang): string {
-  const diff = ts - Date.now();
-  const abs = Math.abs(diff);
-  const future = diff > 0;
-  const h = Math.floor(abs / 3_600_000);
-  const m = Math.floor((abs % 3_600_000) / 60_000);
-  const d = Math.floor(h / 24);
-
-  if (d >= 1) {
-    if (lang === "de") return future ? `in ${d} Tag${d > 1 ? "en" : ""}` : `vor ${d} Tag${d > 1 ? "en" : ""}`;
-    return future ? `in ${d}d` : `${d}d ago`;
-  }
-  if (h >= 1) {
-    if (lang === "de") return future ? `in ${h} Std.` : `vor ${h} Std.`;
-    return future ? `in ${h}h` : `${h}h ago`;
-  }
-  if (lang === "de") return future ? `in ${m} Min.` : `vor ${m} Min.`;
-  return future ? `in ${m}m` : `${m}m ago`;
 }
 
 const STATUS_BADGE: Record<SlotStatus, string> = {
@@ -204,12 +185,12 @@ function SlotCard({
         )}
         <p className="text-xs text-muted mt-1">
           {status === "active"
-            ? `${t("devices.slots.expires")}: ${relativeTime(slot.expiresAt, lang)}`
+            ? `${t("devices.slots.expires")}: ${formatRelativeTime(slot.expiresAt, lang)}`
             : status === "used"
-            ? `${t("devices.slots.usedAt")}: ${relativeTime(slot.usedAt!, lang)}`
+            ? `${t("devices.slots.usedAt")}: ${formatRelativeTime(slot.usedAt!, lang)}`
             : status === "expired"
-            ? `${t("devices.slots.expires")}: ${relativeTime(slot.expiresAt, lang)}`
-            : `${relativeTime(slot.usedAt!, lang)}`}
+            ? `${t("devices.slots.expires")}: ${formatRelativeTime(slot.expiresAt, lang)}`
+            : `${formatRelativeTime(slot.usedAt!, lang)}`}
         </p>
       </div>
 
@@ -266,11 +247,6 @@ export default function DevicesPage() {
     pending: t("status.pending"),
     active: t("status.active"),
     disabled: t("status.disabled"),
-  };
-  const statusClass: Record<string, string> = {
-    pending: "bg-warn/20 text-warn",
-    active: "bg-ok/20 text-ok",
-    disabled: "bg-danger/20 text-danger",
   };
 
   if (devices === undefined || people === undefined) {
@@ -348,7 +324,7 @@ export default function DevicesPage() {
                     <td className="px-4 py-3 text-muted">{d.lastWindowsUser}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass[d.status]}`}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${DEVICE_STATUS_CLASS[d.status as DeviceStatus]}`}
                       >
                         {statusLabel[d.status]}
                       </span>

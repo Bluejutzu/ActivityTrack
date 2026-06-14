@@ -12,6 +12,7 @@
     "dev:desktop": "pnpm --filter @activitytrack/desktop dev",
     "dev:backend": "pnpm --filter @activitytrack/backend dev",
     "build": "pnpm -r build",
+    "build:vercel": "pnpm --filter @activitytrack/backend exec convex deploy --cmd 'NEXT_PUBLIC_CONVEX_URL=\"$CONVEX_URL\" pnpm --filter @activitytrack/web build'",
     "build:installer": "pnpm --filter @activitytrack/desktop build:installer",
     "typecheck": "pnpm -r typecheck"
   }

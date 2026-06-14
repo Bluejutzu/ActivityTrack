@@ -47,7 +47,8 @@ export default defineSchema({
     agentVersion: v.optional(v.string()),
   })
     .index("by_deviceId", ["deviceId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_personId", ["personId"]),
 
   // Coworkers being tracked (managed in the dashboard; ~10, expandable).
   people: defineTable({

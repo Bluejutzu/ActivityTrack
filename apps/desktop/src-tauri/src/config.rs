@@ -11,9 +11,6 @@ pub struct Config {
     /// One-time enrollment code placed in config.json by IT. Consumed on
     /// first registration and no longer needed afterward.
     pub enrollment_code: Option<String>,
-    /// Per-device key issued by the backend on enrollment. Loaded from the
-    /// device.key file (written after first successful registration).
-    pub device_key: Option<String>,
     pub poll_interval_ms: u64,
     pub idle_threshold_ms: u64,
     pub flush_interval_ms: u64,
@@ -39,7 +36,6 @@ impl Default for Config {
             convex_url: std::env::var("ACTIVITYTRACK_CONVEX_URL").unwrap_or_default(),
             bootstrap_key: std::env::var("ACTIVITYTRACK_INGEST_KEY").unwrap_or_default(),
             enrollment_code: std::env::var("ACTIVITYTRACK_ENROLLMENT_CODE").ok(),
-            device_key: None,
             poll_interval_ms: 15_000,
             idle_threshold_ms: 60_000,
             flush_interval_ms: 30_000,
@@ -49,30 +45,22 @@ impl Default for Config {
 }
 
 impl Config {
-    /// True if the device has a key and can send samples.
-    pub fn can_send(&self) -> bool {
-        !self.convex_url.is_empty() && self.device_key.is_some()
-    }
-
     /// True if the device can attempt enrollment (has code + bootstrap key).
+    /// Whether it has actually enrolled (holds a device key) lives on AppState,
+    /// since the key is acquired at runtime and is therefore mutable.
     pub fn can_register(&self) -> bool {
         !self.convex_url.is_empty()
             && !self.bootstrap_key.is_empty()
             && self.enrollment_code.is_some()
     }
-
-    /// True if the config is usable (either already enrolled or can enroll).
-    pub fn is_configured(&self) -> bool {
-        self.can_send() || self.can_register()
-    }
 }
 
-/// Load config from the file in %ProgramData%, then load the device key from
-/// its own file. Missing files fall back to env-derived defaults.
+/// Load config from the file in %ProgramData%. Missing files fall back to
+/// env-derived defaults. The device key is loaded separately (see
+/// `load_device_key`) because it's mutable at runtime, not part of Config.
 pub fn load_config() -> Config {
     let mut cfg = Config::default();
 
-    // Load config.json
     if let Ok(text) = std::fs::read_to_string(config_file()) {
         if let Ok(file) = serde_json::from_str::<FileConfig>(&text) {
             if let Some(v) = file.convex_url {
@@ -99,13 +87,16 @@ pub fn load_config() -> Config {
         }
     }
 
-    // Load device key from its own file (written after first enrollment)
-    if let Ok(key) = std::fs::read_to_string(device_key_file()) {
-        let key = key.trim().to_string();
-        if !key.is_empty() {
-            cfg.device_key = Some(key);
-        }
-    }
-
     cfg
+}
+
+/// Read the device key written after a successful enrollment, if present.
+pub fn load_device_key() -> Option<String> {
+    let key = std::fs::read_to_string(device_key_file()).ok()?;
+    let key = key.trim().to_string();
+    if key.is_empty() {
+        None
+    } else {
+        Some(key)
+    }
 }

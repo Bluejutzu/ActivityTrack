@@ -38,14 +38,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ items, toast }}>
       {children}
       {items.length > 0 && (
-        <div
-          className="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
           {items.map((item) => (
             <div
               key={item.id}
+              // Errors interrupt (assertive/alert); ok/warn announce politely.
+              role={item.variant === "danger" ? "alert" : "status"}
+              aria-live={item.variant === "danger" ? "assertive" : "polite"}
               className={`flex items-center gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm font-medium shadow-lg ${
                 VARIANT_CLASS[item.variant]
               } ${item.exiting ? "animate-toast-out" : "animate-toast-in"}`}

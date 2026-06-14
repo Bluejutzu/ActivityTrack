@@ -15,8 +15,12 @@ apps/desktop/src-tauri/gen/
 apps/desktop/src-tauri/bundle/nsis/config-staging/
 *.exe
 
-# Convex generated
+# Convex generated — but DO commit the backend stubs so the web build can
+# resolve `@activitytrack/backend/convex/_generated/api` on Vercel without a
+# build-time codegen step (the files are generic `anyApi` stubs).
 **/convex/_generated/
+!packages/backend/convex/_generated/
+!packages/backend/convex/_generated/**
 
 # Env / secrets
 .env

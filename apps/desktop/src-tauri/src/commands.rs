@@ -17,5 +17,10 @@ pub fn get_status(state: State<'_, Arc<AppState>>) -> AgentStatus {
 /// keyed backend endpoint. Returns "ok" | "wrong" | "unset" | "network".
 #[tauri::command]
 pub fn verify_password(state: State<'_, Arc<AppState>>, password: String) -> String {
-    sender::verify_password(&state.config, &password)
+    sender::verify_password(
+        &state.config.convex_url,
+        state.device_key().as_deref(),
+        &state.config.bootstrap_key,
+        &password,
+    )
 }

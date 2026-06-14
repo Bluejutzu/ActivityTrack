@@ -17,7 +17,6 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
-use crate::model::AGENT_VERSION;
 use crate::state::AppState;
 
 fn show_main(app: &tauri::AppHandle) {
@@ -30,60 +29,24 @@ fn show_main(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load config (reads config.json + device.key file).
-    let mut config = config::load_config();
+    let config = config::load_config();
+    let device_key = config::load_device_key();
 
     let device_id = device::get_or_create_device_id();
     let hostname = host::hostname();
     let windows_user = host::windows_user();
 
-    // Auto-enroll on first boot if we have an enrollment code but no device key.
-    // This is a blocking network call before the UI starts — intentional, so the
-    // tracker is sending data by the time the tray icon appears.
-    let mut enrollment_error: Option<String> = None;
-    let mut key_persist_warning: Option<String> = None;
-    if !config.can_send() && config.can_register() {
-        let code = config.enrollment_code.clone().unwrap_or_default();
-        match sender::register_device(
-            &config.convex_url,
-            &config.bootstrap_key,
-            &code,
-            &device_id,
-            &hostname,
-            &windows_user,
-            AGENT_VERSION,
-        ) {
-            Ok(key) => {
-                let key_path = paths::device_key_file();
-                let _ = std::fs::create_dir_all(paths::app_dir());
-                if let Err(e) = std::fs::write(&key_path, &key) {
-                    eprintln!("ActivityTrack: cannot persist device key: {e}");
-                    key_persist_warning = Some(format!(
-                        "Enrolled, but the device key could not be saved to disk ({e}); \
-                         re-enrollment will be required after restart."
-                    ));
-                }
-                // Set in-memory so this session can send data regardless.
-                config.device_key = Some(key);
-            }
-            Err(e) => {
-                eprintln!("ActivityTrack: enrollment failed: {e}");
-                enrollment_error = Some(e);
-            }
-        }
-    }
-
-    let state = Arc::new(AppState::new(config, device_id, hostname, windows_user));
-
-    // Surface any startup problems so they show in the tray UI immediately
-    // (and, once enrolled, get reported to the dashboard on the next tick).
-    if let Some(err) = enrollment_error {
-        state.push_error("tracker.enroll_failed", err);
-    }
-    if let Some(warn) = key_persist_warning {
-        state.push_error("tracker.queue_io", warn.clone());
-        state.report_event("warning", "tracker.queue_io", &warn);
-    }
+    // Build state and start the tracker immediately so the tray icon appears at
+    // once. First-boot enrollment (a blocking network call) now happens inside
+    // the tracker thread, not here — a slow/down backend no longer freezes
+    // startup. The tracker's flush guard defers sending until enrolled.
+    let state = Arc::new(AppState::new(
+        config,
+        device_id,
+        hostname,
+        windows_user,
+        device_key,
+    ));
 
     tracker::start(state.clone());
 

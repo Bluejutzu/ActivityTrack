@@ -148,11 +148,15 @@ export const health = query({
     offlineDevices.sort((a, b) => b.offlineForMs - a.offlineForMs);
 
     // Open events, newest first — a friendly digest (no technical message).
+    // The by_resolvedAt index is [resolvedAt, lastAt], so fixing the
+    // resolvedAt=undefined partition and ordering desc yields the most recent
+    // open events without loading the whole table. Bounded — for an internal
+    // tool open events are few, and the banner count tolerates being capped.
     const openEvents = await ctx.db
       .query("systemEvents")
-      .withIndex("by_open", (q) => q.eq("resolvedAt", undefined))
-      .collect();
-    openEvents.sort((a, b) => b.lastAt - a.lastAt);
+      .withIndex("by_resolvedAt", (q) => q.eq("resolvedAt", undefined))
+      .order("desc")
+      .take(200);
 
     const recentIssues = openEvents.slice(0, 50).map((e) => ({
       id: e._id,
@@ -206,10 +210,9 @@ export const listEvents = query({
     if (onlyOpen) {
       rows = await ctx.db
         .query("systemEvents")
-        .withIndex("by_open", (q) => q.eq("resolvedAt", undefined))
-        .collect();
-      rows.sort((a, b) => b.lastAt - a.lastAt);
-      rows = rows.slice(0, take);
+        .withIndex("by_resolvedAt", (q) => q.eq("resolvedAt", undefined))
+        .order("desc")
+        .take(take);
     } else {
       rows = await ctx.db
         .query("systemEvents")
@@ -266,13 +269,15 @@ export const purgeOldEvents = internalMutation({
   handler: async (ctx, { retentionDays }) => {
     const days = retentionDays ?? 90;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    // Only resolved rows (resolvedAt > 0) — the gt() skips the open partition
+    // (resolvedAt = undefined) entirely instead of scanning the whole table.
     const stale = await ctx.db
       .query("systemEvents")
-      .withIndex("by_resolvedAt")
-      .collect();
+      .withIndex("by_resolvedAt", (q) => q.gt("resolvedAt", 0))
+      .take(4000);
     let deleted = 0;
     for (const row of stale) {
-      if (row.resolvedAt !== undefined && row.lastAt < cutoff) {
+      if (row.lastAt < cutoff) {
         await ctx.db.delete(row._id);
         deleted++;
         if (deleted >= 2000) break;

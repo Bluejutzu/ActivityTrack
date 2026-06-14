@@ -2,23 +2,22 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use crate::config::Config;
 use crate::model::ActivitySample;
 
 /// POST a batch of samples to /ingest using the device-specific key.
-pub fn send_batch(config: &Config, batch: &[ActivitySample]) -> Result<(), String> {
+pub fn send_batch(
+    convex_url: &str,
+    device_key: &str,
+    batch: &[ActivitySample],
+) -> Result<(), String> {
     if batch.is_empty() {
         return Ok(());
     }
-    let device_key = config
-        .device_key
-        .as_deref()
-        .ok_or_else(|| "not enrolled".to_string())?;
-    if config.convex_url.is_empty() {
+    if convex_url.is_empty() {
         return Err("not configured".into());
     }
 
-    let url = format!("{}/ingest", config.convex_url.trim_end_matches('/'));
+    let url = format!("{}/ingest", convex_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(15))
         .build();
@@ -40,21 +39,18 @@ pub fn send_batch(config: &Config, batch: &[ActivitySample]) -> Result<(), Strin
 /// the dashboard's System Health page can show it centrally. Best-effort: the
 /// caller ignores the result.
 pub fn report_event(
-    config: &Config,
+    convex_url: &str,
+    device_key: &str,
     severity: &str,
     code: &str,
     message: &str,
     hostname: &str,
 ) -> Result<(), String> {
-    let device_key = config
-        .device_key
-        .as_deref()
-        .ok_or_else(|| "not enrolled".to_string())?;
-    if config.convex_url.is_empty() {
+    if convex_url.is_empty() {
         return Err("not configured".into());
     }
 
-    let url = format!("{}/agent/event", config.convex_url.trim_end_matches('/'));
+    let url = format!("{}/agent/event", convex_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(10))
         .build();
@@ -124,19 +120,18 @@ pub fn register_device(
 /// Verify the debug-login password via the keyed /agent/verify-password
 /// endpoint. Uses device key if enrolled, falls back to bootstrap key for dev.
 /// Returns one of: "ok", "wrong", "unset", "network".
-pub fn verify_password(config: &Config, password: &str) -> String {
-    let auth_key = config
-        .device_key
-        .as_deref()
-        .unwrap_or(&config.bootstrap_key);
-    if auth_key.is_empty() || config.convex_url.is_empty() {
+pub fn verify_password(
+    convex_url: &str,
+    device_key: Option<&str>,
+    bootstrap_key: &str,
+    password: &str,
+) -> String {
+    let auth_key = device_key.unwrap_or(bootstrap_key);
+    if auth_key.is_empty() || convex_url.is_empty() {
         return "network".into();
     }
 
-    let url = format!(
-        "{}/agent/verify-password",
-        config.convex_url.trim_end_matches('/')
-    );
+    let url = format!("{}/agent/verify-password", convex_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(15))
         .build();

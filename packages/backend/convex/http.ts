@@ -49,13 +49,13 @@ http.route({
   path: "/ingest",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
+    // NOTE: we deliberately do NOT log unauthenticated ingest rejections. This
+    // is a public endpoint, so logging a DB write per rejected request turns
+    // anonymous spam into write amplification — and unknown-key hits are mostly
+    // internet-scanner noise, not actionable signal. We only log failures from
+    // an *authenticated* device (below), where the deviceId is known.
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      await logBackendEvent(ctx, {
-        severity: "warning",
-        code: "ingest.unauthorized",
-        message: "Ingest rejected: missing or malformed Authorization header.",
-      });
       return new Response("unauthorized", { status: 401 });
     }
     const rawKey = authHeader.slice(7);
@@ -65,12 +65,6 @@ http.route({
       { keyHash },
     );
     if (!deviceId) {
-      await logBackendEvent(ctx, {
-        severity: "warning",
-        code: "ingest.unauthorized",
-        message:
-          "Ingest rejected: device key did not match any enrolled device (unknown, revoked, or disabled).",
-      });
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -142,15 +136,13 @@ http.route({
   path: "/agent/register",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
+    // Like /ingest, don't log the unauthenticated path (wrong/absent bootstrap
+    // key) — it's the same write-amplification vector. enroll.code_invalid
+    // below IS logged: reaching it requires a valid bootstrap key, so it's a
+    // real signal (someone with a build using a bad/expired code).
     const expected = process.env.ACTIVITYTRACK_INGEST_KEY;
     const authHeader = request.headers.get("authorization");
     if (!expected || authHeader !== `Bearer ${expected}`) {
-      await logBackendEvent(ctx, {
-        severity: "warning",
-        code: "enroll.unauthorized",
-        message:
-          "Enrollment rejected: bootstrap key missing or incorrect (a build with the wrong/absent ACTIVITYTRACK_INGEST_KEY tried to register).",
-      });
       return new Response("unauthorized", { status: 401 });
     }
 

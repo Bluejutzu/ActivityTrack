@@ -20,6 +20,18 @@ function appErrorData(err: unknown): AppErrorData | null {
   if (err instanceof ConvexError && err.data && typeof err.data === "object") {
     return err.data as AppErrorData;
   }
+  // Duck-typed fallback: if `instanceof` misses (e.g. ConvexError bundled under
+  // a different module identity across the client boundary), still recover the
+  // structured `{ code, message }` payload from a `.data` object.
+  if (
+    err &&
+    typeof err === "object" &&
+    "data" in err &&
+    typeof (err as { data: unknown }).data === "object" &&
+    (err as { data: unknown }).data !== null
+  ) {
+    return (err as { data: AppErrorData }).data;
+  }
   return null;
 }
 
