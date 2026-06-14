@@ -6,9 +6,7 @@
 
 !macro NSIS_HOOK_POSTINSTALL
   CreateDirectory "$COMMONAPPDATA\ActivityTrack"
-  ${If} ${FileExists} "$INSTDIR\config.json"
-    ${IfNot} ${FileExists} "$COMMONAPPDATA\ActivityTrack\config.json"
-      CopyFiles /SILENT "$INSTDIR\config.json" "$COMMONAPPDATA\ActivityTrack\config.json"
-    ${EndIf}
-  ${EndIf}
+  IfFileExists "$INSTDIR\config.json" +1 +3
+  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" +2 +1
+  CopyFiles /SILENT "$INSTDIR\config.json" "$COMMONAPPDATA\ActivityTrack\config.json"
 !macroend
