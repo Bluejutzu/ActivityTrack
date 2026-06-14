@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "dotenv -- tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",
+    "dotenv-cli": "^7.4.4",
     "typescript": "^5.6.0",
     "vite": "^5.4.0"
   }
