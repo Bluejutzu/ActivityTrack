@@ -5,10 +5,10 @@
 ; from GitHub secrets at build time) — without overwriting an existing config.
 
 !macro NSIS_HOOK_POSTINSTALL
-  CreateDirectory "$PROGRAMDATA\ActivityTrack"
+  CreateDirectory "$COMMONAPPDATA\ActivityTrack"
   ${If} ${FileExists} "$INSTDIR\config.json"
-    ${IfNot} ${FileExists} "$PROGRAMDATA\ActivityTrack\config.json"
-      CopyFiles /SILENT "$INSTDIR\config.json" "$PROGRAMDATA\ActivityTrack\config.json"
+    ${IfNot} ${FileExists} "$COMMONAPPDATA\ActivityTrack\config.json"
+      CopyFiles /SILENT "$INSTDIR\config.json" "$COMMONAPPDATA\ActivityTrack\config.json"
     ${EndIf}
   ${EndIf}
 !macroend
