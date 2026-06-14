@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { t, getLang, setLang, type Lang } from "./i18n.js";
 import type { AgentStatus, VerifyResult } from "./types.js";
-
+ 
 /**
  * Tray UI controller. The window is hidden on startup (tray-only); when shown
  * it presents a password gate, then a read-only status/debug panel. Unlocking
