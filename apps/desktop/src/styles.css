@@ -1,12 +1,19 @@
 :root {
-  --bg: #0f1115;
+  --bg: #0e1014;
+  --bg-elev: #0f1218;
   --card: #171a21;
+  --card-2: #1b1f28;
   --fg: #e6e9ef;
   --muted: #8b93a7;
   --ok: #2ecc71;
   --warn: #e67e22;
   --accent: #4c8dff;
+  --accent-2: #3f7ae6;
   --border: #262b36;
+  --border-soft: #20242e;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -21,53 +28,65 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(76, 141, 255, 0.08), transparent 70%),
+    var(--bg);
   color: var(--fg);
   font-size: 14px;
+  line-height: 1.45;
+  min-height: 100vh;
 }
 
 #app {
-  padding: 16px;
+  padding: 20px 16px;
+  display: flex;
+  justify-content: center;
 }
 
 .card {
-  background: var(--card);
+  width: 100%;
+  background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
+  border-radius: var(--radius);
+  padding: 22px;
   max-width: 520px;
-  margin: 0 auto;
+  box-shadow: var(--shadow);
 }
 
-/* Fade-up entrance for each card render (login ↔ status transitions) */
+/* Fade + subtle scale entrance, fired on each screen change (remount). */
 .panel {
-  animation: fade-up 250ms ease-out both;
+  animation: panel-in 280ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
 
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 h1 {
   font-size: 16px;
   margin: 0;
   letter-spacing: 0.02em;
+  font-weight: 650;
 }
 
 h2 {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 18px 0 8px;
+  letter-spacing: 0.09em;
+  margin: 20px 0 10px;
+  font-weight: 600;
 }
 
 .hint {
   color: var(--muted);
-  margin: 4px 0 12px;
+  margin: 4px 0 14px;
 }
 
 form {
@@ -77,19 +96,27 @@ form {
 
 input,
 select {
-  background: #0f1218;
+  background: var(--bg-elev);
   color: var(--fg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
   font-size: 14px;
-  transition: border-color 150ms ease, outline 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+input::placeholder {
+  color: var(--muted);
 }
 
 input:focus,
 select:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.22);
 }
 
 input {
@@ -97,21 +124,27 @@ input {
 }
 
 button {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
   font-size: 14px;
+  font-weight: 550;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  transition: background-color 150ms ease, transform 100ms ease, filter 150ms ease;
+  transition:
+    filter 150ms ease,
+    transform 90ms ease,
+    box-shadow 150ms ease;
 }
 
 button:hover:not(:disabled) {
-  filter: brightness(1.12);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 14px -4px rgba(76, 141, 255, 0.55);
 }
 
 button:active:not(:disabled) {
@@ -121,27 +154,31 @@ button:active:not(:disabled) {
 button.secondary,
 .actions #lock {
   background: #2a3140;
+  box-shadow: none;
 }
 
 button.secondary:hover:not(:disabled),
 .actions #lock:hover:not(:disabled) {
   background: #333c4e;
+  filter: none;
+  box-shadow: none;
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: default;
 }
 
 .error {
   color: var(--warn);
   min-height: 18px;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
+  font-size: 13px;
 }
 
-/* Error slides in when it first appears on re-render */
+/* Error slides in when it first appears (re-keyed on each new message). */
 .error.fade-up {
-  animation: fade-up 200ms ease-out both;
+  animation: fade-up 220ms ease-out both;
 }
 
 .lang {
@@ -152,29 +189,57 @@ button:disabled {
   color: var(--muted);
 }
 
+.lang select {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+
+.skip-row {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.skip-link {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.skip-link:hover {
+  color: var(--fg);
+  border-bottom-color: var(--border);
+}
+
 .badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .badge {
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
   font-weight: 600;
   font-size: 12px;
   background: #2a3140;
+  color: var(--muted);
+  border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .badge.ok {
-  background: rgba(46, 204, 113, 0.18);
+  background: rgba(46, 204, 113, 0.16);
   color: var(--ok);
+  border-color: rgba(46, 204, 113, 0.3);
 }
 
-/* Pulsing dot for the "active" badge */
+/* Pulsing dot for the "active"/online/enrolled (ok) badges. */
 .badge.ok::before {
   content: "";
   display: inline-block;
@@ -182,12 +247,14 @@ button:disabled {
   height: 7px;
   border-radius: 50%;
   background: var(--ok);
+  box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.6);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .badge.warn {
-  background: rgba(230, 126, 34, 0.18);
+  background: rgba(230, 126, 34, 0.16);
   color: var(--warn);
+  border-color: rgba(230, 126, 34, 0.3);
 }
 
 .badge.muted {
@@ -199,34 +266,56 @@ table {
   border-collapse: collapse;
 }
 
+table.kv {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
 table.kv th {
   text-align: left;
   color: var(--muted);
   font-weight: 500;
-  padding: 4px 8px 4px 0;
+  padding: 7px 12px;
   white-space: nowrap;
   vertical-align: top;
+  width: 40%;
 }
 
 table.kv td {
-  padding: 4px 0;
+  padding: 7px 12px;
   word-break: break-all;
 }
 
-table.samples th,
+table.kv tr + tr th,
+table.kv tr + tr td {
+  border-top: 1px solid var(--border-soft);
+}
+
+table.samples th {
+  text-align: left;
+  padding: 7px 10px;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 table.samples td {
   text-align: left;
-  padding: 4px 8px;
-  border-top: 1px solid var(--border);
+  padding: 7px 10px;
+  border-top: 1px solid var(--border-soft);
   font-variant-numeric: tabular-nums;
 }
 
 table.samples tbody tr {
-  transition: background-color 100ms ease;
+  transition: background-color 120ms ease;
 }
 
 table.samples tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 table.errors .err-detail {
@@ -239,15 +328,21 @@ table.errors .err-detail {
 .actions {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
 }
 
-/* Login button spinner */
+.actions button {
+  flex: 1;
+}
+
+/* Login/enroll button spinner */
 .spinner {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 600ms linear infinite;
@@ -255,27 +350,65 @@ table.errors .err-detail {
 }
 
 /* Thin scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
 
 /* Keyframes */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.45);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.82);
+    box-shadow: 0 0 0 4px rgba(46, 204, 113, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
