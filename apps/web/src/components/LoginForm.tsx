@@ -13,7 +13,7 @@ export function LoginForm() {
   const { t } = useI18n();
   const { signIn } = useAuthActions();
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"generic" | "password" | false>(false);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,8 +24,9 @@ export function LoginForm() {
     form.set("flow", flow);
     try {
       await signIn("password", form);
-    } catch {
-      setError(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      setError(flow === "signUp" && msg.includes("Invalid password") ? "password" : "generic");
     } finally {
       setBusy(false);
     }
@@ -48,13 +49,19 @@ export function LoginForm() {
           placeholder={t("login.email")}
           className="rounded-lg border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60 placeholder:text-muted/60"
         />
-        <input
-          name="password"
-          type="password"
-          required
-          placeholder={t("login.password")}
-          className="rounded-lg border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60 placeholder:text-muted/60"
-        />
+        <div className="flex flex-col gap-1">
+          <input
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            placeholder={t("login.password")}
+            className="rounded-lg border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60 placeholder:text-muted/60"
+          />
+          {flow === "signUp" && (
+            <p className="text-xs text-muted">{t("login.passwordHint")}</p>
+          )}
+        </div>
         <button
           type="submit"
           disabled={busy}
@@ -67,12 +74,14 @@ export function LoginForm() {
         </button>
       </form>
       {error && (
-        <p className="mt-3 text-sm text-warn animate-fade-up">{t("login.error")}</p>
+        <p className="mt-3 text-sm text-warn animate-fade-up">
+          {error === "password" ? t("login.passwordHint") : t("login.error")}
+        </p>
       )}
       <button
         onClick={() => {
           setFlow(flow === "signIn" ? "signUp" : "signIn");
-          setError(false);
+          setError(false as const);
         }}
         className="mt-4 text-sm text-accent transition-colors duration-150 hover:text-accent/80 underline-offset-2 hover:underline"
       >

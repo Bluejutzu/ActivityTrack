@@ -45,6 +45,7 @@ const de: Dict = {
   "login.error": "Anmeldung fehlgeschlagen. Bitte Daten prüfen.",
   "login.firstUserNote":
     "Das erste registrierte Konto wird automatisch IT-Administrator.",
+  "login.passwordHint": "Mindestens 8 Zeichen.",
 
   "overview.heading": "Team-Übersicht",
   "overview.empty":
@@ -257,6 +258,7 @@ const en: Dict = {
   "login.error": "Sign-in failed. Please check your details.",
   "login.firstUserNote":
     "The first account to register automatically becomes IT admin.",
+  "login.passwordHint": "Minimum 8 characters.",
 
   "overview.heading": "Team overview",
   "overview.empty": "No approved devices yet. Approve one under “Devices”.",
