@@ -1,7 +1,7 @@
 "use client";
 
 import { useConvexAuth, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { LoginForm } from "@/components/LoginForm";
+import { LoginScreen } from "@/components/LoginScreen";
 import { AppShell } from "@/components/AppShell";
 import { SkeletonCard } from "@/components/Skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -31,7 +31,7 @@ export default function DashLayout({ children }: { children: ReactNode }) {
         </div>
       </AuthLoading>
       <Unauthenticated>
-        <LoginForm />
+        <LoginScreen />
       </Unauthenticated>
       <Authenticated>
         <AppShell>

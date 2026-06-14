@@ -49,13 +49,15 @@ pnpm install
 pnpm dev:backend
 #    Then set the deployment env vars:
 #      npx convex env set ACTIVITYTRACK_INGEST_KEY <a-long-random-secret>
-#    and initialise Convex Auth (JWT keys) once:
-#      npx @convex-dev/auth
+#    Auth is handled by Clerk. Create a Clerk app, add a JWT template named
+#    "convex", then point the backend at the Clerk issuer:
+#      npx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-app>.clerk.accounts.dev
 
-# 2. Web dashboard — copy the deployment URL into apps/web/.env.local as
-#    NEXT_PUBLIC_CONVEX_URL, then:
+# 2. Web dashboard — in apps/web/.env.local set NEXT_PUBLIC_CONVEX_URL plus the
+#    Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY); see
+#    .env.example. Then:
 pnpm dev:web
-#    The first account you register becomes it_admin. Set the tracker debug
+#    The first account you sign in with becomes it_admin. Set the tracker debug
 #    password under Settings.
 
 # 3. Tracker — create %ProgramData%\ActivityTrack\config.json with the Convex
