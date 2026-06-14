@@ -39,7 +39,6 @@ jobs:
       # on installation. The installer uses these values by default.
       - name: Create installer config
         run: |
-          mkdir -p apps/desktop/src-tauri/bundle/nsis/config-staging
           $configJson = @{
             convexUrl = "${{ secrets.ACTIVITYTRACK_CONVEX_URL }}"
             ingestKey = "${{ secrets.ACTIVITYTRACK_INGEST_KEY }}"
