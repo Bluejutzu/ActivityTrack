@@ -33,8 +33,9 @@ pub fn platform() -> String {
 #[cfg(windows)]
 pub fn tz_offset_minutes() -> i32 {
     use windows::Win32::System::Time::{
-        GetTimeZoneInformation, TIME_ZONE_ID_DAYLIGHT, TIME_ZONE_INFORMATION,
+        GetTimeZoneInformation, TIME_ZONE_INFORMATION,
     };
+    const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
     unsafe {
         let mut tzi = TIME_ZONE_INFORMATION::default();
         let result = GetTimeZoneInformation(&mut tzi);
