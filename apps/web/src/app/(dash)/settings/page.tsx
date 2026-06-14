@@ -2,10 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useAction } from "convex/react";
+import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { errorMessage } from "@/lib/errors";
-import { Skeleton } from "@/components/Skeleton";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
   const { t } = useI18n();
@@ -45,38 +56,52 @@ export default function SettingsPage() {
 
   return (
     <section className="max-w-lg">
-      <h1 className="mb-4 text-xl font-semibold">{t("settings.heading")}</h1>
+      <Card className="animate-fade-up">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent/20 text-accent">
+              <KeyRound className="h-4 w-4" />
+            </span>
+            <CardTitle className="text-base">
+              {t("settings.debugPw.heading")}
+            </CardTitle>
+          </div>
+          <CardDescription>{t("settings.debugPw.hint")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            {isSet === undefined ? (
+              <Skeleton className="h-5 w-32" />
+            ) : isSet ? (
+              <Badge variant="ok">{t("settings.debugPw.set")}</Badge>
+            ) : (
+              <Badge variant="muted">{t("settings.debugPw.unset")}</Badge>
+            )}
+          </div>
 
-      <div className="rounded-xl border border-border bg-panel p-4">
-        <h2 className="font-medium">{t("settings.debugPw.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("settings.debugPw.hint")}</p>
-        <p className="mt-2 text-sm">
-          {isSet === undefined
-            ? <Skeleton className="h-4 w-32" />
-            : isSet
-              ? `✓ ${t("settings.debugPw.set")}`
-              : t("settings.debugPw.unset")}
-        </p>
+          <form onSubmit={onSave} className="flex gap-2">
+            <Input
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder={t("settings.debugPw.new")}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={busy}>
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t("settings.debugPw.save")}
+            </Button>
+          </form>
 
-        <form onSubmit={onSave} className="mt-4 flex gap-2">
-          <input
-            type="password"
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            placeholder={t("settings.debugPw.new")}
-            className="flex-1 rounded-md border border-border bg-bg px-3 py-2 transition-colors duration-150 focus:border-accent/60"
-          />
-          <button
-            disabled={busy}
-            className="rounded-md bg-accent px-4 py-2 text-white transition-colors duration-150 hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {busy && <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />}
-            {t("settings.debugPw.save")}
-          </button>
-        </form>
-        {saved && <p className="mt-3 text-sm text-ok animate-fade-up">{t("settings.debugPw.saved")}</p>}
-        {error && <p className="mt-3 text-sm text-warn">{error}</p>}
-      </div>
+          {saved && (
+            <p className="flex items-center gap-1.5 text-sm text-ok animate-fade-up">
+              <CheckCircle2 className="h-4 w-4" />
+              {t("settings.debugPw.saved")}
+            </p>
+          )}
+          {error && <p className="text-sm text-warn">{error}</p>}
+        </CardContent>
+      </Card>
     </section>
   );
 }

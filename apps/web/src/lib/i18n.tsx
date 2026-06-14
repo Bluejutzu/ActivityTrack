@@ -46,6 +46,10 @@ const de: Dict = {
   "login.firstUserNote":
     "Das erste registrierte Konto wird automatisch IT-Administrator.",
   "login.passwordHint": "Mindestens 8 Zeichen.",
+  "login.feature.insights":
+    "Aktivitätsmuster auf einen Blick — Diagramme statt endloser Listen.",
+  "login.feature.privacy":
+    "Nur Aktiv-/Inaktivzeiten — keine Screenshots, keine Tastatureingaben.",
 
   "overview.heading": "Team-Übersicht",
   "overview.empty":
@@ -113,6 +117,21 @@ const de: Dict = {
   "timeline.state": "Zustand",
   "timeline.idle": "Untätigkeit",
   "timeline.empty": "Keine Stichproben vorhanden.",
+  "timeline.kpi.activeToday": "Heute aktiv",
+  "timeline.kpi.idleToday": "Heute inaktiv",
+  "timeline.kpi.status": "Status",
+  "timeline.kpi.lastSeen": "Zuletzt gesehen",
+  "timeline.trend.heading": "Aktivität der letzten 14 Tage",
+  "timeline.trend.sub": "Aktive vs. inaktive Stunden pro Tag.",
+  "timeline.intraday.heading": "Tagesverlauf",
+  "timeline.intraday.sub": "Anteil aktiver Stichproben im Zeitverlauf.",
+  "timeline.intraday.series": "Aktiv %",
+  "timeline.heatmap.heading": "Aktivität nach Tageszeit",
+  "timeline.heatmap.sub": "Wann diese Person typischerweise aktiv ist.",
+  "timeline.tabs.charts": "Übersicht",
+  "timeline.tabs.raw": "Rohdaten",
+  "timeline.online": "Online",
+  "timeline.offline": "Offline",
 
   "common.loading": "Wird geladen …",
   "common.active": "Aktiv",
@@ -259,6 +278,10 @@ const en: Dict = {
   "login.firstUserNote":
     "The first account to register automatically becomes IT admin.",
   "login.passwordHint": "Minimum 8 characters.",
+  "login.feature.insights":
+    "Activity patterns at a glance — charts instead of endless lists.",
+  "login.feature.privacy":
+    "Active/idle timing only — no screenshots, no keystrokes.",
 
   "overview.heading": "Team overview",
   "overview.empty": "No approved devices yet. Approve one under “Devices”.",
@@ -325,6 +348,21 @@ const en: Dict = {
   "timeline.state": "State",
   "timeline.idle": "Idle",
   "timeline.empty": "No samples available.",
+  "timeline.kpi.activeToday": "Active today",
+  "timeline.kpi.idleToday": "Idle today",
+  "timeline.kpi.status": "Status",
+  "timeline.kpi.lastSeen": "Last seen",
+  "timeline.trend.heading": "Last 14 days",
+  "timeline.trend.sub": "Active vs idle hours per day.",
+  "timeline.intraday.heading": "Across the day",
+  "timeline.intraday.sub": "Share of active samples over time.",
+  "timeline.intraday.series": "Active %",
+  "timeline.heatmap.heading": "Activity by time of day",
+  "timeline.heatmap.sub": "When this person is typically active.",
+  "timeline.tabs.charts": "Overview",
+  "timeline.tabs.raw": "Raw data",
+  "timeline.online": "Online",
+  "timeline.offline": "Offline",
 
   "common.loading": "Loading …",
   "common.active": "Active",
