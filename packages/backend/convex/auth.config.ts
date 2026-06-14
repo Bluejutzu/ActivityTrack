@@ -1,12 +1,14 @@
 /**
- * Convex Auth provider config. The CONVEX_SITE_URL env var is set automatically
- * by Convex; @convex-dev/auth uses it to issue/verify its own JWTs. No external
- * identity provider is configured (password auth lives entirely in Convex).
+ * Convex auth provider config. Identity is owned by Clerk; Convex verifies the
+ * Clerk-issued JWT. `domain` is the Clerk instance's Frontend API / issuer URL
+ * (e.g. https://your-app.clerk.accounts.dev), supplied via CLERK_JWT_ISSUER_DOMAIN
+ * as a Convex deployment env var. `applicationID` must match the Clerk JWT
+ * template name — create a template called "convex" in the Clerk dashboard.
  */
 export default {
   providers: [
     {
-      domain: process.env.CONVEX_SITE_URL,
+      domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
       applicationID: "convex",
     },
   ],
