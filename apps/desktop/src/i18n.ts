@@ -6,7 +6,7 @@
 export type Lang = "de" | "en";
 
 type Dict = Record<string, string>;
- 
+
 const de: Dict = {
   "app.title": "ActivityTrack",
   "login.heading": "Anmeldung erforderlich",
