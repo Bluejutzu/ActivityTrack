@@ -10,6 +10,7 @@ on:
     paths:
       - 'packages/**'
       - 'apps/desktop/**'
+      - '.github/workflows/release.yml'
 
 jobs:
   build-tracker:
