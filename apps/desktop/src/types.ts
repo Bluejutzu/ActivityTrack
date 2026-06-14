@@ -30,3 +30,4 @@ export interface AgentStatus {
 }
 
 export type VerifyResult = "ok" | "wrong" | "unset" | "network";
+export type EnrollResult = "ok" | "invalid_code" | "network";

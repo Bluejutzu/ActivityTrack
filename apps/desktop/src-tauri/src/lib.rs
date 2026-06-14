@@ -58,7 +58,8 @@ pub fn run() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
-            commands::verify_password
+            commands::verify_password,
+            commands::enroll,
         ])
         .setup(|app| {
             let _ = app.autolaunch().enable();

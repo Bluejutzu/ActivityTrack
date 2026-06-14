@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { t, getLang, setLang, type Lang } from "./i18n.js";
-import type { AgentStatus, AgentSample, AgentError, VerifyResult } from "./types.js";
+import type { AgentStatus, AgentSample, AgentError, VerifyResult, EnrollResult } from "./types.js";
 
 /**
  * Tray UI controller. The window is hidden on startup (tray-only); when shown
@@ -81,7 +81,12 @@ function renderLogin(error?: string): void {
       const result = await invoke<VerifyResult>("verify_password", { password: pw });
       if (result === "ok") {
         unlocked = true;
-        await startStatus();
+        const status = await invoke<AgentStatus>("get_status");
+        if (status.enrolled) {
+          await startStatus();
+        } else {
+          renderEnroll();
+        }
         return;
       }
       const key =
@@ -93,6 +98,54 @@ function renderLogin(error?: string): void {
       renderLogin(t(key));
     } catch {
       renderLogin(t("login.error.network"));
+    }
+  });
+}
+
+function renderEnroll(error?: string): void {
+  app.innerHTML = `
+    <div class="card panel">
+      <header><h1>${t("app.title")}</h1>${langSwitcher()}</header>
+      <h2>${t("enroll.heading")}</h2>
+      <p class="hint">${t("enroll.hint")}</p>
+      <form id="enroll-form">
+        <input id="code" type="text" placeholder="${t("enroll.code")}"
+               autocomplete="off" spellcheck="false" autofocus
+               style="text-transform:uppercase;letter-spacing:0.05em" maxlength="9" />
+        <button type="submit" id="submit">${t("enroll.submit")}</button>
+      </form>
+      ${error ? `<p class="error fade-up" id="error">${error}</p>` : `<p class="error" id="error"></p>`}
+      <p class="hint" style="margin-top:1rem">
+        <a href="#" id="skip" style="color:var(--color-muted);font-size:.8rem">${t("enroll.skip")}</a>
+      </p>
+    </div>`;
+  wireLangSwitcher(() => renderEnroll(error));
+
+  document.getElementById("skip")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await startStatus();
+  });
+
+  const form = document.getElementById("enroll-form") as HTMLFormElement;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = (document.getElementById("code") as HTMLInputElement).value
+      .trim()
+      .toUpperCase();
+    const btn = document.getElementById("submit") as HTMLButtonElement;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> ${t("enroll.checking")}`;
+    try {
+      const result = await invoke<EnrollResult>("enroll", { code });
+      if (result === "ok") {
+        await startStatus();
+        return;
+      }
+      const key =
+        result === "invalid_code" ? "enroll.error.invalid" : "enroll.error.network";
+      renderEnroll(t(key));
+    } catch {
+      renderEnroll(t("enroll.error.network"));
     }
   });
 }
