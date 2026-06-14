@@ -5,8 +5,11 @@ name: Release tracker
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+    paths:
+      - 'packages/**'
+      - 'apps/desktop/**'
 
 jobs:
   build-tracker:
