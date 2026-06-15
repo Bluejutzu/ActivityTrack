@@ -181,6 +181,64 @@ button:disabled {
   animation: fade-up 220ms ease-out both;
 }
 
+.error .error-msg {
+  margin: 0;
+}
+
+/* Expandable technical detail under an error message (the real reason). */
+.error-detail {
+  margin-top: 8px;
+}
+
+.error-detail > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  user-select: none;
+}
+
+.error-detail > summary:hover {
+  color: var(--fg);
+}
+
+.error-detail pre {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* Config/connectivity diagnostics, shown up front on the login/enroll screens. */
+.diag {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.diag > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  user-select: none;
+}
+
+.diag > summary:hover {
+  color: var(--fg);
+}
+
+.diag table.kv {
+  margin-top: 12px;
+}
+
 .lang {
   display: flex;
   align-items: center;

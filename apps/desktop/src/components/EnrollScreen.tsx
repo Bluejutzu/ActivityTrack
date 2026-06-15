@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { t, type Lang } from "../i18n.js";
-import type { EnrollResult } from "../types.js";
+import type { EnrollOutcome, EnrollStatus } from "../types.js";
 import { PanelHeader } from "./PanelHeader.js";
+import { DiagnosticsPanel } from "./DiagnosticsPanel.js";
+
+const ERROR_KEYS: Record<Exclude<EnrollStatus, "ok">, string> = {
+  invalid_code: "enroll.error.invalid",
+  not_configured: "enroll.error.notConfigured",
+  server: "enroll.error.server",
+  network: "enroll.error.network",
+};
 
 interface Props {
   lang: Lang;
@@ -14,11 +22,13 @@ interface Props {
 export function EnrollScreen({ lang, onLangChange, onDone }: Props) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
+  const [detail, setDetail] = useState<string | undefined>(undefined);
   const [errorKey, setErrorKey] = useState(0);
   const [checking, setChecking] = useState(false);
 
-  const showError = (message: string) => {
+  const showError = (message: string, detail?: string) => {
     setError(message);
+    setDetail(detail);
     setErrorKey((k) => k + 1);
   };
 
@@ -27,20 +37,16 @@ export function EnrollScreen({ lang, onLangChange, onDone }: Props) {
     if (checking) return;
     setChecking(true);
     try {
-      const result = await invoke<EnrollResult>("enroll", {
+      const result = await invoke<EnrollOutcome>("enroll", {
         code: code.trim().toUpperCase(),
       });
-      if (result === "ok") {
+      if (result.status === "ok") {
         await onDone();
         return;
       }
-      const key =
-        result === "invalid_code"
-          ? "enroll.error.invalid"
-          : "enroll.error.network";
-      showError(t(key));
-    } catch {
-      showError(t("enroll.error.network"));
+      showError(t(ERROR_KEYS[result.status]), result.detail ?? undefined);
+    } catch (e) {
+      showError(t("enroll.error.network"), String(e));
     } finally {
       setChecking(false);
     }
@@ -80,12 +86,19 @@ export function EnrollScreen({ lang, onLangChange, onDone }: Props) {
         </button>
       </form>
       {error ? (
-        <p className="error fade-up" id="error" key={errorKey}>
-          {error}
-        </p>
+        <div className="error fade-up" id="error" key={errorKey}>
+          <p className="error-msg">{error}</p>
+          {detail ? (
+            <details className="error-detail">
+              <summary>{t("error.details")}</summary>
+              <pre>{detail}</pre>
+            </details>
+          ) : null}
+        </div>
       ) : (
         <p className="error" id="error" />
       )}
+      <DiagnosticsPanel />
       <p className="hint skip-row">
         <a
           href="#"

@@ -57,4 +57,51 @@ pub struct AgentStatus {
     pub recent_errors: Vec<UiError>,
 }
 
+/// Result of a command that talks to the backend (password check, enrollment).
+/// `status` is a stable machine code the UI maps to a localized message; `detail`
+/// carries the real underlying reason (HTTP status + body, transport error, or
+/// which config/credential is missing) so a technician can debug on the machine
+/// without guessing. This is the desktop analogue of the web app's structured
+/// `ConvexError { code, message }`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Outcome {
+    pub status: String,
+    pub detail: Option<String>,
+}
+
+impl Outcome {
+    /// A bare status with no extra detail (e.g. "ok", "wrong").
+    pub fn of(status: &str) -> Self {
+        Outcome {
+            status: status.to_string(),
+            detail: None,
+        }
+    }
+
+    /// A status with a human-readable diagnostic detail.
+    pub fn with(status: &str, detail: impl Into<String>) -> Self {
+        Outcome {
+            status: status.to_string(),
+            detail: Some(detail.into()),
+        }
+    }
+}
+
+/// Connectivity/configuration snapshot, available *without* unlocking the tool.
+/// Surfaced on the login screen so a misconfigured machine (missing Convex URL,
+/// missing access key, not enrolled) is debuggable up front instead of hiding
+/// behind a generic "server unreachable" message.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Diagnostics {
+    pub convex_url: String,
+    pub config_file: String,
+    pub config_present: bool,
+    pub has_convex_url: bool,
+    pub has_bootstrap_key: bool,
+    pub enrolled: bool,
+    pub configured: bool,
+}
+
 pub const AGENT_VERSION: &str = env!("CARGO_PKG_VERSION");
