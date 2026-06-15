@@ -143,7 +143,7 @@ interface Absence {
 
 async function fetchAbsences(year: number): Promise<Absence[]> {
   const body = await clockodoGet<{ absences: Absence[] }>(
-    `/api/v2/absences?year=${year}`,
+    `/api/v4/absences?year=${year}`,
   );
   return body.absences ?? [];
 }
