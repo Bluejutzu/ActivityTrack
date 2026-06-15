@@ -22,6 +22,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+/**
+ * Inline-editable id cell. Saves on blur (and Enter) only when the value
+ * actually changed, so the integration mappings can be maintained right in the
+ * roster without a modal.
+ */
+function EditableId({
+  initial,
+  disabled,
+  placeholder,
+  onSave,
+}: {
+  initial: string;
+  disabled: boolean;
+  placeholder: string;
+  onSave: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <Input
+      value={value}
+      disabled={disabled}
+      placeholder={placeholder}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        if (value !== initial) onSave(value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      className="h-8 min-w-[7rem] font-mono text-xs"
+    />
+  );
+}
+
 export default function PeoplePage() {
   const { t } = useI18n();
   const me = useQuery(api.users.me);
@@ -91,6 +125,9 @@ export default function PeoplePage() {
             <TableRow>
               <TableHead>{t("people.name")}</TableHead>
               <TableHead>{t("people.email")}</TableHead>
+              <TableHead>{t("people.employeeId")}</TableHead>
+              <TableHead>{t("people.genesysId")}</TableHead>
+              <TableHead>{t("people.clockodoId")}</TableHead>
               <TableHead>{t("people.active")}</TableHead>
               {canEdit && <TableHead />}
             </TableRow>
@@ -100,6 +137,45 @@ export default function PeoplePage() {
               <TableRow key={p._id}>
                 <TableCell className="text-fg">{p.name}</TableCell>
                 <TableCell className="text-muted">{p.email ?? "—"}</TableCell>
+                <TableCell>
+                  <EditableId
+                    initial={p.employeeId ?? ""}
+                    disabled={!canEdit}
+                    placeholder={t("people.employeeId")}
+                    onSave={(value) =>
+                      void update(
+                        { personId: p._id, employeeId: value },
+                        { success: t("people.updated") },
+                      )
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <EditableId
+                    initial={p.genesysUserId ?? ""}
+                    disabled={!canEdit}
+                    placeholder={t("people.genesysId")}
+                    onSave={(value) =>
+                      void update(
+                        { personId: p._id, genesysUserId: value },
+                        { success: t("people.updated") },
+                      )
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <EditableId
+                    initial={p.clockodoUserId ?? ""}
+                    disabled={!canEdit}
+                    placeholder={t("people.clockodoId")}
+                    onSave={(value) =>
+                      void update(
+                        { personId: p._id, clockodoUserId: value },
+                        { success: t("people.updated") },
+                      )
+                    }
+                  />
+                </TableCell>
                 <TableCell>
                   <input
                     type="checkbox"

@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Menu,
   MonitorSmartphone,
+  Radio,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -39,6 +40,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
+  { href: "/state", labelKey: "nav.state", minRole: "viewer", icon: Radio },
   { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
   { href: "/health", labelKey: "nav.health", minRole: "viewer", icon: HeartPulse },
