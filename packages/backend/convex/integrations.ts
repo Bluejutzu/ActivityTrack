@@ -167,7 +167,7 @@ function isAbsentOn(
 
 async function fetchClockodoRunning(): Promise<{ services_id?: number } | null> {
   const body = await clockodoGet<{ running: { services_id?: number } | null }>(
-    "/api/v2/entries/current",
+    "/api/v2/entries",
   );
   return body.running ?? null;
 }
