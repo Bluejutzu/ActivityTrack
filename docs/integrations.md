@@ -50,9 +50,11 @@ The engine is a pure function in `packages/shared/src/state.ts`
   (clock-in/out/break are pushed in realtime, day and night, no cron needed).
 - **Genesys** has no webhooks; it pushes over a notifications WebSocket. Two ways
   to consume it:
-  1. **Polling fallback (no extra host)** — `GET /api/integrations/poll`, driven
-     by **Vercel Cron**. This is the default and needs nothing to self-host. It
-     polls Genesys per user and refreshes Clockodo absences.
+  1. **Convex cron poll (default, no extra host)** — `internal.integrations.pollAll`
+     (`packages/backend/convex/integrations.ts`) runs inside Convex and polls
+     Genesys per user + refreshes Clockodo absences. Convex crons run on the
+     **free tier** and can fire every minute (unlike Vercel Hobby crons, which
+     are once-a-day). Nothing to self-host.
   2. **Realtime worker (optional upgrade)** — a standalone long-lived process
      (`apps/web/src/server/integrations/genesysWorker.ts`,
      `pnpm --filter @activitytrack/web worker:genesys`) that holds the WebSocket
@@ -60,12 +62,17 @@ The engine is a pure function in `packages/shared/src/state.ts`
 
 #### Cron schedule
 
-`apps/web/vercel.json` runs the poll every 2 minutes during business hours on
-weekdays: `*/2 5-18 * * 1-5`. **Vercel Cron runs in UTC** — `05:00–18:59 UTC`
-maps to roughly `06:00–20:00` German time (CET/CEST). It does not run at night
-or on weekends because nobody is on shift, and Clockodo clock-ins still arrive
-via webhook regardless. Adjust the expression to your hours/timezone; on Vercel
-**Hobby** crons run at most once per day, so finer cadence needs **Pro**.
+`packages/backend/convex/crons.ts` runs the poll every 2 minutes during business
+hours on weekdays: `*/2 5-18 * * 1-5`. **Convex crons run in UTC** —
+`05:00–18:59 UTC` maps to roughly `06:00–20:00` German time (CET/CEST). It does
+not run at night or on weekends because nobody is on shift, and Clockodo
+clock-ins still arrive via webhook regardless. Adjust the expression to your
+hours/timezone.
+
+The on-demand paths (`/api/integrations/genesys/sync`, and the Clockodo webhook
+re-pull) delegate to the same Convex actions (`integrations.syncGenesys` /
+`integrations.refreshClockodo`), so there is exactly one copy of the outbound
+HTTP logic.
 
 ### Resilience (graceful degradation)
 
@@ -81,16 +88,25 @@ signals remain.
 
 1. **Generate two secrets** (any long random strings):
    `ACTIVITYTRACK_SIGNAL_SECRET` and `ACTIVITYTRACK_WEBHOOK_SECRET`.
-2. **Convex deployment env:** `npx convex env set ACTIVITYTRACK_SIGNAL_SECRET <secret>`
-   (also push the schema: `npx convex deploy` / `convex dev` to apply the new
-   `employeeStates` table + `people` mapping fields).
-3. **Web app env** (`.env.local` / hosting env): `ACTIVITYTRACK_SIGNAL_SECRET`,
-   `ACTIVITYTRACK_WEBHOOK_SECRET`, `GENESYS_CLIENT_ID`, `GENESYS_CLIENT_SECRET`,
-   `GENESYS_REGION`, `CLOCKODO_API_USER`, `CLOCKODO_API_KEY`,
-   `CLOCKODO_BREAK_SERVICE_IDS` (see `.env.example`).
+2. **Convex deployment env** (polling + outbound HTTP run here):
+   ```
+   npx convex env set ACTIVITYTRACK_SIGNAL_SECRET <secret>
+   npx convex env set GENESYS_CLIENT_ID <id>
+   npx convex env set GENESYS_CLIENT_SECRET <secret>
+   npx convex env set GENESYS_REGION mypurecloud.de
+   npx convex env set CLOCKODO_API_USER <email>
+   npx convex env set CLOCKODO_API_KEY <key>
+   npx convex env set CLOCKODO_BREAK_SERVICE_IDS <id,id>   # optional
+   ```
+   Then push the schema/functions: `npx convex deploy` (or `convex dev`) to apply
+   the new `employeeStates` / `integrationHealth` tables, the `people` mapping
+   fields, and the poll cron.
+3. **Web app env** (`.env.local` / Vercel): `ACTIVITYTRACK_SIGNAL_SECRET` (same
+   value as Convex) and `ACTIVITYTRACK_WEBHOOK_SECRET`. That's all the dashboard
+   layer needs — it no longer calls Genesys/Clockodo directly.
 4. **Genesys OAuth client:** create a *Client Credentials* OAuth app in Genesys
    Admin with read scopes for **Presence, Routing Status, Conversations, Users**;
-   put its id/secret in the env. Set `GENESYS_REGION` to your org's region.
+   put its id/secret in the **Convex** env. Set `GENESYS_REGION` to your org's region.
 5. **Clockodo:** get the API key (Clockodo → Personal data → API), and note the
    service id(s) you use for breaks → `CLOCKODO_BREAK_SERVICE_IDS`. Configure a
    Clockodo webhook pointing at `https://<dashboard>/api/webhooks/clockodo`
@@ -100,13 +116,12 @@ signals remain.
 6. **Map people:** in the dashboard → *People*, fill each person's
    **Employee ID** (the canonical key, also what the agent sends), **Genesys ID**,
    and **Clockodo ID**.
-7. **Realtime for Genesys — pick one:**
-   - *Default (no host needed):* set a random `CRON_SECRET` in the Vercel project
-     env. The cron in `apps/web/vercel.json` then polls during business hours.
-     Tune the schedule/timezone to your team (see "Cron schedule" above).
-   - *Optional instant updates:* run `pnpm --filter @activitytrack/web worker:genesys`
-     as a persistent process with `NEXT_PUBLIC_CONVEX_URL`,
-     `ACTIVITYTRACK_SIGNAL_SECRET`, and the `GENESYS_*` vars in its env.
+7. **Realtime for Genesys:** nothing to do — the Convex cron polls automatically
+   during business hours. Tune the schedule/timezone in
+   `packages/backend/convex/crons.ts` (see "Cron schedule"). *Optional* instant
+   updates: run `pnpm --filter @activitytrack/web worker:genesys` as a persistent
+   process with `NEXT_PUBLIC_CONVEX_URL`, `ACTIVITYTRACK_SIGNAL_SECRET`, and the
+   `GENESYS_*` vars in its env.
 8. **Point the desktop agent** at `POST /api/activity/update` with the
    `{ employeeId, deviceIdle, idleSeconds, timestamp }` payload and the
    `ACTIVITYTRACK_INGEST_KEY` bearer (or keep the existing `/ingest` path; the

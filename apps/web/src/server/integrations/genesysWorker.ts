@@ -1,11 +1,10 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import {
-  createNotificationsChannel,
-  parseNotificationEvent,
-  subscribeToTopics,
-  topicsForUser,
-} from "./genesys";
+  genesysTopicsForUser,
+  parseGenesysNotification,
+} from "@activitytrack/shared";
+import { createNotificationsChannel, subscribeToTopics } from "./genesys";
 
 /**
  * Genesys realtime notifications subscriber.
@@ -56,7 +55,9 @@ async function run(): Promise<void> {
 
   // 2. Channel + subscriptions.
   const channel = await createNotificationsChannel();
-  const topics = [...byGenesysId.keys()].flatMap((id) => topicsForUser(id));
+  const topics = [...byGenesysId.keys()].flatMap((id) =>
+    genesysTopicsForUser(id),
+  );
   if (topics.length > 0) {
     await subscribeToTopics(channel.id, topics);
   }
@@ -94,7 +95,7 @@ async function handleMessage(
   } catch {
     return;
   }
-  const event = parseNotificationEvent(parsed);
+  const event = parseGenesysNotification(parsed);
   if (!event) return; // heartbeat / unrelated topic
 
   const employeeId = byGenesysId.get(event.genesysUserId);

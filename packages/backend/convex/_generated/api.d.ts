@@ -16,6 +16,7 @@ import type * as errors from "../errors.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
+import type * as integrations from "../integrations.js";
 import type * as maintenance from "../maintenance.js";
 import type * as people from "../people.js";
 import type * as rbac from "../rbac.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   ingest: typeof ingest;
+  integrations: typeof integrations;
   maintenance: typeof maintenance;
   people: typeof people;
   rbac: typeof rbac;

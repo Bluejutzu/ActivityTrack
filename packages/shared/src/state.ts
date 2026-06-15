@@ -142,3 +142,124 @@ export const clockodoSignalSchema = z.object({
   timestamp: z.string().datetime().optional(),
 });
 export type ClockodoSignal = z.infer<typeof clockodoSignalSchema>;
+
+// --- Pure Genesys normalization (shared by the backend cron action and the
+//     optional WebSocket worker, which run in different runtimes) -----------
+
+export function normalizeRoutingStatus(
+  raw: string | undefined,
+): GenesysRoutingStatus | undefined {
+  switch (raw?.toUpperCase()) {
+    case "IDLE":
+      return "IDLE";
+    case "INTERACTING":
+      return "INTERACTING";
+    case "OFF_QUEUE":
+      return "OFF_QUEUE";
+    case "NOT_RESPONDING":
+      return "NOT_RESPONDING";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Genesys `systemPresence` is a richer enum than our four-value model; collapse
+ * the long tail (Meeting, Training, Break, Meal, …) onto the nearest bucket.
+ */
+export function normalizePresence(
+  raw: string | undefined,
+): GenesysPresence | undefined {
+  switch (raw?.toUpperCase()) {
+    case "AVAILABLE":
+    case "ON QUEUE":
+    case "ON_QUEUE":
+      return "AVAILABLE";
+    case "BUSY":
+    case "MEETING":
+    case "MEAL":
+    case "TRAINING":
+      return "BUSY";
+    case "AWAY":
+    case "IDLE":
+    case "BREAK":
+    case "OUT OF OFFICE":
+    case "OUT_OF_OFFICE":
+      return "AWAY";
+    case "OFFLINE":
+      return "OFFLINE";
+    default:
+      return undefined;
+  }
+}
+
+/** After-call work surfaces as a dedicated system presence in Genesys. */
+export function isWrapUpPresence(raw: string | undefined): boolean {
+  const v = raw?.toUpperCase();
+  return v === "WRAP UP" || v === "WRAP-UP" || v === "WRAPUP";
+}
+
+/** Topic ids that carry the state we care about, for one Genesys user. */
+export function genesysTopicsForUser(genesysUserId: string): string[] {
+  return [
+    `v2.users.${genesysUserId}.routingStatus`,
+    `v2.users.${genesysUserId}.presence`,
+    `v2.users.${genesysUserId}.conversations`,
+  ];
+}
+
+/** A normalized slice of telephony state extracted from a notification event. */
+export interface ParsedGenesysEvent {
+  genesysUserId: string;
+  routingStatus?: GenesysRoutingStatus;
+  presence?: GenesysPresence;
+  wrapUp?: boolean;
+}
+
+/**
+ * Map a raw notifications WebSocket message to a normalized event, or null if
+ * it's a heartbeat / unrelated topic. Topic id shape: `v2.users.{id}.{kind}`.
+ */
+export function parseGenesysNotification(
+  raw: unknown,
+): ParsedGenesysEvent | null {
+  const msg = raw as { topicName?: string; eventBody?: unknown };
+  const topic = msg?.topicName;
+  if (!topic) return null;
+
+  const m = /^v2\.users\.([^.]+)\.(routingStatus|presence|conversations)$/.exec(
+    topic,
+  );
+  if (!m) return null;
+  const genesysUserId = m[1]!;
+  const kind = m[2]!;
+  const eventBody = msg.eventBody as Record<string, unknown> | undefined;
+  if (!eventBody) return null;
+
+  if (kind === "routingStatus") {
+    const status = (eventBody.routingStatus as { status?: string } | undefined)
+      ?.status;
+    return { genesysUserId, routingStatus: normalizeRoutingStatus(status) };
+  }
+
+  if (kind === "presence") {
+    const system = (
+      eventBody.presenceDefinition as { systemPresence?: string } | undefined
+    )?.systemPresence;
+    return {
+      genesysUserId,
+      presence: normalizePresence(system),
+      wrapUp: isWrapUpPresence(system),
+    };
+  }
+
+  // conversations: flag after-call work when any participant is in wrap-up.
+  const participants =
+    (eventBody.participants as
+      | Array<{ wrapupRequired?: boolean; state?: string }>
+      | undefined) ?? [];
+  const inWrapUp = participants.some(
+    (p) => p.state?.toLowerCase() === "wrapup" || p.wrapupRequired === true,
+  );
+  return { genesysUserId, wrapUp: inWrapUp };
+}

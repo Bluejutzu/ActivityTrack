@@ -7,6 +7,20 @@ import { internal } from "./_generated/api";
  */
 const crons = cronJobs();
 
+/**
+ * Poll Genesys + Clockodo and fold the results into the fused employee state.
+ * Convex crons run on the free tier and can fire frequently (unlike Vercel
+ * Hobby crons, which are once-a-day). Scheduled to business hours on weekdays
+ * (UTC) — Clockodo clock-ins still arrive via webhook outside this window, and
+ * nobody is on shift at night/weekends. Adjust to your team's hours/timezone.
+ */
+crons.cron(
+  "poll integrations",
+  "*/2 5-18 * * 1-5",
+  internal.integrations.pollAll,
+  {},
+);
+
 crons.daily(
   "prune old raw samples",
   { hourUTC: 3, minuteUTC: 0 },
