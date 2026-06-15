@@ -1,26 +1,26 @@
-/** Shared chart colours, kept in sync with the "Signal" Tailwind tokens. */
+/** Shared chart colours, kept in sync with the "Daylight" Tailwind tokens. */
 export const CHART = {
-  active: "#C8F05A", // signal lime (= active/ok)
-  idle: "#F5B544", // amber (= idle/warn)
-  accent: "#C8F05A", // signal
-  info: "#5CD0DE", // secondary cool series
-  grid: "#1F2630", // border
-  axis: "#838D9B", // muted
-  panel: "#10141A",
-  fg: "#E9EDF3",
+  active: "#10A372", // green (= working/ok)
+  idle: "#C2740C", // amber (= idle/warn)
+  accent: "#2E6CF6", // brand blue
+  info: "#0E92C9", // secondary cool series
+  grid: "#E4E8EE", // border
+  axis: "#5B6573", // muted
+  panel: "#FFFFFF",
+  fg: "#1B2027",
 } as const;
 
 /** Common tooltip styling props for Recharts <Tooltip />. */
 export const tooltipStyle = {
   contentStyle: {
-    background: "#161C24",
-    border: "1px solid #1F2630",
+    background: "#FFFFFF",
+    border: "1px solid #E4E8EE",
     borderRadius: "0.5rem",
-    color: "#E9EDF3",
+    color: "#1B2027",
     fontSize: "0.75rem",
-    fontFamily: "var(--font-mono)",
-    boxShadow: "0 18px 44px -22px rgba(0,0,0,0.85)",
+    fontFamily: "var(--font-sans)",
+    boxShadow: "0 6px 16px -8px rgba(16,24,40,0.18)",
   },
-  labelStyle: { color: "#838D9B" },
-  cursor: { fill: "rgba(200,240,90,0.08)" },
+  labelStyle: { color: "#5B6573" },
+  cursor: { fill: "rgba(46,108,246,0.08)" },
 } as const;

@@ -2,13 +2,13 @@ import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 
 /**
- * "Signal" — a precision telemetry command deck.
+ * "Daylight" — a calm, friendly operations dashboard.
  *
- * The product detects the *signal* of human activity, so the active state IS the
- * brand colour: a sharp signal-lime against deep ink. Dominant dark surfaces +
- * one decisive accent (per the design brief) instead of a timid, even palette.
- * Type system: Bricolage Grotesque (display) · IBM Plex Sans (body) · IBM Plex
- * Mono (every numeral, id and timestamp — the data layer).
+ * Built for the person running a small team, not a security analyst. Light, airy
+ * surfaces and generous whitespace replace the old dark command deck. One calm
+ * brand blue carries every action and link; status reads as a plain traffic
+ * light — green is working, amber is idle, grey is offline — so anyone can scan
+ * the room at a glance. Inter sets the whole interface for a clean, modern feel.
  */
 export default {
   content: ["./src/**/*.{ts,tsx}"],
@@ -22,33 +22,29 @@ export default {
           "ui-sans-serif",
           "sans-serif",
         ],
-        mono: [
-          "var(--font-mono)",
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "monospace",
-        ],
+        // Numerals stay in the same family — tabular figures do the aligning, so
+        // the data layer never has to look like a terminal.
+        mono: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
-        // ── Ink surfaces (dominant) ──────────────────────────────────────
-        bg: "#0A0C0F",
-        "bg-2": "#0C0F13",
-        panel: "#10141A",
-        "panel-2": "#161C24",
-        border: "#1F2630",
-        "border-soft": "#161B22",
-        muted: "#838D9B",
-        fg: "#E9EDF3",
-        // ── The signal (sharp accent = the "active" state = the brand) ───
-        accent: "#C8F05A",
-        signal: "#C8F05A",
-        ok: "#C8F05A",
-        // ── Other telemetry states ───────────────────────────────────────
-        warn: "#F5B544",
-        idle: "#F5B544",
-        danger: "#FB6A5B",
-        info: "#5CD0DE",
+        // ── Light surfaces ───────────────────────────────────────────────
+        bg: "#F7F8FA",
+        "bg-2": "#FFFFFF",
+        panel: "#FFFFFF",
+        "panel-2": "#F1F3F6",
+        border: "#E4E8EE",
+        "border-soft": "#EEF1F4",
+        muted: "#5B6573",
+        fg: "#1B2027",
+        // ── Brand (every action, link, focus ring) ───────────────────────
+        accent: "#2E6CF6",
+        signal: "#2E6CF6",
+        // ── Status (traffic light) ───────────────────────────────────────
+        ok: "#10A372",
+        warn: "#C2740C",
+        idle: "#C2740C",
+        danger: "#DC4B47",
+        info: "#0E92C9",
       },
       borderRadius: {
         lg: "0.75rem",
@@ -59,20 +55,20 @@ export default {
         "24": "repeat(24, minmax(0, 1fr))",
       },
       letterSpacing: {
-        tightest: "-0.04em",
+        tightest: "-0.02em",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(0,0,0,0.45), 0 18px 44px -22px rgba(0,0,0,0.85)",
-        // Card surface: depth + a hairline top highlight in one declaration so a
-        // single utility carries both (stacked shadow-* classes don't combine).
-        card: "0 1px 2px rgba(0,0,0,0.45), 0 18px 44px -22px rgba(0,0,0,0.85), inset 0 1px 0 0 rgba(255,255,255,0.045)",
-        glow: "0 0 0 1px rgba(200,240,90,0.30), 0 14px 48px -14px rgba(200,240,90,0.28)",
-        "signal-sm": "0 0 0 1px rgba(200,240,90,0.25)",
-        hairline: "inset 0 1px 0 0 rgba(255,255,255,0.045)",
+        // Soft, low elevation — surfaces lift off the page without shouting.
+        soft: "0 1px 2px rgba(16,24,40,0.05), 0 1px 3px rgba(16,24,40,0.07)",
+        card: "0 1px 2px rgba(16,24,40,0.04), 0 6px 16px -8px rgba(16,24,40,0.10)",
+        // A gentle blue lift used on hover / primary buttons.
+        glow: "0 6px 18px -6px rgba(46,108,246,0.28)",
+        "signal-sm": "0 0 0 1px rgba(46,108,246,0.20)",
+        hairline: "inset 0 1px 0 0 rgba(255,255,255,0.6)",
       },
       backgroundImage: {
         "signal-line":
-          "linear-gradient(90deg, transparent, rgba(200,240,90,0.7), transparent)",
+          "linear-gradient(90deg, transparent, rgba(46,108,246,0.55), transparent)",
       },
       keyframes: {
         "fade-up": {
@@ -89,19 +85,11 @@ export default {
         },
         "pulse-dot": {
           "0%, 100%": { opacity: "1", transform: "scale(1)" },
-          "50%": { opacity: "0.45", transform: "scale(0.82)" },
+          "50%": { opacity: "0.5", transform: "scale(0.85)" },
         },
         "pulse-ring": {
-          "0%": { transform: "scale(0.7)", opacity: "0.7" },
-          "80%, 100%": { transform: "scale(2.4)", opacity: "0" },
-        },
-        scan: {
-          "0%": { transform: "translateY(-100%)" },
-          "100%": { transform: "translateY(900%)" },
-        },
-        "sweep-x": {
-          "0%": { transform: "translateX(-120%)" },
-          "100%": { transform: "translateX(120%)" },
+          "0%": { transform: "scale(0.7)", opacity: "0.5" },
+          "80%, 100%": { transform: "scale(2.2)", opacity: "0" },
         },
         "toast-in": {
           "0%": { opacity: "0", transform: "translateX(12px) scale(0.98)" },
@@ -118,8 +106,6 @@ export default {
         shimmer: "shimmer 1.6s linear infinite",
         "pulse-dot": "pulse-dot 2s ease-in-out infinite",
         "pulse-ring": "pulse-ring 2.4s cubic-bezier(0.16,1,0.3,1) infinite",
-        scan: "scan 7s linear infinite",
-        "sweep-x": "sweep-x 5.5s ease-in-out infinite",
         "toast-in": "toast-in 240ms cubic-bezier(0.16,1,0.3,1) both",
         "toast-out": "toast-out 180ms ease-in both",
       },

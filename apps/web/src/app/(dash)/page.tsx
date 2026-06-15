@@ -25,7 +25,7 @@ function FleetSummary({
   const offline = rows.filter((d) => !d.online).length;
 
   const stats: { label: string; value: number; tone: string; live?: boolean }[] = [
-    { label: t("overview.working"), value: working, tone: "text-accent", live: working > 0 },
+    { label: t("overview.working"), value: working, tone: "text-ok", live: working > 0 },
     { label: t("overview.idleNow"), value: idle, tone: "text-warn" },
     { label: t("overview.offline"), value: offline, tone: "text-muted" },
     { label: t("overview.total"), value: rows.length, tone: "text-fg" },
@@ -35,12 +35,12 @@ function FleetSummary({
     <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
       {stats.map((s) => (
         <div key={s.label} className="flex flex-col gap-1 bg-panel px-4 py-3.5">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
             {s.live && <span className="signal-dot !h-1.5 !w-1.5" />}
             {s.label}
           </span>
-          <span className={cn("font-display text-2xl font-semibold tabular-nums", s.tone)}>
-            {String(s.value).padStart(2, "0")}
+          <span className={cn("text-3xl font-semibold tabular-nums", s.tone)}>
+            {s.value}
           </span>
         </div>
       ))}

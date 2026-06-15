@@ -9,14 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Signal lime carries ink text (lime is light — white would smear).
+        // Brand blue with white text — the one primary action on the screen.
         default:
-          "bg-accent text-[#0a0c0f] font-semibold hover:bg-accent/90 hover:shadow-glow",
+          "bg-accent text-white font-semibold shadow-sm hover:bg-accent/90 hover:shadow-glow",
         secondary:
-          "border border-border bg-panel-2 text-fg hover:border-border hover:bg-[#1c232d]",
+          "border border-border bg-bg-2 text-fg hover:bg-panel-2",
         ghost: "text-muted hover:bg-panel-2 hover:text-fg",
         destructive: "bg-danger text-white hover:bg-danger/90",
-        outline: "border border-border text-fg hover:border-accent/50 hover:bg-panel-2",
+        outline:
+          "border border-border bg-bg-2 text-fg hover:border-accent/50 hover:bg-panel-2",
       },
       size: {
         sm: "h-8 rounded-md px-3 text-xs",

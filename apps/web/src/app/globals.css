@@ -3,23 +3,23 @@
 @tailwind utilities;
 
 /* ───────────────────────────────────────────────────────────────────────────
-   "Signal" — telemetry command deck
-   Deep ink base, a faint graph-paper grid + grain for instrument texture, and a
-   single radial signal-glow up top. One sharp accent (signal lime) does the
-   talking; everything else stays in disciplined greys.
+   "Daylight" — a calm, friendly operations dashboard
+   A soft off-white base, clean Inter type, and plenty of breathing room. No
+   grain, no glow, no graph paper — just quiet surfaces with one brand blue and
+   plain traffic-light status colours.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-sans);
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --grid: rgba(255, 255, 255, 0.022);
+  /* Numerals share the body face; tabular figures do the aligning. */
+  --font-mono: var(--font-sans);
 }
 
 html,
 body {
-  background-color: #0a0c0f;
-  color: #e9edf3;
+  background-color: #f7f8fa;
+  color: #1b2027;
 }
 
 html {
@@ -29,61 +29,14 @@ html {
 }
 
 body {
-  position: relative;
   min-height: 100vh;
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv01";
-  /* Radial signal glow bleeding down from the top edge. */
-  background-image:
-    radial-gradient(
-      1100px 560px at 50% -8%,
-      rgba(200, 240, 90, 0.06),
-      transparent 60%
-    ),
-    radial-gradient(
-      800px 480px at 90% 0%,
-      rgba(92, 208, 222, 0.045),
-      transparent 55%
-    );
-  background-attachment: fixed;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Fixed instrument grid — fine graph paper, barely there. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(to right, var(--grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 34px 34px;
-  /* Fade the grid out toward the bottom so content never fights it. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
-  mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
-}
-
-/* Fine film grain so flat panels read as a surface, not a void. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* App content sits above the texture layers. */
-body > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Keyboard focus ring — signal lime; pointer interactions stay ring-free. */
+/* Keyboard focus ring — brand blue; pointer interactions stay ring-free. */
 *:focus-visible {
-  outline: 2px solid #c8f05a;
+  outline: 2px solid #2e6cf6;
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -93,71 +46,71 @@ body > * {
 }
 
 ::selection {
-  background: rgba(200, 240, 90, 0.28);
-  color: #f4f8ee;
+  background: rgba(46, 108, 246, 0.16);
+  color: #14223f;
 }
 
-/* Styled checkbox in signal lime */
+/* Styled checkbox in brand blue */
 input[type="checkbox"] {
-  accent-color: #c8f05a;
+  accent-color: #2e6cf6;
   width: 1rem;
   height: 1rem;
   cursor: pointer;
 }
 
-/* Thin scrollbar */
+/* Thin, light scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #232b37;
-  border-radius: 4px;
+  background: #d4d9e0;
+  border-radius: 6px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #313a49;
+  background: #c0c7d1;
   background-clip: padding-box;
 }
 
-/* ── Reusable atmosphere helpers ──────────────────────────────────────────── */
+/* ── Reusable helpers ─────────────────────────────────────────────────────── */
 
-/* Heavier graph-paper grid for hero/empty surfaces. */
+/* A near-invisible neutral grid for large empty surfaces — texture, not noise. */
 .signal-grid {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 26px 26px;
+    linear-gradient(to right, rgba(27, 32, 39, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(27, 32, 39, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-/* Eyebrow / instrument label — small mono caps used for section kickers. */
+/* Small section label — clean caps, no monospace. */
 .kicker {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #838d9b;
+  color: #5b6573;
 }
 
-/* A live "signal" dot with an expanding ring — used for active/online states. */
+/* A live status dot with a soft expanding ring — used for working/online. */
 .signal-dot {
   position: relative;
   display: inline-block;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 9999px;
-  background: #c8f05a;
+  background: #10a372;
 }
 .signal-dot::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  box-shadow: 0 0 0 1px rgba(200, 240, 90, 0.5);
+  box-shadow: 0 0 0 1px rgba(16, 163, 114, 0.5);
   animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
@@ -168,8 +121,8 @@ input[type="checkbox"] {
 }
 
 /* These two are driven from raw CSS / inline styles (the live dot + the login
-   equalizer), so define them here — Tailwind only emits @keyframes for names
-   used via animate-* utilities. */
+   pulse), so define them here — Tailwind only emits @keyframes for names used
+   via animate-* utilities. */
 @keyframes pulse-dot {
   0%,
   100% {
@@ -177,19 +130,19 @@ input[type="checkbox"] {
     transform: scale(1);
   }
   50% {
-    opacity: 0.45;
-    transform: scale(0.82);
+    opacity: 0.5;
+    transform: scale(0.85);
   }
 }
 
 @keyframes pulse-ring {
   0% {
     transform: scale(0.7);
-    opacity: 0.7;
+    opacity: 0.5;
   }
   80%,
   100% {
-    transform: scale(2.4);
+    transform: scale(2.2);
     opacity: 0;
   }
 }
