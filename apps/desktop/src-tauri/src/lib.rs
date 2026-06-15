@@ -60,6 +60,7 @@ pub fn run() {
             commands::get_status,
             commands::verify_password,
             commands::enroll,
+            commands::get_diagnostics,
         ])
         .setup(|app| {
             let _ = app.autolaunch().enable();

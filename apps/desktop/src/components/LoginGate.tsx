@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { t, type Lang } from "../i18n.js";
-import type { VerifyResult } from "../types.js";
+import type { VerifyOutcome, VerifyStatus } from "../types.js";
 import { PanelHeader } from "./PanelHeader.js";
+import { DiagnosticsPanel } from "./DiagnosticsPanel.js";
+
+const ERROR_KEYS: Record<Exclude<VerifyStatus, "ok">, string> = {
+  wrong: "login.error.wrong",
+  unset: "login.error.unset",
+  not_configured: "login.error.notConfigured",
+  server: "login.error.server",
+  network: "login.error.network",
+};
 
 interface Props {
   lang: Lang;
@@ -14,11 +23,13 @@ interface Props {
 export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
+  const [detail, setDetail] = useState<string | undefined>(undefined);
   const [errorKey, setErrorKey] = useState(0);
   const [checking, setChecking] = useState(false);
 
-  const showError = (message: string) => {
+  const showError = (message: string, detail?: string) => {
     setError(message);
+    setDetail(detail);
     setErrorKey((k) => k + 1);
   };
 
@@ -27,22 +38,17 @@ export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
     if (checking) return;
     setChecking(true);
     try {
-      const result = await invoke<VerifyResult>("verify_password", {
+      const result = await invoke<VerifyOutcome>("verify_password", {
         password,
       });
-      if (result === "ok") {
+      if (result.status === "ok") {
         await onUnlocked();
         return;
       }
-      const key =
-        result === "unset"
-          ? "login.error.unset"
-          : result === "network"
-            ? "login.error.network"
-            : "login.error.wrong";
-      showError(t(key));
-    } catch {
-      showError(t("login.error.network"));
+      showError(t(ERROR_KEYS[result.status]), result.detail ?? undefined);
+    } catch (e) {
+      // The command itself failed to run (not a backend status) — surface it.
+      showError(t("login.error.network"), String(e));
     } finally {
       setChecking(false);
     }
@@ -73,12 +79,19 @@ export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
         </button>
       </form>
       {error ? (
-        <p className="error fade-up" id="error" key={errorKey}>
-          {error}
-        </p>
+        <div className="error fade-up" id="error" key={errorKey}>
+          <p className="error-msg">{error}</p>
+          {detail ? (
+            <details className="error-detail">
+              <summary>{t("error.details")}</summary>
+              <pre>{detail}</pre>
+            </details>
+          ) : null}
+        </div>
       ) : (
         <p className="error" id="error" />
       )}
+      <DiagnosticsPanel />
     </div>
   );
 }

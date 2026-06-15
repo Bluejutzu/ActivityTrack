@@ -29,5 +29,43 @@ export interface AgentStatus {
   recentErrors: AgentError[];
 }
 
-export type VerifyResult = "ok" | "wrong" | "unset" | "network";
-export type EnrollResult = "ok" | "invalid_code" | "network";
+/** Status codes returned by the `verify_password` command (see sender.rs). */
+export type VerifyStatus =
+  | "ok"
+  | "wrong"
+  | "unset"
+  | "not_configured"
+  | "server"
+  | "network";
+
+/** Status codes returned by the `enroll` command. */
+export type EnrollStatus =
+  | "ok"
+  | "invalid_code"
+  | "not_configured"
+  | "server"
+  | "network";
+
+/**
+ * Structured result of a backend-touching command. `detail` carries the real
+ * underlying reason (HTTP status + body, transport error, or which config is
+ * missing) so failures are debuggable instead of collapsing into one message.
+ */
+export interface Outcome<S extends string> {
+  status: S;
+  detail: string | null;
+}
+
+export type VerifyOutcome = Outcome<VerifyStatus>;
+export type EnrollOutcome = Outcome<EnrollStatus>;
+
+/** Connectivity/configuration snapshot from the `get_diagnostics` command. */
+export interface Diagnostics {
+  convexUrl: string;
+  configFile: string;
+  configPresent: boolean;
+  hasConvexUrl: boolean;
+  hasBootstrapKey: boolean;
+  enrolled: boolean;
+  configured: boolean;
+}
