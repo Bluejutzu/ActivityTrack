@@ -20,6 +20,7 @@ import type * as maintenance from "../maintenance.js";
 import type * as people from "../people.js";
 import type * as rbac from "../rbac.js";
 import type * as settings from "../settings.js";
+import type * as state from "../state.js";
 import type * as stats from "../stats.js";
 import type * as users from "../users.js";
 
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   people: typeof people;
   rbac: typeof rbac;
   settings: typeof settings;
+  state: typeof state;
   stats: typeof stats;
   users: typeof users;
 }>;

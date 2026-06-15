@@ -32,3 +32,6 @@ export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 /** Dashboard role hierarchy. it_admin ⊃ manager ⊃ viewer. */
 export const ROLES = ["it_admin", "manager", "viewer"] as const;
 export type Role = (typeof ROLES)[number];
+
+/** Unified employee-state model + state engine (Genesys + Clockodo fusion). */
+export * from "./state";

@@ -1,0 +1,244 @@
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { computeEmployeeState, type StateSignals } from "@activitytrack/shared";
+import { requireViewer } from "./rbac";
+import { appError } from "./errors";
+
+/**
+ * The fused employee-state engine — the single source of truth that combines
+ * the desktop agent, Genesys, and Clockodo into one normalized state.
+ *
+ * Trust boundary: the three signal sources live *outside* Convex (the agent
+ * heartbeat, the Genesys notifications relay, and the Clockodo webhook) and
+ * reach us through the dashboard's Elysia API layer, which calls `pushSignal`
+ * server-to-server. `pushSignal` is therefore a public mutation guarded by a
+ * shared secret (`ACTIVITYTRACK_SIGNAL_SECRET`) instead of a Clerk session —
+ * the same trust model as the agent's device-key ingest. Dashboard reads go
+ * through `overview`/`get`, which are Clerk + RBAC gated and reactive.
+ */
+
+const ROUTING_STATUS = v.union(
+  v.literal("IDLE"),
+  v.literal("INTERACTING"),
+  v.literal("OFF_QUEUE"),
+  v.literal("NOT_RESPONDING"),
+);
+const PRESENCE = v.union(
+  v.literal("AVAILABLE"),
+  v.literal("BUSY"),
+  v.literal("AWAY"),
+  v.literal("OFFLINE"),
+);
+
+/** Map a cache row's signal columns to the engine's input shape. */
+function signalsOf(row: Partial<Doc<"employeeStates">>): StateSignals {
+  return {
+    deviceIdle: row.deviceIdle,
+    idleSeconds: row.idleSeconds,
+    genesysRoutingStatus: row.genesysRoutingStatus,
+    genesysPresence: row.genesysPresence,
+    genesysWrapUp: row.genesysWrapUp,
+    clockodoWorking: row.clockodoWorking,
+    clockodoBreak: row.clockodoBreak,
+    clockodoAbsent: row.clockodoAbsent,
+  };
+}
+
+/** Constant-time-ish equality is unnecessary here; the secret is server-only. */
+function assertSignalSecret(secret: string): void {
+  const expected = process.env.ACTIVITYTRACK_SIGNAL_SECRET;
+  if (!expected || secret !== expected) {
+    throw appError("auth.forbidden", "Invalid signal secret");
+  }
+}
+
+/**
+ * Apply one source's slice of signals to the cache and recompute `finalState`.
+ * Only the fields a source actually provides are patched, so an agent heartbeat
+ * never clobbers the last-known Genesys/Clockodo state and vice-versa.
+ */
+export const pushSignal = mutation({
+  args: {
+    secret: v.string(),
+    employeeId: v.string(),
+    source: v.union(
+      v.literal("agent"),
+      v.literal("genesys"),
+      v.literal("clockodo"),
+    ),
+    // Agent
+    deviceIdle: v.optional(v.boolean()),
+    idleSeconds: v.optional(v.number()),
+    // Genesys
+    genesysRoutingStatus: v.optional(ROUTING_STATUS),
+    genesysPresence: v.optional(PRESENCE),
+    genesysWrapUp: v.optional(v.boolean()),
+    // Clockodo
+    clockodoWorking: v.optional(v.boolean()),
+    clockodoBreak: v.optional(v.boolean()),
+    clockodoAbsent: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    assertSignalSecret(args.secret);
+    const now = Date.now();
+
+    const existing = await getStateRow(ctx, args.employeeId);
+
+    // Build the per-source patch. Undefined values are skipped so a source only
+    // ever updates its own columns.
+    const patch: Partial<Doc<"employeeStates">> = {};
+    if (args.source === "agent") {
+      if (args.deviceIdle !== undefined) patch.deviceIdle = args.deviceIdle;
+      if (args.idleSeconds !== undefined) patch.idleSeconds = args.idleSeconds;
+      patch.agentUpdatedAt = now;
+    } else if (args.source === "genesys") {
+      if (args.genesysRoutingStatus !== undefined)
+        patch.genesysRoutingStatus = args.genesysRoutingStatus;
+      if (args.genesysPresence !== undefined)
+        patch.genesysPresence = args.genesysPresence;
+      if (args.genesysWrapUp !== undefined)
+        patch.genesysWrapUp = args.genesysWrapUp;
+      patch.genesysUpdatedAt = now;
+    } else {
+      if (args.clockodoWorking !== undefined)
+        patch.clockodoWorking = args.clockodoWorking;
+      if (args.clockodoBreak !== undefined)
+        patch.clockodoBreak = args.clockodoBreak;
+      if (args.clockodoAbsent !== undefined)
+        patch.clockodoAbsent = args.clockodoAbsent;
+      patch.clockodoUpdatedAt = now;
+    }
+
+    const merged = { ...(existing ?? {}), ...patch };
+    const finalState = computeEmployeeState(signalsOf(merged));
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { ...patch, finalState, updatedAt: now });
+    } else {
+      await ctx.db.insert("employeeStates", {
+        employeeId: args.employeeId,
+        ...patch,
+        finalState,
+        updatedAt: now,
+      });
+    }
+
+    return { employeeId: args.employeeId, finalState };
+  },
+});
+
+async function getStateRow(
+  ctx: MutationCtx | QueryCtx,
+  employeeId: string,
+): Promise<Doc<"employeeStates"> | null> {
+  return await ctx.db
+    .query("employeeStates")
+    .withIndex("by_employeeId", (q) => q.eq("employeeId", employeeId))
+    .unique();
+}
+
+/**
+ * Resolve a source-native user id to the canonical `employeeId`, so the Elysia
+ * layer can translate Genesys/Clockodo identifiers before pushing a signal.
+ * Secret-guarded (server-to-server), same as `pushSignal`.
+ */
+export const resolveEmployeeId = query({
+  args: {
+    secret: v.string(),
+    genesysUserId: v.optional(v.string()),
+    clockodoUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, { secret, genesysUserId, clockodoUserId }) => {
+    assertSignalSecret(secret);
+    let person: Doc<"people"> | null = null;
+    if (genesysUserId) {
+      person = await ctx.db
+        .query("people")
+        .withIndex("by_genesysUserId", (q) =>
+          q.eq("genesysUserId", genesysUserId),
+        )
+        .unique();
+    }
+    if (!person && clockodoUserId) {
+      person = await ctx.db
+        .query("people")
+        .withIndex("by_clockodoUserId", (q) =>
+          q.eq("clockodoUserId", clockodoUserId),
+        )
+        .unique();
+    }
+    return person?.employeeId ?? null;
+  },
+});
+
+/**
+ * Server-to-server: the Genesys/Clockodo external-id map for every active
+ * person that has one. The notifications worker uses this to know which users
+ * to subscribe to. Secret-guarded, same as `pushSignal`.
+ */
+export const mappings = query({
+  args: { secret: v.string() },
+  handler: async (ctx, { secret }) => {
+    assertSignalSecret(secret);
+    const people = await ctx.db.query("people").collect();
+    return people
+      .filter((p) => p.active && p.employeeId)
+      .map((p) => ({
+        employeeId: p.employeeId!,
+        genesysUserId: p.genesysUserId ?? null,
+        clockodoUserId: p.clockodoUserId ?? null,
+      }));
+  },
+});
+
+/**
+ * Reactive dashboard read: every cached employee state joined to its person.
+ * Viewer+; the dashboard subscribes via `useQuery` for live updates.
+ */
+export const overview = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireViewer(ctx);
+
+    const rows = await ctx.db.query("employeeStates").collect();
+
+    // Join people by employeeId (cheap: ~10s of employees).
+    const people = await ctx.db.query("people").collect();
+    const byEmployeeId = new Map(
+      people.flatMap((p) => (p.employeeId ? [[p.employeeId, p] as const] : [])),
+    );
+
+    return rows.map((row) => {
+      const person = byEmployeeId.get(row.employeeId) ?? null;
+      return {
+        employeeId: row.employeeId,
+        personId: person?._id ?? null,
+        personName: person?.name ?? null,
+        finalState: row.finalState,
+        deviceIdle: row.deviceIdle ?? null,
+        idleSeconds: row.idleSeconds ?? null,
+        genesysRoutingStatus: row.genesysRoutingStatus ?? null,
+        genesysPresence: row.genesysPresence ?? null,
+        genesysWrapUp: row.genesysWrapUp ?? null,
+        clockodoWorking: row.clockodoWorking ?? null,
+        clockodoBreak: row.clockodoBreak ?? null,
+        clockodoAbsent: row.clockodoAbsent ?? null,
+        agentUpdatedAt: row.agentUpdatedAt ?? null,
+        genesysUpdatedAt: row.genesysUpdatedAt ?? null,
+        clockodoUpdatedAt: row.clockodoUpdatedAt ?? null,
+        updatedAt: row.updatedAt,
+      };
+    });
+  },
+});
+
+/** Reactive single-employee read (timeline / detail panes). Viewer+. */
+export const get = query({
+  args: { employeeId: v.string() },
+  handler: async (ctx, { employeeId }) => {
+    await requireViewer(ctx);
+    return await getStateRow(ctx, employeeId);
+  },
+});

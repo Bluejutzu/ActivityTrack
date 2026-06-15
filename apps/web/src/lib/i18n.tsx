@@ -88,6 +88,11 @@ const de: Dict = {
   "people.delete": "Löschen",
   "people.cancel": "Abbrechen",
   "people.confirmDelete": "Diesen Mitarbeiter wirklich löschen?",
+  "people.employeeId": "Mitarbeiter-ID",
+  "people.genesysId": "Genesys-ID",
+  "people.clockodoId": "Clockodo-ID",
+  "people.idsHint":
+    "Verknüpft den Mitarbeiter mit Genesys und Clockodo für den zusammengeführten Live-Status.",
 
   "users.heading": "Benutzer & Rollen",
   "users.email": "E-Mail",
@@ -172,6 +177,26 @@ const de: Dict = {
   "devices.slotRevoked": "Code widerrufen.",
 
   "nav.health": "Systemstatus",
+
+  // Live employee state (Arbeitsplatz + Genesys + Clockodo zusammengeführt).
+  "nav.state": "Live-Status",
+  "state.heading": "Live-Status",
+  "state.subtitle":
+    "Zusammengeführter Status aus Arbeitsplatz, Genesys und Clockodo.",
+  "state.empty":
+    "Noch keine Statusdaten. Sobald Signale eintreffen, erscheinen sie hier.",
+  "state.updated": "Aktualisiert",
+  "state.signals": "Signale",
+  "state.source.agent": "Arbeitsplatz",
+  "state.source.genesys": "Genesys",
+  "state.source.clockodo": "Clockodo",
+  "state.idleFor": "inaktiv seit {duration}",
+  "empstate.ABSENT": "Abwesend",
+  "empstate.BREAK": "Pause",
+  "empstate.IN_CALL": "Im Gespräch",
+  "empstate.WRAP_UP": "Nachbearbeitung",
+  "empstate.ACTIVE": "Aktiv",
+  "empstate.IDLE": "Inaktiv",
 
   // Error toasts — shown when an action fails. Keyed by the backend error code.
   "error.generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
@@ -326,6 +351,11 @@ const en: Dict = {
   "people.delete": "Delete",
   "people.cancel": "Cancel",
   "people.confirmDelete": "Really delete this person?",
+  "people.employeeId": "Employee ID",
+  "people.genesysId": "Genesys ID",
+  "people.clockodoId": "Clockodo ID",
+  "people.idsHint":
+    "Links the person to Genesys and Clockodo for the fused live state.",
 
   "users.heading": "Users & roles",
   "users.email": "Email",
@@ -410,6 +440,24 @@ const en: Dict = {
   "devices.slotRevoked": "Code revoked.",
 
   "nav.health": "System health",
+
+  // Live employee state (workstation + Genesys + Clockodo fusion).
+  "nav.state": "Live state",
+  "state.heading": "Live state",
+  "state.subtitle": "Fused status from workstation, Genesys and Clockodo.",
+  "state.empty": "No state data yet. Signals will appear here as they arrive.",
+  "state.updated": "Updated",
+  "state.signals": "Signals",
+  "state.source.agent": "Workstation",
+  "state.source.genesys": "Genesys",
+  "state.source.clockodo": "Clockodo",
+  "state.idleFor": "idle for {duration}",
+  "empstate.ABSENT": "Absent",
+  "empstate.BREAK": "Break",
+  "empstate.IN_CALL": "On call",
+  "empstate.WRAP_UP": "Wrap-up",
+  "empstate.ACTIVE": "Active",
+  "empstate.IDLE": "Idle",
 
   // Error toasts — shown when an action fails. Keyed by the backend error code.
   "error.generic": "Something went wrong. Please try again.",

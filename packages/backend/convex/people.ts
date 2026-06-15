@@ -13,29 +13,54 @@ export const list = query({
   },
 });
 
+/**
+ * Normalize a free-text id field: trim, and treat empty string as "clear it"
+ * (undefined) so the dashboard can blank a mapping by submitting "".
+ */
+function normalizeId(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 /** Add a coworker. Manager+ (the boss manages people). */
 export const create = mutation({
   args: {
     name: v.string(),
     email: v.optional(v.string()),
+    employeeId: v.optional(v.string()),
+    genesysUserId: v.optional(v.string()),
+    clockodoUserId: v.optional(v.string()),
   },
-  handler: async (ctx, { name, email }) => {
+  handler: async (ctx, { name, email, employeeId, genesysUserId, clockodoUserId }) => {
     const actor = await requireManager(ctx);
-    const id = await ctx.db.insert("people", { name, email, active: true });
+    const id = await ctx.db.insert("people", {
+      name,
+      email,
+      active: true,
+      employeeId: normalizeId(employeeId),
+      genesysUserId: normalizeId(genesysUserId),
+      clockodoUserId: normalizeId(clockodoUserId),
+    });
     await writeAudit(ctx, actor._id, "person.create", name);
     return id;
   },
 });
 
-/** Edit a coworker's details / active flag. Manager+. */
+/** Edit a coworker's details / active flag / integration mappings. Manager+. */
 export const update = mutation({
   args: {
     personId: v.id("people"),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     active: v.optional(v.boolean()),
+    employeeId: v.optional(v.string()),
+    genesysUserId: v.optional(v.string()),
+    clockodoUserId: v.optional(v.string()),
   },
-  handler: async (ctx, { personId, name, email, active }) => {
+  handler: async (ctx, args) => {
+    const { personId, name, email, active, employeeId, genesysUserId, clockodoUserId } =
+      args;
     const actor = await requireManager(ctx);
     const person = await ctx.db.get(personId);
     if (!person) throw appError("notFound.person", "Person not found");
@@ -43,6 +68,13 @@ export const update = mutation({
       ...(name !== undefined ? { name } : {}),
       ...(email !== undefined ? { email } : {}),
       ...(active !== undefined ? { active } : {}),
+      ...(employeeId !== undefined ? { employeeId: normalizeId(employeeId) } : {}),
+      ...(genesysUserId !== undefined
+        ? { genesysUserId: normalizeId(genesysUserId) }
+        : {}),
+      ...(clockodoUserId !== undefined
+        ? { clockodoUserId: normalizeId(clockodoUserId) }
+        : {}),
     });
     await writeAudit(ctx, actor._id, "person.update", person.name);
   },

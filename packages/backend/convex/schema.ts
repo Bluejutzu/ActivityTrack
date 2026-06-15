@@ -47,12 +47,24 @@ export default defineSchema({
     .index("by_personId", ["personId"]),
 
   // Coworkers being tracked (managed in the dashboard; ~10, expandable).
+  //
+  // The external-id fields map a person to their identity in the integrated
+  // systems. `employeeId` is the stable key used across all three signal
+  // sources (agent / Genesys / Clockodo) and the `employeeStates` cache;
+  // `genesysUserId`/`clockodoUserId` let the backend resolve an inbound signal
+  // (which carries a source-native user id) back to the canonical employeeId.
   people: defineTable({
     name: v.string(),
     email: v.optional(v.string()),
     managerId: v.optional(v.id("users")),
     active: v.boolean(),
-  }),
+    employeeId: v.optional(v.string()),
+    genesysUserId: v.optional(v.string()),
+    clockodoUserId: v.optional(v.string()),
+  })
+    .index("by_employeeId", ["employeeId"])
+    .index("by_genesysUserId", ["genesysUserId"])
+    .index("by_clockodoUserId", ["clockodoUserId"]),
 
   // Raw samples (append-only). Indexed for time-range + per-device queries.
   activitySamples: defineTable({
@@ -69,6 +81,57 @@ export default defineSchema({
   })
     .index("by_device_time", ["deviceId", "capturedAt"])
     .index("by_receivedAt", ["receivedAt"]),
+
+  // Fused employee-state cache: the single source of truth combining the
+  // desktop agent, Genesys telephony, and Clockodo time-tracking into one
+  // normalized state. One row per `employeeId`. Each source patches its own
+  // slice of signals; `finalState` is recomputed by the state engine on every
+  // write. Per-source `*UpdatedAt` timestamps support staleness detection.
+  employeeStates: defineTable({
+    employeeId: v.string(),
+
+    // Workstation (desktop agent).
+    deviceIdle: v.optional(v.boolean()),
+    idleSeconds: v.optional(v.number()),
+    agentUpdatedAt: v.optional(v.number()),
+
+    // Genesys telephony.
+    genesysRoutingStatus: v.optional(
+      v.union(
+        v.literal("IDLE"),
+        v.literal("INTERACTING"),
+        v.literal("OFF_QUEUE"),
+        v.literal("NOT_RESPONDING"),
+      ),
+    ),
+    genesysPresence: v.optional(
+      v.union(
+        v.literal("AVAILABLE"),
+        v.literal("BUSY"),
+        v.literal("AWAY"),
+        v.literal("OFFLINE"),
+      ),
+    ),
+    genesysWrapUp: v.optional(v.boolean()),
+    genesysUpdatedAt: v.optional(v.number()),
+
+    // Clockodo time-tracking.
+    clockodoWorking: v.optional(v.boolean()),
+    clockodoBreak: v.optional(v.boolean()),
+    clockodoAbsent: v.optional(v.boolean()),
+    clockodoUpdatedAt: v.optional(v.number()),
+
+    // Engine output.
+    finalState: v.union(
+      v.literal("ABSENT"),
+      v.literal("BREAK"),
+      v.literal("IN_CALL"),
+      v.literal("WRAP_UP"),
+      v.literal("ACTIVE"),
+      v.literal("IDLE"),
+    ),
+    updatedAt: v.number(),
+  }).index("by_employeeId", ["employeeId"]),
 
   // Server-computed daily rollups (active vs idle seconds) for fast dashboards.
   dailyStats: defineTable({
