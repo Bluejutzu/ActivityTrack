@@ -60,6 +60,7 @@ const de: Dict = {
   "overview.todayActive": "heute aktiv",
   "overview.unassigned": "Nicht zugewiesen",
   "overview.lastSeen": "Zuletzt gesehen",
+  "overview.total": "Geräte gesamt",
 
   "devices.heading": "Geräte",
   "devices.pending": "Wartet auf Genehmigung",
@@ -297,6 +298,7 @@ const en: Dict = {
   "overview.todayActive": "active today",
   "overview.unassigned": "Unassigned",
   "overview.lastSeen": "Last seen",
+  "overview.total": "Devices total",
 
   "devices.heading": "Devices",
   "devices.pending": "Pending approval",

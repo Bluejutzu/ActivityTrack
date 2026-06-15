@@ -38,43 +38,13 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  {
-    href: "/",
-    labelKey: "nav.overview",
-    minRole: "viewer",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/devices",
-    labelKey: "nav.devices",
-    minRole: "viewer",
-    icon: MonitorSmartphone,
-  },
+  { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
+  { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
-  {
-    href: "/health",
-    labelKey: "nav.health",
-    minRole: "viewer",
-    icon: HeartPulse,
-  },
-  {
-    href: "/users",
-    labelKey: "nav.users",
-    minRole: "it_admin",
-    icon: ShieldCheck,
-  },
-  {
-    href: "/audit",
-    labelKey: "nav.audit",
-    minRole: "it_admin",
-    icon: ScrollText,
-  },
-  {
-    href: "/settings",
-    labelKey: "nav.settings",
-    minRole: "it_admin",
-    icon: Settings,
-  },
+  { href: "/health", labelKey: "nav.health", minRole: "viewer", icon: HeartPulse },
+  { href: "/users", labelKey: "nav.users", minRole: "it_admin", icon: ShieldCheck },
+  { href: "/audit", labelKey: "nav.audit", minRole: "it_admin", icon: ScrollText },
+  { href: "/settings", labelKey: "nav.settings", minRole: "it_admin", icon: Settings },
 ];
 
 function NavLinks({
@@ -88,7 +58,7 @@ function NavLinks({
 }) {
   const { t } = useI18n();
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
       {items.map((n) => {
         const active =
           n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
@@ -99,13 +69,25 @@ function NavLinks({
             href={n.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
               active
-                ? "bg-accent/15 text-accent"
+                ? "bg-accent/10 text-accent"
                 : "text-muted hover:bg-panel-2 hover:text-fg",
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            {/* Signal indicator bar on the active route. */}
+            <span
+              className={cn(
+                "absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent transition-all duration-200",
+                active ? "opacity-100" : "opacity-0",
+              )}
+            />
+            <Icon
+              className={cn(
+                "h-4 w-4 shrink-0 transition-colors",
+                active ? "text-accent" : "text-muted group-hover:text-fg",
+              )}
+            />
             {t(n.labelKey)}
           </Link>
         );
@@ -117,11 +99,20 @@ function NavLinks({
 function Brand() {
   const { t } = useI18n();
   return (
-    <Link href="/" className="flex items-center gap-2">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent/20 text-accent">
-        <Activity className="h-4 w-4" />
+    <Link href="/" className="group flex items-center gap-2.5">
+      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-accent/30 bg-accent/10 text-accent shadow-signal-sm">
+        <Activity className="h-[18px] w-[18px]" />
+        {/* faint scanline sweeping across the monogram */}
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-1/3 -translate-y-full bg-gradient-to-b from-accent/40 to-transparent animate-scan" />
       </span>
-      <span className="font-semibold text-fg">{t("app.name")}</span>
+      <span className="flex flex-col leading-none">
+        <span className="font-display text-[15px] font-semibold tracking-tightest text-fg">
+          {t("app.name")}
+        </span>
+        <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.28em] text-muted">
+          Signal Deck
+        </span>
+      </span>
     </Link>
   );
 }
@@ -130,8 +121,8 @@ function Brand() {
 function BootstrapSkeleton() {
   return (
     <div className="min-h-screen">
-      <div className="h-12 border-b border-border bg-panel animate-pulse" />
-      <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      <div className="h-14 border-b border-border bg-panel/60 animate-pulse" />
+      <div className="mx-auto max-w-6xl space-y-4 px-4 py-8">
         <div className="h-7 w-40 rounded-md bg-border/40" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
@@ -148,13 +139,15 @@ function AuthErrorPanel({ onRetry }: { onRetry: () => void }) {
   const { t } = useI18n();
   return (
     <div className="grid min-h-screen place-items-center p-4">
-      <div className="max-w-md rounded-xl border border-danger/30 bg-danger/5 p-6 text-center animate-fade-up">
-        <div className="mb-2 text-3xl">⚠️</div>
-        <h2 className="text-lg font-semibold text-fg">
+      <div className="max-w-md rounded-xl border border-danger/30 bg-danger/5 p-8 text-center shadow-soft animate-fade-up">
+        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border border-danger/30 bg-danger/10 text-2xl">
+          ⚠
+        </div>
+        <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
           {t("auth.error.title")}
         </h2>
         <p className="mt-2 text-sm text-muted">{t("auth.error.body")}</p>
-        <Button className="mt-4" onClick={onRetry}>
+        <Button className="mt-5" onClick={onRetry}>
           {t("auth.error.retry")}
         </Button>
       </div>
@@ -188,27 +181,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-panel/60 p-4 lg:flex">
-        <div className="px-1 pb-6">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-panel/40 p-4 backdrop-blur-sm lg:flex">
+        <div className="px-1 pb-7 pt-1">
           <Brand />
         </div>
         <NavLinks items={items} pathname={pathname} />
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4">
-          <div className="min-w-0">
-            <p className="truncate text-xs text-fg">{me.email}</p>
-            <Badge variant="outline" className="mt-1">
-              {t(`role.${role}`)}
-            </Badge>
+        <div className="mt-auto space-y-3 border-t border-border pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-xs text-fg">{me.email}</p>
+              <Badge variant="outline" className="mt-1.5">
+                {t(`role.${role}`)}
+              </Badge>
+            </div>
+            <UserButton afterSignOutUrl="/" />
           </div>
-          <UserButton afterSignOutUrl="/" />
         </div>
       </aside>
 
       <div className="flex min-h-screen flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-panel/80 px-4 py-3 backdrop-blur-sm">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg/70 px-4 py-3 backdrop-blur-md sm:px-6">
           {/* Mobile nav trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -216,7 +211,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-4">
+            <SheetContent side="left" className="w-72 border-border bg-panel p-4">
               <div className="px-1 pb-6">
                 <Brand />
               </div>
@@ -228,9 +223,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <h1 className="flex-1 text-base font-semibold text-fg">
-            {current ? t(current.labelKey) : t("app.name")}
-          </h1>
+          <div className="flex flex-1 flex-col leading-none">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
+              {t("app.name")}
+            </span>
+            <h1 className="mt-1 font-display text-base font-semibold tracking-tightest text-fg">
+              {current ? t(current.labelKey) : t("app.name")}
+            </h1>
+          </div>
 
           <LangSwitcher />
           <div className="lg:hidden">
@@ -238,11 +238,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6">
           <PageTransition>{children}</PageTransition>
         </main>
 
-        <footer className="mx-auto w-full max-w-6xl px-4 py-8 text-xs text-muted">
+        <footer className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-8 text-xs text-muted sm:px-6">
+          <span className="h-1 w-1 rounded-full bg-accent/60" />
           {t("footer.privacy")}
         </footer>
       </div>

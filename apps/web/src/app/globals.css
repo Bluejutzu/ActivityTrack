@@ -2,10 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────────────────────────────────────────────────────────
+   "Signal" — telemetry command deck
+   Deep ink base, a faint graph-paper grid + grain for instrument texture, and a
+   single radial signal-glow up top. One sharp accent (signal lime) does the
+   talking; everything else stays in disciplined greys.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --grid: rgba(255, 255, 255, 0.022);
+}
+
 html,
 body {
-  background: #0b0d12;
-  color: #e6e9ef;
+  background-color: #0a0c0f;
+  color: #e9edf3;
 }
 
 html {
@@ -15,12 +29,61 @@ html {
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv01";
+  /* Radial signal glow bleeding down from the top edge. */
+  background-image:
+    radial-gradient(
+      1100px 560px at 50% -8%,
+      rgba(200, 240, 90, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      800px 480px at 90% 0%,
+      rgba(92, 208, 222, 0.045),
+      transparent 55%
+    );
+  background-attachment: fixed;
 }
 
-/* Keyboard focus ring — pointer interactions stay ring-free */
+/* Fixed instrument grid — fine graph paper, barely there. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 34px 34px;
+  /* Fade the grid out toward the bottom so content never fights it. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+}
+
+/* Fine film grain so flat panels read as a surface, not a void. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* App content sits above the texture layers. */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Keyboard focus ring — signal lime; pointer interactions stay ring-free. */
 *:focus-visible {
-  outline: 2px solid #4c8dff;
+  outline: 2px solid #c8f05a;
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -29,23 +92,113 @@ body {
   outline: none;
 }
 
-/* Styled checkbox */
+::selection {
+  background: rgba(200, 240, 90, 0.28);
+  color: #f4f8ee;
+}
+
+/* Styled checkbox in signal lime */
 input[type="checkbox"] {
-  accent-color: #4c8dff;
+  accent-color: #c8f05a;
   width: 1rem;
   height: 1rem;
   cursor: pointer;
 }
 
 /* Thin scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #232a36; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2e3747; }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #232b37;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #313a49;
+  background-clip: padding-box;
+}
+
+/* ── Reusable atmosphere helpers ──────────────────────────────────────────── */
+
+/* Heavier graph-paper grid for hero/empty surfaces. */
+.signal-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Eyebrow / instrument label — small mono caps used for section kickers. */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #838d9b;
+}
+
+/* A live "signal" dot with an expanding ring — used for active/online states. */
+.signal-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #c8f05a;
+}
+.signal-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px rgba(200, 240, 90, 0.5);
+  animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Tabular numerals for any metric/figure. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* These two are driven from raw CSS / inline styles (the live dot + the login
+   equalizer), so define them here — Tailwind only emits @keyframes for names
+   used via animate-* utilities. */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
 
 /* Respect reduced-motion — single override, no exceptions needed */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

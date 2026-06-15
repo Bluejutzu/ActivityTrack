@@ -299,7 +299,7 @@ export default function DevicesPage() {
       {isAdmin && (
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-fg">
+            <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
               {t("devices.slots.heading")}
             </h2>
             {!showCreateForm && (
@@ -337,7 +337,7 @@ export default function DevicesPage() {
 
       {/* ── Devices table ── */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-fg">
+        <h2 className="mb-4 font-display text-lg font-semibold tracking-tightest text-fg">
           {t("devices.slots.heading.devices")}
         </h2>
         <Card>

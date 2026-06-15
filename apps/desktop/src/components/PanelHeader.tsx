@@ -9,7 +9,13 @@ interface Props {
 export function PanelHeader({ lang, onLangChange }: Props) {
   return (
     <header>
-      <h1>{t("app.title")}</h1>
+      <div className="brand">
+        <span className="brand-mark" aria-hidden />
+        <span className="brand-text">
+          <span className="brand-name">{t("app.title")}</span>
+          <span className="brand-sub">Signal Deck</span>
+        </span>
+      </div>
       <LangSwitcher lang={lang} onChange={onLangChange} />
     </header>
   );
