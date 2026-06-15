@@ -24,6 +24,7 @@ import { roleAtLeast, type Role } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./LangSwitcher";
 import { PageTransition } from "./PageTransition";
+import { SkeletonCard } from "@/components/Skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -37,13 +38,43 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
-  { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
+  {
+    href: "/",
+    labelKey: "nav.overview",
+    minRole: "viewer",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/devices",
+    labelKey: "nav.devices",
+    minRole: "viewer",
+    icon: MonitorSmartphone,
+  },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
-  { href: "/health", labelKey: "nav.health", minRole: "viewer", icon: HeartPulse },
-  { href: "/users", labelKey: "nav.users", minRole: "it_admin", icon: ShieldCheck },
-  { href: "/audit", labelKey: "nav.audit", minRole: "it_admin", icon: ScrollText },
-  { href: "/settings", labelKey: "nav.settings", minRole: "it_admin", icon: Settings },
+  {
+    href: "/health",
+    labelKey: "nav.health",
+    minRole: "viewer",
+    icon: HeartPulse,
+  },
+  {
+    href: "/users",
+    labelKey: "nav.users",
+    minRole: "it_admin",
+    icon: ShieldCheck,
+  },
+  {
+    href: "/audit",
+    labelKey: "nav.audit",
+    minRole: "it_admin",
+    icon: ScrollText,
+  },
+  {
+    href: "/settings",
+    labelKey: "nav.settings",
+    minRole: "it_admin",
+    icon: Settings,
+  },
 ];
 
 function NavLinks({
@@ -95,16 +126,62 @@ function Brand() {
   );
 }
 
+/** Full-screen placeholder shown while the user row is being provisioned. */
+function BootstrapSkeleton() {
+  return (
+    <div className="min-h-screen">
+      <div className="h-12 border-b border-border bg-panel animate-pulse" />
+      <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+        <div className="h-7 w-40 rounded-md bg-border/40" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Shown when provisioning fails for real (after retries) — calm, with retry. */
+function AuthErrorPanel({ onRetry }: { onRetry: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="grid min-h-screen place-items-center p-4">
+      <div className="max-w-md rounded-xl border border-danger/30 bg-danger/5 p-6 text-center animate-fade-up">
+        <div className="mb-2 text-3xl">⚠️</div>
+        <h2 className="text-lg font-semibold text-fg">
+          {t("auth.error.title")}
+        </h2>
+        <p className="mt-2 text-sm text-muted">{t("auth.error.body")}</p>
+        <Button className="mt-4" onClick={onRetry}>
+          {t("auth.error.retry")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const pathname = usePathname();
   const me = useQuery(api.users.me);
-  const role = (me?.role ?? "viewer") as Role;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Provision the Convex user row (and first-user it_admin) once authenticated.
-  useStoreUser();
+  const { status, retry } = useStoreUser();
 
+  // Gate: never render the role-aware shell until the user row is provisioned
+  // AND loaded. Otherwise affordances flicker as the role resolves, and a failed
+  // provision would silently leave the user stuck as a viewer.
+  if (status === "error") {
+    return <AuthErrorPanel onRetry={retry} />;
+  }
+  if (status !== "ready" || me === undefined || me === null) {
+    return <BootstrapSkeleton />;
+  }
+
+  const role = me.role as Role;
   const items = NAV.filter((n) => roleAtLeast(role, n.minRole));
   const current = NAV.find((n) =>
     n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
@@ -120,7 +197,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <NavLinks items={items} pathname={pathname} />
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4">
           <div className="min-w-0">
-            <p className="truncate text-xs text-fg">{me?.email}</p>
+            <p className="truncate text-xs text-fg">{me.email}</p>
             <Badge variant="outline" className="mt-1">
               {t(`role.${role}`)}
             </Badge>

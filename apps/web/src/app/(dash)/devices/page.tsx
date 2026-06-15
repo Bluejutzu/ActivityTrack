@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { motion } from "framer-motion";
 import { Check, Copy, KeyRound, Plus, X } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatRelativeTime, roleAtLeast, type Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { Collapse } from "@/components/motion/Collapse";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { MOTION } from "@/components/motion/motion-tokens";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,7 +75,11 @@ function CopyButton({ value }: { value: string }) {
         })
       }
     >
-      {copied ? <Check className="h-4 w-4 text-ok" /> : <Copy className="h-4 w-4" />}
+      {copied ? (
+        <Check className="h-4 w-4 text-ok" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
       {copied ? t("devices.slots.copied") : t("devices.slots.copy")}
     </Button>
   );
@@ -100,73 +108,90 @@ function CreateSlotForm({ onDone }: { onDone: () => void }) {
     }
   }
 
-  if (code) {
-    return (
-      <Card className="mb-4 border-ok/30 bg-ok/5 animate-scale-in">
-        <CardContent className="flex items-start justify-between gap-4 p-5">
-          <div>
-            <p className="mb-2 text-sm font-medium text-muted">
-              {t("devices.slots.note")}
-            </p>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-2xl font-bold tracking-widest text-fg">
-                {code}
-              </span>
-              <CopyButton value={code} />
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onDone} aria-label="close">
-            <X className="h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // Fade between the form and the generated-code confirmation (keyed on state)
+  // so the swap reads as one surface changing, not a card popping out of nowhere.
+  // The surrounding <Collapse> (in the page) animates the open/close height.
   return (
-    <Card className="mb-4 animate-scale-in">
-      <CardContent className="p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>{t("devices.slots.label")}</Label>
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder={t("devices.slots.labelPlaceholder")}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("devices.slots.expiry")}</Label>
-            <div className="flex gap-2">
-              {([24, 48, 168] as const).map((h) => (
-                <Button
-                  key={h}
-                  type="button"
-                  variant={hours === h ? "default" : "secondary"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setHours(h)}
-                >
-                  {h === 24
-                    ? t("devices.slots.expiry24")
-                    : h === 48
-                      ? t("devices.slots.expiry48")
-                      : t("devices.slots.expiry7d")}
+    <motion.div
+      key={code ? "code" : "form"}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+    >
+      {code ? (
+        <>
+          <Card className="mb-4 border-ok/30 bg-ok/5">
+            <CardContent className="flex items-start justify-between gap-4 p-5">
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted">
+                  {t("devices.slots.note")}
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-2xl font-bold tracking-widest text-fg">
+                    {code}
+                  </span>
+                  <CopyButton value={code} />
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onDone}
+                aria-label="close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <>
+          <Card className="mb-4">
+            <CardContent className="p-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>{t("devices.slots.label")}</Label>
+                  <Input
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder={t("devices.slots.labelPlaceholder")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("devices.slots.expiry")}</Label>
+                  <div className="flex gap-2">
+                    {([24, 48, 168] as const).map((h) => (
+                      <Button
+                        key={h}
+                        type="button"
+                        variant={hours === h ? "default" : "secondary"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setHours(h)}
+                      >
+                        {h === 24
+                          ? t("devices.slots.expiry24")
+                          : h === 48
+                            ? t("devices.slots.expiry48")
+                            : t("devices.slots.expiry7d")}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="secondary" onClick={onDone}>
+                  {t("devices.slots.cancel")}
                 </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onDone}>
-            {t("devices.slots.cancel")}
-          </Button>
-          <Button onClick={() => void submit()} disabled={busy}>
-            {t("devices.slots.create")}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+                <Button onClick={() => void submit()} disabled={busy}>
+                  {t("devices.slots.create")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </motion.div>
   );
 }
 
@@ -223,7 +248,9 @@ function SlotCard({
               className="text-danger hover:bg-danger/10 hover:text-danger"
               onClick={() =>
                 void revoke(
-                  { slotId: slot._id as Parameters<typeof revoke>[0]["slotId"] },
+                  {
+                    slotId: slot._id as Parameters<typeof revoke>[0]["slotId"],
+                  },
                   { success: t("devices.slotRevoked") },
                 )
               }
@@ -283,9 +310,9 @@ export default function DevicesPage() {
             )}
           </div>
 
-          {showCreateForm && (
+          <Collapse show={showCreateForm}>
             <CreateSlotForm onDone={() => setShowCreateForm(false)} />
-          )}
+          </Collapse>
 
           {slots === undefined ? (
             <p className="text-sm text-muted">{t("common.loading")}</p>
@@ -297,11 +324,13 @@ export default function DevicesPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {slots.map((slot) => (
-                <SlotCard key={slot._id} slot={slot} />
+            <Stagger className="space-y-2">
+              {slots.map((slot, i) => (
+                <StaggerItem key={slot._id} index={i}>
+                  <SlotCard slot={slot} />
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           )}
         </div>
       )}
