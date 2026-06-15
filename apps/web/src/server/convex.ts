@@ -31,4 +31,26 @@ export function signalSecret(): string {
   return secret;
 }
 
+/**
+ * Record an integration's health. Best-effort and never throws — a down source
+ * must not break the request that noticed it. Surfaces on the dashboard as
+ * "<source> unavailable due to <message>".
+ */
+export async function reportHealth(
+  source: "genesys" | "clockodo",
+  status: "ok" | "unavailable" | "unconfigured",
+  message?: string,
+): Promise<void> {
+  try {
+    await convex.mutation(api.state.reportHealth, {
+      secret: signalSecret(),
+      source,
+      status,
+      message: message?.slice(0, 300),
+    });
+  } catch (err) {
+    console.error("[server] reportHealth failed:", err);
+  }
+}
+
 export { api };

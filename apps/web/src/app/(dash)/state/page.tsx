@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { AlertTriangle } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import type { EmployeeState } from "@activitytrack/shared";
 import { useI18n } from "@/lib/i18n";
@@ -24,6 +25,47 @@ const STATE_STYLE: Record<
   ABSENT: { variant: "muted" },
   IDLE: { variant: "warn" },
 };
+
+/**
+ * Per-source availability banner. A down/unconfigured integration shows here
+ * with its reason; it never blocks the rest — the fused state simply stops using
+ * that signal.
+ */
+function HealthBanner() {
+  const { t } = useI18n();
+  const health = useQuery(api.state.health);
+  const degraded = (health ?? []).filter((h) => h.status !== "ok");
+  if (degraded.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {degraded.map((h) => {
+        const source = t(`state.source.${h.source}`);
+        const text =
+          h.status === "unconfigured"
+            ? t("state.health.unconfigured", { source })
+            : t("state.health.unavailable", {
+                source,
+                reason: h.message ?? "—",
+              });
+        return (
+          <div
+            key={h.source}
+            className="flex items-start gap-2.5 rounded-xl border border-warn/30 bg-warn/10 px-4 py-3"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+            <div className="min-w-0">
+              <p className="text-sm text-fg">{text}</p>
+              <p className="mt-0.5 text-xs text-muted">
+                {t("state.health.degraded")}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** A single signal chip (source + value), greyed out when unknown. */
 function Signal({ label, value }: { label: string; value: string | null }) {
@@ -51,6 +93,8 @@ export default function LiveStatePage() {
         </h2>
         <p className="mt-1 text-sm text-muted">{t("state.subtitle")}</p>
       </div>
+
+      <HealthBanner />
 
       <QueryState
         data={rows}

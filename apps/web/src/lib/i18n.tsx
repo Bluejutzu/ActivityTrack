@@ -191,6 +191,10 @@ const de: Dict = {
   "state.source.genesys": "Genesys",
   "state.source.clockodo": "Clockodo",
   "state.idleFor": "inaktiv seit {duration}",
+  "state.health.unavailable": "{source} nicht verfügbar: {reason}",
+  "state.health.unconfigured": "{source} ist nicht konfiguriert.",
+  "state.health.degraded":
+    "Dieses Signal wird derzeit nicht berücksichtigt. Die übrigen Quellen bestimmen den Status weiterhin.",
   "empstate.ABSENT": "Abwesend",
   "empstate.BREAK": "Pause",
   "empstate.IN_CALL": "Im Gespräch",
@@ -452,6 +456,10 @@ const en: Dict = {
   "state.source.genesys": "Genesys",
   "state.source.clockodo": "Clockodo",
   "state.idleFor": "idle for {duration}",
+  "state.health.unavailable": "{source} unavailable: {reason}",
+  "state.health.unconfigured": "{source} is not configured.",
+  "state.health.degraded":
+    "This signal is currently ignored. The remaining sources still drive the state.",
   "empstate.ABSENT": "Absent",
   "empstate.BREAK": "Break",
   "empstate.IN_CALL": "On call",

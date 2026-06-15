@@ -133,6 +133,22 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_employeeId", ["employeeId"]),
 
+  // Integration health, one row per external source. Lets the dashboard show
+  // "Genesys unavailable due to <reason>" without the failure ever breaking the
+  // state pipeline — a down source simply stops contributing fresh signals.
+  integrationHealth: defineTable({
+    source: v.union(v.literal("genesys"), v.literal("clockodo")),
+    status: v.union(
+      v.literal("ok"),
+      v.literal("unavailable"),
+      v.literal("unconfigured"),
+    ),
+    message: v.optional(v.string()), // the "xyz" reason, when not ok
+    lastOkAt: v.optional(v.number()),
+    lastErrorAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_source", ["source"]),
+
   // Server-computed daily rollups (active vs idle seconds) for fast dashboards.
   dailyStats: defineTable({
     deviceId: v.string(),

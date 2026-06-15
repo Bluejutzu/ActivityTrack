@@ -174,6 +174,53 @@ export const resolveEmployeeId = query({
 });
 
 /**
+ * Report an integration source's health (server-to-server). Upserts the single
+ * row for that source. A failure here is purely informational — it never blocks
+ * or rolls back the signal it accompanies.
+ */
+export const reportHealth = mutation({
+  args: {
+    secret: v.string(),
+    source: v.union(v.literal("genesys"), v.literal("clockodo")),
+    status: v.union(
+      v.literal("ok"),
+      v.literal("unavailable"),
+      v.literal("unconfigured"),
+    ),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, { secret, source, status, message }) => {
+    assertSignalSecret(secret);
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("integrationHealth")
+      .withIndex("by_source", (q) => q.eq("source", source))
+      .unique();
+    const patch = {
+      source,
+      status,
+      message,
+      updatedAt: now,
+      ...(status === "ok" ? { lastOkAt: now } : { lastErrorAt: now }),
+    };
+    if (existing) {
+      await ctx.db.patch(existing._id, patch);
+    } else {
+      await ctx.db.insert("integrationHealth", patch);
+    }
+  },
+});
+
+/** Reactive read of every integration's health, for the dashboard banner. */
+export const health = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireViewer(ctx);
+    return await ctx.db.query("integrationHealth").collect();
+  },
+});
+
+/**
  * Server-to-server: the Genesys/Clockodo external-id map for every active
  * person that has one. The notifications worker uses this to know which users
  * to subscribe to. Secret-guarded, same as `pushSignal`.
