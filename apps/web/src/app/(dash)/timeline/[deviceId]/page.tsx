@@ -57,12 +57,14 @@ function KpiCard({
   return (
     <Card className="animate-fade-up">
       <CardContent className="flex items-center gap-3 p-4">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-panel-2 text-muted">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-panel-2 text-muted">
           {icon}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-xs text-muted">{label}</p>
-          <p className={`truncate text-lg font-semibold ${toneClass}`}>
+          <p className="kicker truncate">{label}</p>
+          <p
+            className={`mt-1 truncate font-display text-xl font-semibold tabular-nums ${toneClass}`}
+          >
             {value}
           </p>
         </div>
@@ -138,8 +140,11 @@ export default function TimelinePage({
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold text-fg">{title}</h1>
-        <p className="font-mono text-xs text-muted">{deviceId}</p>
+        <p className="kicker mb-1.5">// Device telemetry</p>
+        <h1 className="font-display text-2xl font-semibold tracking-tightest text-fg">
+          {title}
+        </h1>
+        <p className="mt-1 font-mono text-xs text-muted">{deviceId}</p>
       </div>
 
       {/* KPI row */}

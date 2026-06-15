@@ -1,20 +1,37 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   ActivityTrack tracker — "Signal" theme
+   The tray panel as a precision instrument: deep ink, a faint telemetry grid,
+   and one sharp signal-lime accent (= the "active" state = the brand). Type:
+   Bricolage Grotesque (display) · IBM Plex Sans (body) · IBM Plex Mono (data).
+   ─────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --bg: #0e1014;
-  --bg-elev: #0f1218;
-  --card: #171a21;
-  --card-2: #1b1f28;
-  --fg: #e6e9ef;
-  --muted: #8b93a7;
-  --ok: #2ecc71;
-  --warn: #e67e22;
-  --accent: #4c8dff;
-  --accent-2: #3f7ae6;
-  --border: #262b36;
-  --border-soft: #20242e;
+  --bg: #0a0c0f;
+  --bg-elev: #0d1117;
+  --card: #10141a;
+  --card-2: #0e121a;
+  --panel-2: #161c24;
+  --fg: #e9edf3;
+  --muted: #838d9b;
+  --signal: #c8f05a;
+  --signal-ink: #0a0c0f;
+  --ok: #c8f05a;
+  --warn: #f5b544;
+  --danger: #fb6a5b;
+  --border: #1f2630;
+  --border-soft: #161b22;
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shadow: 0 18px 44px -22px rgba(0, 0, 0, 0.85);
+  --grid: rgba(255, 255, 255, 0.022);
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", Roboto,
+    sans-serif;
+  --font-display: "Bricolage Grotesque", var(--font-sans);
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    monospace;
+
+  font-family: var(--font-sans);
 }
 
 html {
@@ -28,34 +45,77 @@ html {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(900px 500px at 50% -10%, rgba(76, 141, 255, 0.08), transparent 70%),
-    var(--bg);
+  position: relative;
+  background-color: var(--bg);
+  /* Signal glow from the top edge. */
+  background-image: radial-gradient(
+      720px 420px at 50% -12%,
+      rgba(200, 240, 90, 0.07),
+      transparent 62%
+    ),
+    radial-gradient(
+      560px 360px at 100% 0%,
+      rgba(92, 208, 222, 0.04),
+      transparent 60%
+    );
+  background-attachment: fixed;
   color: var(--fg);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
   min-height: 100vh;
 }
 
+/* Faint instrument grid behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 90%);
+  mask-image: linear-gradient(to bottom, #000, transparent 90%);
+}
+
 #app {
-  padding: 20px 16px;
+  position: relative;
+  z-index: 1;
+  padding: 22px 18px;
   display: flex;
   justify-content: center;
 }
 
 .card {
+  position: relative;
   width: 100%;
+  max-width: 520px;
+  overflow: hidden;
   background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 22px;
-  max-width: 520px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.045);
+}
+
+/* Signal line igniting along the panel's top edge. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(200, 240, 90, 0.7),
+    transparent
+  );
 }
 
 /* Fade + subtle scale entrance, fired on each screen change (remount). */
 .panel {
-  animation: panel-in 280ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  animation: panel-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 header {
@@ -63,25 +123,75 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--border-soft);
 }
 
+/* ── Brand mark ───────────────────────────────────────────────────────────── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  position: relative;
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 0 4px rgba(200, 240, 90, 0.12);
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(200, 240, 90, 0.5);
+  animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.brand-sub {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.26em;
+  color: var(--muted);
+}
+
 h1 {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 17px;
   margin: 0;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
   font-weight: 650;
 }
 
 h2 {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  margin: 20px 0 10px;
-  font-weight: 600;
+  letter-spacing: 0.16em;
+  margin: 22px 0 10px;
+  font-weight: 500;
 }
 
 .hint {
@@ -102,9 +212,8 @@ select {
   border-radius: var(--radius-sm);
   padding: 9px 11px;
   font-size: 14px;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
+  font-family: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease,
     background-color 150ms ease;
 }
 
@@ -115,8 +224,8 @@ input::placeholder {
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.22);
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px rgba(200, 240, 90, 0.22);
 }
 
 input {
@@ -124,27 +233,25 @@ input {
 }
 
 button {
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
-  color: white;
+  background: var(--signal);
+  color: var(--signal-ink);
   border: none;
   border-radius: var(--radius-sm);
   padding: 9px 16px;
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition:
-    filter 150ms ease,
-    transform 90ms ease,
-    box-shadow 150ms ease;
+  transition: filter 150ms ease, transform 90ms ease, box-shadow 200ms ease;
 }
 
 button:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow: 0 4px 14px -4px rgba(76, 141, 255, 0.55);
+  filter: brightness(1.05);
+  box-shadow: 0 0 0 1px rgba(200, 240, 90, 0.3),
+    0 10px 30px -10px rgba(200, 240, 90, 0.5);
 }
 
 button:active:not(:disabled) {
@@ -153,13 +260,15 @@ button:active:not(:disabled) {
 
 button.secondary,
 .actions #lock {
-  background: #2a3140;
+  background: var(--panel-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
   box-shadow: none;
 }
 
 button.secondary:hover:not(:disabled),
 .actions #lock:hover:not(:disabled) {
-  background: #333c4e;
+  background: #1c232d;
   filter: none;
   box-shadow: none;
 }
@@ -211,23 +320,24 @@ button:disabled {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 /* Config/connectivity diagnostics, shown up front on the login/enroll screens. */
 .diag {
-  margin-top: 18px;
-  padding-top: 14px;
+  margin-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid var(--border-soft);
 }
 
 .diag > summary {
   cursor: pointer;
   color: var(--muted);
+  font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-weight: 600;
+  letter-spacing: 0.16em;
+  font-weight: 500;
   user-select: none;
 }
 
@@ -275,26 +385,29 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .badge {
   padding: 5px 11px;
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 12px;
-  background: #2a3140;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--panel-2);
   color: var(--muted);
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .badge.ok {
-  background: rgba(46, 204, 113, 0.16);
-  color: var(--ok);
-  border-color: rgba(46, 204, 113, 0.3);
+  background: rgba(200, 240, 90, 0.14);
+  color: var(--signal);
+  border-color: rgba(200, 240, 90, 0.32);
 }
 
 /* Pulsing dot for the "active"/online/enrolled (ok) badges. */
@@ -304,15 +417,15 @@ button:disabled {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.6);
+  background: var(--signal);
+  box-shadow: 0 0 0 0 rgba(200, 240, 90, 0.6);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .badge.warn {
-  background: rgba(230, 126, 34, 0.16);
+  background: rgba(245, 181, 68, 0.14);
   color: var(--warn);
-  border-color: rgba(230, 126, 34, 0.3);
+  border-color: rgba(245, 181, 68, 0.32);
 }
 
 .badge.muted {
@@ -325,7 +438,7 @@ table {
 }
 
 table.kv {
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(255, 255, 255, 0.012);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -335,15 +448,18 @@ table.kv th {
   text-align: left;
   color: var(--muted);
   font-weight: 500;
-  padding: 7px 12px;
+  padding: 8px 12px;
   white-space: nowrap;
   vertical-align: top;
   width: 40%;
 }
 
 table.kv td {
-  padding: 7px 12px;
+  padding: 8px 12px;
   word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 table.kv tr + tr th,
@@ -355,16 +471,18 @@ table.samples th {
   text-align: left;
   padding: 7px 10px;
   color: var(--muted);
+  font-family: var(--font-mono);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
 }
 
 table.samples td {
   text-align: left;
   padding: 7px 10px;
   border-top: 1px solid var(--border-soft);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -373,7 +491,7 @@ table.samples tbody tr {
 }
 
 table.samples tbody tr:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(200, 240, 90, 0.04);
 }
 
 table.errors .err-detail {
@@ -386,8 +504,8 @@ table.errors .err-detail {
 .actions {
   display: flex;
   gap: 8px;
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 22px;
+  padding-top: 18px;
   border-top: 1px solid var(--border-soft);
 }
 
@@ -400,8 +518,8 @@ table.errors .err-detail {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: white;
+  border: 2px solid rgba(10, 12, 15, 0.3);
+  border-top-color: var(--signal-ink);
   border-radius: 50%;
   animation: spin 600ms linear infinite;
   flex-shrink: 0;
@@ -409,15 +527,18 @@ table.errors .err-detail {
 
 /* Thin scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #232b37;
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #313a49;
 }
 
 /* Keyframes */
@@ -454,12 +575,24 @@ table.errors .err-detail {
   100% {
     opacity: 1;
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.45);
+    box-shadow: 0 0 0 0 rgba(200, 240, 90, 0.5);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.55;
     transform: scale(0.82);
-    box-shadow: 0 0 0 4px rgba(46, 204, 113, 0);
+    box-shadow: 0 0 0 4px rgba(200, 240, 90, 0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
   }
 }
 
@@ -468,6 +601,7 @@ table.errors .err-detail {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

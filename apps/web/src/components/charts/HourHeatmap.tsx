@@ -32,8 +32,8 @@ export function HourHeatmap({ data }: { data: Bucket[] }) {
                     className="aspect-square rounded-sm ring-1 ring-inset ring-border/40 transition-transform hover:scale-110"
                     style={{
                       backgroundColor: empty
-                        ? "rgba(139,147,167,0.15)"
-                        : `rgba(76,141,255,${opacity})`,
+                        ? "rgba(131,141,155,0.10)"
+                        : `rgba(200,240,90,${opacity})`,
                     }}
                     aria-label={`${b.hour}:00 — ${Math.round(b.ratio * 100)}%`}
                   />

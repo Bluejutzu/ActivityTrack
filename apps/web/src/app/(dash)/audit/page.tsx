@@ -48,7 +48,7 @@ export default function AuditPage() {
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r._id}>
-              <TableCell className="whitespace-nowrap text-muted">
+              <TableCell className="whitespace-nowrap font-mono text-xs tabular-nums text-muted">
                 {formatTime(r.at, lang)}
               </TableCell>
               <TableCell className="text-fg">{r.actorName}</TableCell>

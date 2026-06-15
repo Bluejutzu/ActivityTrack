@@ -8,7 +8,12 @@ const Card = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("rounded-xl border border-border bg-panel", className)}
+    className={cn(
+      // Faint top-down gradient + hairline highlight reads as a lit surface,
+      // not a flat rectangle on the void.
+      "rounded-xl border border-border bg-gradient-to-b from-panel to-[#0e121a] shadow-card",
+      className
+    )}
     {...props}
   />
 ));
@@ -33,7 +38,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight text-fg",
+      "font-display text-lg font-semibold leading-none tracking-tightest text-fg",
       className
     )}
     {...props}
@@ -77,7 +82,7 @@ export {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
+  CardDescription,
   CardFooter,
 };
