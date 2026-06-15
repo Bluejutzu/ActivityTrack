@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
-import { errorMessage } from "@/lib/errors";
+import { useToast } from "@/lib/useToast";
+import { useActionWithToast } from "@/lib/useActionWithToast";
+import { Reveal } from "@/components/motion/Reveal";
 import {
   Card,
   CardContent,
@@ -20,12 +22,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const toast = useToast();
   const isSet = useQuery(api.settings.debugPasswordIsSet);
-  const setDebugPassword = useAction(api.settings.setDebugPassword);
+  const setDebugPassword = useActionWithToast(api.settings.setDebugPassword);
 
   const [pw, setPw] = useState("");
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -37,20 +39,19 @@ export default function SettingsPage() {
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setSaved(false);
-    setError(null);
     if (pw.length < 6) {
-      setError(t("settings.debugPw.tooShort"));
+      toast(t("settings.debugPw.tooShort"), "warn");
       return;
     }
     setBusy(true);
-    try {
-      await setDebugPassword({ password: pw });
+    const result = await setDebugPassword(
+      { password: pw },
+      { success: t("settings.debugPw.saved") },
+    );
+    setBusy(false);
+    if (result !== undefined) {
       setPw("");
       setSaved(true);
-    } catch (err) {
-      setError(errorMessage(t, err));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -93,13 +94,12 @@ export default function SettingsPage() {
             </Button>
           </form>
 
-          {saved && (
-            <p className="flex items-center gap-1.5 text-sm text-ok animate-fade-up">
+          <Reveal show={saved}>
+            <p className="flex items-center gap-1.5 text-sm text-ok">
               <CheckCircle2 className="h-4 w-4" />
               {t("settings.debugPw.saved")}
             </p>
-          )}
-          {error && <p className="text-sm text-warn">{error}</p>}
+          </Reveal>
         </CardContent>
       </Card>
     </section>

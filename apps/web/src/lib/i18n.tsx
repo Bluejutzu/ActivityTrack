@@ -249,6 +249,12 @@ const de: Dict = {
   "errorBoundary.body":
     "Dieser Bereich konnte nicht geladen werden. Das Problem wurde automatisch an die IT gemeldet.",
   "errorBoundary.retry": "Erneut versuchen",
+
+  // Auth provisioning gate (user row could not be created/loaded).
+  "auth.error.title": "Anmeldung konnte nicht abgeschlossen werden",
+  "auth.error.body":
+    "Ihr Konto konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "auth.error.retry": "Erneut versuchen",
 };
 
 const en: Dict = {
@@ -479,6 +485,12 @@ const en: Dict = {
   "errorBoundary.body":
     "This area couldn't be loaded. The problem was automatically reported to IT.",
   "errorBoundary.retry": "Try again",
+
+  // Auth provisioning gate (user row could not be created/loaded).
+  "auth.error.title": "Couldn't finish signing you in",
+  "auth.error.body":
+    "We couldn't load your account. Please check your connection and try again.",
+  "auth.error.retry": "Try again",
 };
 
 const DICTS: Record<Lang, Dict> = { de, en };
