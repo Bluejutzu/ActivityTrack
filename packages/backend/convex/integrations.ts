@@ -209,6 +209,22 @@ async function fetchClockodoWork(clockodoUserId: string): Promise<{
   return { working: clockedIn, onBreak: !clockedIn };
 }
 
+/**
+ * Look up a single entry by id, only to learn which Clockodo user it belongs to.
+ * A webhook carries just the entry id, so we resolve the user, then read their
+ * authoritative day state via `fetchClockodoWork`. Returns null when the entry
+ * no longer exists (e.g. it was deleted).
+ */
+async function fetchClockodoEntryUserId(id: string): Promise<string | null> {
+  const res = await fetch(`${CLOCKODO_BASE()}/api/v2/entries/${id}`, {
+    headers: clockodoHeaders(),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Clockodo GET entry ${id} failed: ${res.status}`);
+  const body = (await res.json()) as { entry?: ClockodoEntry };
+  return body.entry?.users_id != null ? String(body.entry.users_id) : null;
+}
+
 // --- Persistence helpers (single guarded write path) -----------------------
 
 async function pushGenesys(
@@ -340,6 +356,63 @@ export const refreshClockodo = action({
         clockodoWorking: work.working,
         clockodoBreak: work.onBreak,
         clockodoAbsent: absent,
+      });
+      await reportHealth(ctx, "clockodo", "ok");
+      return { ok: true as const };
+    } catch (err) {
+      await reportHealth(ctx, "clockodo", healthStatusOf(err), errMessage(err));
+      return { ok: false, error: "clockodo_unavailable" as const };
+    }
+  },
+});
+
+/**
+ * Re-pull state from a Clockodo webhook event. Clockodo sends only the id of the
+ * changed entry, so we fetch the entry, resolve the user behind it, and push the
+ * derived working/break/absent state. Used by the `/api/webhooks/clockodo` route.
+ */
+export const refreshClockodoByEntry = action({
+  args: {
+    secret: v.string(),
+    entryId: v.string(),
+    eventName: v.optional(v.string()),
+  },
+  handler: async (ctx, { secret, entryId }) => {
+    if (secret !== process.env.ACTIVITYTRACK_SIGNAL_SECRET) {
+      return { ok: false, error: "forbidden" as const };
+    }
+    try {
+      // The webhook only carries the entry id — read it to learn the user, then
+      // resolve their day state cross-user (same path as `refreshClockodo`).
+      const clockodoUserId = await fetchClockodoEntryUserId(entryId);
+      // A deleted entry (or one with no user) carries nothing authoritative to
+      // push — acknowledge without touching state so Clockodo won't retry.
+      if (!clockodoUserId) {
+        await reportHealth(ctx, "clockodo", "ok");
+        return { ok: true as const, ignored: true as const };
+      }
+
+      const employeeId = await ctx.runQuery(api.state.resolveEmployeeId, {
+        secret,
+        clockodoUserId,
+      });
+      // The Clockodo user isn't mapped to anyone here — not an error.
+      if (!employeeId) {
+        await reportHealth(ctx, "clockodo", "ok");
+        return { ok: true as const, unmapped: true as const };
+      }
+
+      const [work, absences] = await Promise.all([
+        fetchClockodoWork(clockodoUserId),
+        fetchAbsences(new Date().getFullYear()),
+      ]);
+      await ctx.runMutation(api.state.pushSignal, {
+        secret,
+        employeeId,
+        source: "clockodo",
+        clockodoWorking: work.working,
+        clockodoBreak: work.onBreak,
+        clockodoAbsent: isAbsentOn(absences, clockodoUserId, today()),
       });
       await reportHealth(ctx, "clockodo", "ok");
       return { ok: true as const };

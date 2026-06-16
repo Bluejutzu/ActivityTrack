@@ -39,7 +39,7 @@ The engine is a pure function in `packages/shared/src/state.ts`
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | POST | `/api/activity/update` | `Bearer ACTIVITYTRACK_INGEST_KEY` | Agent workstation heartbeat |
-| POST | `/api/webhooks/clockodo` | `ACTIVITYTRACK_WEBHOOK_SECRET` | Clockodo entry.* webhook (re-pulls authoritative state) |
+| POST | `/api/webhooks/clockodo` | body `token` (`CLOCKODO_WEBHOOK_TOKEN`) / legacy `ACTIVITYTRACK_WEBHOOK_SECRET` | Clockodo entry.* webhook (fetches the entry, maps the user, re-pulls state) |
 | POST | `/api/integrations/genesys/notify` | `ACTIVITYTRACK_WEBHOOK_SECRET` | Relay for normalized Genesys events |
 | POST | `/api/integrations/genesys/sync` | `ACTIVITYTRACK_WEBHOOK_SECRET` | Polling fallback for one user |
 | GET | `/api/health` | — | Liveness |
@@ -111,11 +111,22 @@ signals remain.
    clock on a day the person has already booked time counts as a break (working
    while clocked in, off-shift when there are no entries that day). State is read
    cross-user from `/api/v2/entries` (`filter[users_id]` + a day range); absences
-   come from `/api/v4/absences`. Configure a
-   Clockodo webhook pointing at `https://<dashboard>/api/webhooks/clockodo`
-   (send the webhook secret as `Authorization: Bearer <secret>` or `?secret=`).
-   Include `employeeId` + `clockodoUserId` in the webhook body for the re-pull
-   path, or post a normalized `{ employeeId, working, onBreak, absent }`.
+   come from `/api/v4/absences`. Then add a Clockodo webhook
+   (Clockodo → Webhooks → *Add webhook*):
+   - **Events:** `entry.created`, `entry.updated`, `entry.stopped` (add
+     `entry.deleted` too if you want manual deletions reflected).
+   - **URL:** `https://<dashboard>/api/webhooks/clockodo`
+   - **Token:** Clockodo validates the URL by POSTing `{ "secret": "<uuid>" }`
+     to it; that secret is printed to the web app logs as
+     `[clockodo] webhook validation secret: …`. Paste it into the Token field,
+     and set the same value as `CLOCKODO_WEBHOOK_TOKEN` (web app env) so live
+     events authenticate. Clockodo sends only the changed entry's id — the
+     endpoint resolves the user from it and re-pulls working/break/absent
+     (the same cross-user read as the cron).
+
+   The endpoint still accepts the legacy adapter shapes (a normalized
+   `{ employeeId, working, onBreak, absent }`, or `{ employeeId, clockodoUserId }`
+   for a re-pull) guarded by `Authorization: Bearer <secret>` / `?secret=`.
 6. **Map people:** in the dashboard → *People*, fill each person's
    **Employee ID** (the canonical key, also what the agent sends), **Genesys ID**,
    and **Clockodo ID**.
