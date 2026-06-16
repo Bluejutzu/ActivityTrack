@@ -18,7 +18,9 @@ import {
 
 export default function AuditPage() {
   const { t, lang } = useI18n();
-  const rows = useQuery(api.audit.list, {});
+  const me = useQuery(api.users.me);
+  const isAdmin = me?.role === "it_admin";
+  const rows = useQuery(api.audit.list, isAdmin ? {} : "skip");
 
   if (rows === undefined) {
     return <Skeleton className="h-64 w-full" />;

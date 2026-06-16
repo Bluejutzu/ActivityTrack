@@ -20,7 +20,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
   const { t } = useI18n();
-  const isSet = useQuery(api.settings.debugPasswordIsSet);
+  const me = useQuery(api.users.me);
+  const isAdmin = me?.role === "it_admin";
+  const isSet = useQuery(api.settings.debugPasswordIsSet, isAdmin ? {} : "skip");
   const setDebugPassword = useAction(api.settings.setDebugPassword);
 
   const [pw, setPw] = useState("");

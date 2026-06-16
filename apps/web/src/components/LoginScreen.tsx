@@ -65,10 +65,6 @@ export function LoginScreen() {
               variables: {
                 colorPrimary: "#4c8dff",
                 colorBackground: "#141821",
-                colorInputBackground: "#0b0d12",
-                colorText: "#e6e9ef",
-                colorTextSecondary: "#8b93a7",
-                colorInputText: "#e6e9ef",
                 borderRadius: "0.75rem",
               },
               elements: {

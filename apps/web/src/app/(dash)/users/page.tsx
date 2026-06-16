@@ -28,7 +28,9 @@ const ROLES: Role[] = ["it_admin", "manager", "viewer"];
 
 export default function UsersPage() {
   const { t } = useI18n();
-  const users = useQuery(api.users.list);
+  const me = useQuery(api.users.me);
+  const isAdmin = me?.role === "it_admin";
+  const users = useQuery(api.users.list, isAdmin ? {} : "skip");
   const setRole = useMutationWithToast(api.users.setRole);
   const [busyId, setBusyId] = useState<string | null>(null);
 

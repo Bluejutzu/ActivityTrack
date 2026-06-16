@@ -244,7 +244,7 @@ export default function DevicesPage() {
   const me = useQuery(api.users.me);
   const devices = useQuery(api.devices.list);
   const people = useQuery(api.people.list);
-  const slots = useQuery(api.devices.listSlots);
+  const slots = useQuery(api.devices.listSlots, me?.role === "it_admin" ? {} : "skip");
 
   const approve = useMutationWithToast(api.devices.approve);
   const disable = useMutationWithToast(api.devices.disable);

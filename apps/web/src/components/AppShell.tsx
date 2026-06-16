@@ -24,6 +24,7 @@ import { roleAtLeast, type Role } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./LangSwitcher";
 import { PageTransition } from "./PageTransition";
+import { SkeletonCard } from "./Skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t(`role.${role}`)}
             </Badge>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton  />
         </div>
       </aside>
 
@@ -157,12 +158,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <LangSwitcher />
           <div className="lg:hidden">
-            <UserButton afterSignOutUrl="/" />
+            <UserButton  />
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-          <PageTransition>{children}</PageTransition>
+          <PageTransition>
+            {me == null ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : children}
+          </PageTransition>
         </main>
 
         <footer className="mx-auto w-full max-w-6xl px-4 py-8 text-xs text-muted">
