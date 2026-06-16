@@ -3,7 +3,31 @@
 import { SignIn } from "@clerk/nextjs";
 import { Activity, BarChart3, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
 import { LangSwitcher } from "./LangSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
+
+// Clerk's widget is themed via explicit colour variables, so it has to be told
+// the resolved palette (it can't read our CSS variables). Kept in step with the
+// `--c-*` tokens in globals.css.
+const CLERK_VARS = {
+  light: {
+    colorBackground: "#ffffff",
+    colorInputBackground: "#ffffff",
+    colorText: "#1b2027",
+    colorTextSecondary: "#5b6573",
+    colorInputText: "#1b2027",
+    colorPrimary: "#2e6cf6",
+  },
+  dark: {
+    colorBackground: "#161c24",
+    colorInputBackground: "#1e252f",
+    colorText: "#e6eaf0",
+    colorTextSecondary: "#8e9aa9",
+    colorInputText: "#e6eaf0",
+    colorPrimary: "#588eff",
+  },
+} as const;
 
 /** A small, friendly preview of exactly what the dashboard shows: a few people
  *  and their plain-language status. Concrete beats abstract on a sign-in page. */
@@ -58,19 +82,23 @@ function StatusPreview() {
  */
 export function LoginScreen() {
   const { t } = useI18n();
+  const { theme } = useTheme();
 
   return (
     <div className="min-h-screen bg-bg">
       <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-[1.05fr_1fr]">
         {/* Brand / value column */}
         <div className="hidden flex-col gap-8 lg:flex animate-fade-up">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-white shadow-sm">
-              <Activity className="h-5 w-5" />
-            </span>
-            <span className="text-lg font-semibold tracking-tightest text-fg">
-              {t("app.name")}
-            </span>
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-white shadow-sm">
+                <Activity className="h-5 w-5" />
+              </span>
+              <span className="text-lg font-semibold tracking-tightest text-fg">
+                {t("app.name")}
+              </span>
+            </div>
+            <ThemeToggle />
           </div>
 
           <div>
@@ -109,18 +137,16 @@ export function LoginScreen() {
               </span>
               {t("app.name")}
             </span>
-            <LangSwitcher />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LangSwitcher />
+            </div>
           </div>
           <SignIn
             routing="hash"
             appearance={{
               variables: {
-                colorPrimary: "#2e6cf6",
-                colorBackground: "#ffffff",
-                colorInputBackground: "#ffffff",
-                colorText: "#1b2027",
-                colorTextSecondary: "#5b6573",
-                colorInputText: "#1b2027",
+                ...CLERK_VARS[theme],
                 borderRadius: "0.75rem",
               },
               elements: {

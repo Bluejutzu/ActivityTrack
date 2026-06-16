@@ -9,8 +9,19 @@ import animate from "tailwindcss-animate";
  * brand blue carries every action and link; status reads as a plain traffic
  * light — green is working, amber is idle, grey is offline — so anyone can scan
  * the room at a glance. Inter sets the whole interface for a clean, modern feel.
+ *
+ * Both light and dark modes share these token names; their actual values live as
+ * CSS custom properties in globals.css (`:root` for light, `.dark` for dark), so
+ * every utility — including `/20`-style alpha — recolours automatically when the
+ * `.dark` class is toggled on <html>.
  */
+
+// Each colour token resolves to a CSS variable holding space-separated RGB
+// channels, wrapped so Tailwind's `<alpha-value>` (e.g. `bg-ok/20`) keeps working.
+const c = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 export default {
+  darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -27,24 +38,24 @@ export default {
         mono: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
-        // ── Light surfaces ───────────────────────────────────────────────
-        bg: "#F7F8FA",
-        "bg-2": "#FFFFFF",
-        panel: "#FFFFFF",
-        "panel-2": "#F1F3F6",
-        border: "#E4E8EE",
-        "border-soft": "#EEF1F4",
-        muted: "#5B6573",
-        fg: "#1B2027",
+        // ── Surfaces ─────────────────────────────────────────────────────
+        bg: c("bg"),
+        "bg-2": c("bg-2"),
+        panel: c("panel"),
+        "panel-2": c("panel-2"),
+        border: c("border"),
+        "border-soft": c("border-soft"),
+        muted: c("muted"),
+        fg: c("fg"),
         // ── Brand (every action, link, focus ring) ───────────────────────
-        accent: "#2E6CF6",
-        signal: "#2E6CF6",
+        accent: c("accent"),
+        signal: c("accent"),
         // ── Status (traffic light) ───────────────────────────────────────
-        ok: "#10A372",
-        warn: "#C2740C",
-        idle: "#C2740C",
-        danger: "#DC4B47",
-        info: "#0E92C9",
+        ok: c("ok"),
+        warn: c("warn"),
+        idle: c("warn"),
+        danger: c("danger"),
+        info: c("info"),
       },
       borderRadius: {
         lg: "0.75rem",

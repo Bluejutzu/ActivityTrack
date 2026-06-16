@@ -21,6 +21,7 @@ import { useStoreUser } from "@/lib/useStoreUser";
 import { roleAtLeast, type Role } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LangSwitcher } from "./LangSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { PageTransition } from "./PageTransition";
 import { SkeletonCard } from "@/components/Skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -223,6 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </h1>
           </div>
 
+          <ThemeToggle />
           <LangSwitcher />
           <div className="lg:hidden">
             <UserButton afterSignOutUrl="/" />

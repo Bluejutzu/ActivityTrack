@@ -31,9 +31,11 @@ export function HourHeatmap({ data }: { data: Bucket[] }) {
                   <div
                     className="aspect-square rounded-sm ring-1 ring-inset ring-border/40 transition-transform hover:scale-110"
                     style={{
+                      // Green (= active) at varying strength; CSS variables resolve
+                      // per theme, so the strip recolours in light/dark.
                       backgroundColor: empty
-                        ? "rgba(131,141,155,0.10)"
-                        : `rgba(200,240,90,${opacity})`,
+                        ? "rgb(var(--c-muted) / 0.12)"
+                        : `rgb(var(--c-ok) / ${opacity})`,
                     }}
                     aria-label={`${b.hour}:00 — ${Math.round(b.ratio * 100)}%`}
                   />

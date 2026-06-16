@@ -5,6 +5,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useState, type ReactNode } from "react";
 import { I18nProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/components/Toast";
 
 /**
@@ -19,25 +20,29 @@ export function Providers({ children }: { children: ReactNode }) {
 
   if (!client) {
     return (
-      <I18nProvider>
-        <div className="mx-auto mt-24 max-w-md rounded-xl border border-border bg-panel p-6 text-center text-muted">
-          <p className="text-fg">Configuration required</p>
-          <p className="mt-2 text-sm">
-            Set <code className="text-accent">NEXT_PUBLIC_CONVEX_URL</code> in{" "}
-            <code>.env.local</code> to connect the dashboard to your Convex
-            deployment.
-          </p>
-        </div>
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <div className="mx-auto mt-24 max-w-md rounded-xl border border-border bg-panel p-6 text-center text-muted">
+            <p className="text-fg">Configuration required</p>
+            <p className="mt-2 text-sm">
+              Set <code className="text-accent">NEXT_PUBLIC_CONVEX_URL</code> in{" "}
+              <code>.env.local</code> to connect the dashboard to your Convex
+              deployment.
+            </p>
+          </div>
+        </I18nProvider>
+      </ThemeProvider>
     );
   }
 
   return (
     <ClerkProvider>
       <ConvexProviderWithClerk client={client} useAuth={useAuth}>
-        <I18nProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
