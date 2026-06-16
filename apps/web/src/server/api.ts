@@ -35,6 +35,19 @@ function checkKey(provided: string | null, expected: string | undefined) {
   return !!expected && provided === expected;
 }
 
+/**
+ * Clockodo echoes the value configured in its webhook "Token" field back in
+ * every event body. Accept it against the dedicated token or — for setups that
+ * reuse one secret — the shared webhook secret.
+ */
+function clockodoTokenOk(token: string | null): boolean {
+  if (!token) return false;
+  return (
+    checkKey(token, process.env.CLOCKODO_WEBHOOK_TOKEN) ||
+    checkKey(token, process.env.ACTIVITYTRACK_WEBHOOK_SECRET)
+  );
+}
+
 export const app = new Elysia({ prefix: "/api" })
   .onError(({ error, set }) => {
     // Never leak internals; log server-side, return a terse message.
@@ -118,16 +131,49 @@ export const app = new Elysia({ prefix: "/api" })
   })
 
   /**
-   * POST /api/webhooks/clockodo — Clockodo time-tracking webhook
-   * (entry.created/updated/stopped) or a pre-normalized push.
+   * POST /api/webhooks/clockodo — Clockodo time-tracking webhook.
    *
-   * Two shapes are accepted:
-   *   1. A normalized ClockodoSignal ({ employeeId, working?, onBreak?, absent? })
-   *      — when an adapter has already resolved the state.
-   *   2. A raw event carrying { employeeId, clockodoUserId } — we delegate to the
-   *      Convex action, which re-pulls the current entry + absences.
+   * Accepts the shapes Clockodo actually sends, plus two legacy adapter shapes:
+   *
+   *   A. Validation handshake — on create / URL change Clockodo POSTs
+   *      `{ "secret": "<uuid>" }`. We log the secret (read it from the deploy
+   *      logs and paste it into Clockodo's "Token" field) and return 200 so
+   *      validation passes.
+   *   B. Native event — `{ event_name: "entry.*", payload: { entry: { id } },
+   *      token }`. Clockodo sends only the entry id, so we hand it to Convex,
+   *      which fetches the entry, resolves the user, and re-pulls their state.
+   *      Authenticated by the echoed `token`.
+   *   C. Legacy — a normalized ClockodoSignal, or `{ employeeId, clockodoUserId }`
+   *      for an authoritative re-pull. Guarded by the Bearer / `?secret=` key.
    */
   .post("/webhooks/clockodo", async ({ body, headers, query, set }) => {
+    const b = (body ?? {}) as Record<string, unknown>;
+
+    // A. Validation handshake — surface the secret and acknowledge.
+    if (typeof b.secret === "string" && !b.event_name && !b.employeeId) {
+      console.log(`[clockodo] webhook validation secret: ${b.secret}`);
+      return { ok: true };
+    }
+
+    // B. Native Clockodo event (entry.created / .updated / .stopped / .deleted).
+    if (typeof b.event_name === "string") {
+      const token = typeof b.token === "string" ? b.token : null;
+      if (!clockodoTokenOk(token)) {
+        set.status = 401;
+        return { ok: false, error: "unauthorized" };
+      }
+      const payload = (b.payload ?? {}) as { entry?: { id?: number | string } };
+      const entryId = payload.entry?.id;
+      // Acknowledge events without an entry id so Clockodo doesn't retry them.
+      if (entryId == null) return { ok: true, ignored: true };
+      return await convex.action(api.integrations.refreshClockodoByEntry, {
+        secret: signalSecret(),
+        entryId: String(entryId),
+        eventName: b.event_name,
+      });
+    }
+
+    // C. Legacy adapter shapes — keep the Bearer / ?secret= guard.
     const secret =
       bearer(headers) ?? (query.secret as string | undefined) ?? null;
     if (!checkKey(secret, process.env.ACTIVITYTRACK_WEBHOOK_SECRET)) {
@@ -135,10 +181,8 @@ export const app = new Elysia({ prefix: "/api" })
       return { ok: false, error: "unauthorized" };
     }
 
-    const raw = body as { employeeId?: string; clockodoUserId?: string };
-
-    // Mode 2: re-pull from Clockodo for an authoritative snapshot.
-    if (raw?.employeeId && raw?.clockodoUserId) {
+    const raw = b as { employeeId?: string; clockodoUserId?: string };
+    if (raw.employeeId && raw.clockodoUserId) {
       return await convex.action(api.integrations.refreshClockodo, {
         secret: signalSecret(),
         employeeId: raw.employeeId,
@@ -146,7 +190,6 @@ export const app = new Elysia({ prefix: "/api" })
       });
     }
 
-    // Mode 1: normalized push.
     const parsed = clockodoSignalSchema.safeParse(body);
     if (!parsed.success) {
       set.status = 400;
