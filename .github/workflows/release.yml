@@ -1,16 +1,13 @@
 name: Release tracker
 
 # Builds the Windows tracker installer (Tauri / NSIS) and attaches it to a
-# GitHub Release whenever a v* tag is pushed (e.g. git tag v0.1.0 && git push --tags).
+# GitHub Release whenever a v* tag is pushed (e.g. git tag v0.2.0 && git push --tags).
+# Use scripts/bump-version.sh to update all version files and create the tag.
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'packages/**'
-      - 'apps/desktop/**'
-      - '.github/workflows/release.yml'
+    tags:
+      - 'v*'
 
 jobs:
   build-tracker:
@@ -19,6 +16,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -47,14 +46,36 @@ jobs:
           $configJson | Out-File -Encoding UTF8 -FilePath "apps/desktop/src-tauri/bundle/nsis/config-staging/config.json"
         shell: pwsh
 
+      # Generate changelog from commits since the previous tag.
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s" "$PREVIOUS_TAG"..HEAD)
+          else
+            CHANGES=$(git log --pretty=format:"- %s")
+          fi
+          {
+            echo "changes<<EOF"
+            echo "$CHANGES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
       # Builds the frontend (beforeBuildCommand) + the Rust app, bundles the
-      # NSIS installer, and uploads it to the release for this tag.
+      # NSIS installer, signs the artifacts for the auto-updater, and uploads
+      # everything to a new GitHub Release for this tag.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: "ActivityTrack ${{ github.ref_name }}"
+          releaseBody: ${{ steps.changelog.outputs.changes }}
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true

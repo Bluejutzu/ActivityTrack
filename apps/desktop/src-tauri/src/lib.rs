@@ -16,8 +16,18 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::state::AppState;
+
+async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = handle.updater()?.check().await? {
+        update
+            .download_and_install(|_chunk, _total| {}, || {})
+            .await?;
+    }
+    Ok(())
+}
 
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -51,6 +61,8 @@ pub fn run() {
     tracker::start(state.clone());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_cli::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
@@ -95,6 +107,14 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Check for updates in the background so startup is not delayed.
+            // If a newer version is available, the NSIS installer runs passively
+            // and the app is restarted by the installer.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = check_for_update(handle).await;
+            });
 
             Ok(())
         })

@@ -32,9 +32,7 @@ pub fn platform() -> String {
 /// samples into the device's local calendar day.
 #[cfg(windows)]
 pub fn tz_offset_minutes() -> i32 {
-    use windows::Win32::System::Time::{
-        GetTimeZoneInformation, TIME_ZONE_INFORMATION,
-    };
+    use windows::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
     const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
     unsafe {
         let mut tzi = TIME_ZONE_INFORMATION::default();

@@ -31,3 +31,5 @@ apps/desktop/src-tauri/bundle/nsis/config-staging/config.json.secrets
 *.log
 .DS_Store
 Thumbs.db
+~
+.tauri
