@@ -172,6 +172,10 @@ function isAbsentOn(
   );
 }
 
+function clockodoDate(date = new Date()) {
+  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 interface ClockodoEntry {
   users_id?: number;
   // `clocked: true` means the entry is currently running (clock still ticking).
@@ -192,10 +196,10 @@ interface ClockodoEntry {
 async function fetchTodayEntries(clockodoUserId: string): Promise<ClockodoEntry[]> {
   const day = today();
   const qs = [
-    `time_since=${encodeURIComponent(`${day}T00:00:00Z`)}`,
-    `time_until=${encodeURIComponent(new Date().toISOString())}`,
-    `filter[users_id]=${encodeURIComponent(clockodoUserId)}`,
-  ].join("&");
+  `time_since=${encodeURIComponent(`${day}T00:00:00Z`)}`,
+  `time_until=${encodeURIComponent(clockodoDate())}`,
+  `filter[users_id]=${encodeURIComponent(clockodoUserId)}`,
+].join("&");
   const body = await clockodoGet<{ entries?: ClockodoEntry[] }>(
     `/api/v2/entries?${qs}`,
   );
