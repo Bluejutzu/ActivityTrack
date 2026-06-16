@@ -29,6 +29,13 @@ crons.daily(
 );
 
 crons.daily(
+  "prune old state history",
+  { hourUTC: 3, minuteUTC: 15 },
+  internal.maintenance.pruneOldStateSamples,
+  {},
+);
+
+crons.daily(
   "prune old resolved events",
   { hourUTC: 3, minuteUTC: 30 },
   internal.events.purgeOldEvents,

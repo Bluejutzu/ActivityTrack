@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default function AuditPage() {
+/** Append-only audit log of privileged actions (IT admin). Settings hub tab. */
+export function AuditPanel() {
   const { t, lang } = useI18n();
   const rows = useQuery(api.audit.list, {});
 

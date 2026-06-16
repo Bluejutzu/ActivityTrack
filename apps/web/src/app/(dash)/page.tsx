@@ -7,11 +7,13 @@ import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { EmployeeState } from "@activitytrack/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { QueryState } from "@/components/QueryState";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { HealthBanner, StateBadge } from "@/components/state/StateBits";
 
 /** Compact mono read-out of the fleet's current state. */
 function FleetSummary({
@@ -75,18 +77,24 @@ export default function OverviewPage() {
     >
       {(rows) => (
         <div className="space-y-5">
+          <HealthBanner />
           <FleetSummary rows={rows} />
           <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((d, index) => {
-              const state = !d.online ? "offline" : d.active ? "working" : "idle";
-              const variant =
-                state === "working" ? "ok" : state === "idle" ? "warn" : "muted";
-              const label =
-                state === "working"
+              // Prefer the fused state (on call / break / absent / …) when we
+              // have it and the device is online; fall back to the basic
+              // working/idle/offline read otherwise.
+              const offline = !d.online;
+              const basic = offline ? "offline" : d.active ? "working" : "idle";
+              const basicVariant =
+                basic === "working" ? "ok" : basic === "idle" ? "warn" : "muted";
+              const basicLabel =
+                basic === "working"
                   ? t("overview.working")
-                  : state === "idle"
+                  : basic === "idle"
                     ? t("overview.idleNow")
                     : t("overview.offline");
+              const showFused = !offline && d.finalState != null;
               return (
                 <StaggerItem key={d.deviceId} index={index}>
                   <Link
@@ -101,15 +109,19 @@ export default function OverviewPage() {
                           <span className="truncate font-medium text-fg">
                             {d.personName ?? d.hostname}
                           </span>
-                          <Badge
-                            variant={variant}
-                            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
-                          >
-                            {state === "working" && (
-                              <span className="signal-dot !h-1.5 !w-1.5" />
-                            )}
-                            {label}
-                          </Badge>
+                          {showFused ? (
+                            <StateBadge state={d.finalState as EmployeeState} />
+                          ) : (
+                            <Badge
+                              variant={basicVariant}
+                              className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
+                            >
+                              {basic === "working" && (
+                                <span className="signal-dot !h-1.5 !w-1.5" />
+                              )}
+                              {basicLabel}
+                            </Badge>
+                          )}
                         </div>
                         <p className="mt-1 truncate text-sm text-muted">
                           {d.personName ? d.hostname : t("overview.unassigned")} ·{" "}

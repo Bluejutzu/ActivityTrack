@@ -165,20 +165,48 @@ function isAbsentOn(
   );
 }
 
-async function fetchClockodoRunning(): Promise<{ services_id?: number } | null> {
-  const body = await clockodoGet<{ running: { services_id?: number } | null }>(
-    "/api/v2/entries",
-  );
-  return body.running ?? null;
+interface ClockodoEntry {
+  users_id?: number;
+  // A running (clocked-in) entry has no end yet. Closed entries carry a value.
+  time_until?: string | null;
 }
 
-function breakServiceIds(): Set<string> {
-  return new Set(
-    (process.env.CLOCKODO_BREAK_SERVICE_IDS ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+/**
+ * A user's time entries for today. Uses `/api/v2/entries` with the documented
+ * `time_since`/`time_until` range and a `filter[users_id]` — the only path that
+ * works cross-user with one admin API key. (Note: `/api/v2/clock` only ever
+ * returns the *authenticated* API user's own running clock, so it can't be used
+ * to read other employees' state — that was the broken assumption before.)
+ */
+async function fetchTodayEntries(clockodoUserId: string): Promise<ClockodoEntry[]> {
+  const day = today();
+  const params = new URLSearchParams({
+    time_since: `${day}T00:00:00Z`,
+    time_until: new Date().toISOString(),
+    "filter[users_id]": clockodoUserId,
+  });
+  const body = await clockodoGet<{ entries?: ClockodoEntry[] }>(
+    `/api/v2/entries?${params.toString()}`,
   );
+  return body.entries ?? [];
+}
+
+/**
+ * Derive Clockodo working/break from today's entries, implementing the team's
+ * "no break services — dropping the clock is the break" rule:
+ *   - an open entry (no end yet) → clocked in → working;
+ *   - entries today but none open → clock stopped mid-day → on break;
+ *   - no entries today → off-shift (neither working nor break; absence, if any,
+ *     is handled separately).
+ */
+async function fetchClockodoWork(clockodoUserId: string): Promise<{
+  working: boolean;
+  onBreak: boolean;
+}> {
+  const entries = await fetchTodayEntries(clockodoUserId);
+  if (entries.length === 0) return { working: false, onBreak: false };
+  const clockedIn = entries.some((e) => e.time_until == null);
+  return { working: clockedIn, onBreak: !clockedIn };
 }
 
 // --- Persistence helpers (single guarded write path) -----------------------
@@ -246,10 +274,13 @@ export const pollAll = internalAction({
         const absences = await fetchAbsences(new Date().getFullYear());
         const day = today();
         for (const p of clockodoPeople) {
+          const work = await fetchClockodoWork(p.clockodoUserId!);
           await ctx.runMutation(api.state.pushSignal, {
             secret,
             employeeId: p.employeeId,
             source: "clockodo",
+            clockodoWorking: work.working,
+            clockodoBreak: work.onBreak,
             clockodoAbsent: isAbsentOn(absences, p.clockodoUserId!, day),
           });
         }
@@ -297,21 +328,17 @@ export const refreshClockodo = action({
     }
     try {
       const day = today();
-      const [running, absences] = await Promise.all([
-        fetchClockodoRunning(),
+      const [work, absences] = await Promise.all([
+        fetchClockodoWork(clockodoUserId),
         fetchAbsences(new Date().getFullYear()),
       ]);
       const absent = isAbsentOn(absences, clockodoUserId, day);
-      const onBreak =
-        running != null &&
-        running.services_id != null &&
-        breakServiceIds().has(String(running.services_id));
       await ctx.runMutation(api.state.pushSignal, {
         secret,
         employeeId,
         source: "clockodo",
-        clockodoWorking: running != null && !onBreak,
-        clockodoBreak: onBreak,
+        clockodoWorking: work.working,
+        clockodoBreak: work.onBreak,
         clockodoAbsent: absent,
       });
       await reportHealth(ctx, "clockodo", "ok");

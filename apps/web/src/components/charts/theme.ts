@@ -10,6 +10,16 @@ export const CHART = {
   fg: "#E9EDF3",
 } as const;
 
+/** Per-state colours for the fused-state breakdown (idle/in-call/break/…). */
+export const STATE_COLOR = {
+  ACTIVE: "#C8F05A", // signal lime
+  IN_CALL: "#5CD0DE", // cool cyan
+  WRAP_UP: "#B69CFF", // violet (after-call work)
+  IDLE: "#F5B544", // amber
+  BREAK: "#7C8696", // muted slate
+  ABSENT: "#4A5566", // dim slate
+} as const;
+
 /** Common tooltip styling props for Recharts <Tooltip />. */
 export const tooltipStyle = {
   contentStyle: {

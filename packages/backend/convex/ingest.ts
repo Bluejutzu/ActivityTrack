@@ -2,6 +2,7 @@ import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { readConfig } from "./settings";
 
 /**
  * Server-side persistence for agent samples. This is the ONLY place samples
@@ -45,6 +46,10 @@ export const recordSamples = internalMutation({
   args: { samples: v.array(sampleValidator) },
   handler: async (ctx, { samples }) => {
     const receivedAt = Date.now();
+    // Idle→inactive threshold (Settings → Configuration). Daily active/idle
+    // accrual is derived from each sample's idleMs against this, so changing it
+    // reshapes the rollups going forward.
+    const inactivityMs = (await readConfig(ctx)).inactivityThresholdSeconds * 1000;
 
     // Process per device, oldest sample first, so gap attribution is correct.
     const byDevice = new Map<string, typeof samples>();
@@ -77,7 +82,7 @@ export const recordSamples = internalMutation({
         const gapMs = Math.max(0, Math.min(rawGap, MAX_ATTRIBUTION_MS));
         prevCapturedAt = s.capturedAt;
 
-        await accrueDaily(ctx, deviceId, s, gapMs);
+        await accrueDaily(ctx, deviceId, s, gapMs, inactivityMs);
       }
 
       // Upsert the device row from the newest sample we saw.
@@ -120,13 +125,17 @@ async function getDevice(
 async function accrueDaily(
   ctx: MutationCtx,
   deviceId: string,
-  sample: { active: boolean; capturedAt: number; tzOffsetMinutes: number },
+  sample: { idleMs: number; capturedAt: number; tzOffsetMinutes: number },
   gapMs: number,
+  inactivityMs: number,
 ): Promise<void> {
   const day = localDay(sample.capturedAt, sample.tzOffsetMinutes);
   const seconds = gapMs / 1000;
-  const activeDelta = sample.active ? seconds : 0;
-  const idleDelta = sample.active ? 0 : seconds;
+  // Count the interval as active when the sample's idle time is under the
+  // configured inactivity threshold; otherwise idle.
+  const isActive = sample.idleMs < inactivityMs;
+  const activeDelta = isActive ? seconds : 0;
+  const idleDelta = isActive ? 0 : seconds;
 
   const existing = await ctx.db
     .query("dailyStats")

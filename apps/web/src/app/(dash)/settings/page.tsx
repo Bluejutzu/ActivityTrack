@@ -1,107 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
-import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
-import { useToast } from "@/lib/useToast";
-import { useActionWithToast } from "@/lib/useActionWithToast";
-import { Reveal } from "@/components/motion/Reveal";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfigPanel } from "@/components/admin/ConfigPanel";
+import { SystemPanel } from "@/components/admin/SystemPanel";
+import { UsersPanel } from "@/components/admin/UsersPanel";
+import { AuditPanel } from "@/components/admin/AuditPanel";
 
+/**
+ * Admin hub: configuration, system health, users & roles, and the audit log —
+ * the formerly-scattered admin pages gathered under one tab so the sidebar stays
+ * short. IT-admin gated by the route (see (dash)/layout + nav minRole).
+ */
 export default function SettingsPage() {
   const { t } = useI18n();
-  const toast = useToast();
-  const isSet = useQuery(api.settings.debugPasswordIsSet);
-  const setDebugPassword = useActionWithToast(api.settings.setDebugPassword);
-
-  const [pw, setPw] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!saved) return;
-    const id = setTimeout(() => setSaved(false), 4000);
-    return () => clearTimeout(id);
-  }, [saved]);
-
-  async function onSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaved(false);
-    if (pw.length < 6) {
-      toast(t("settings.debugPw.tooShort"), "warn");
-      return;
-    }
-    setBusy(true);
-    const result = await setDebugPassword(
-      { password: pw },
-      { success: t("settings.debugPw.saved") },
-    );
-    setBusy(false);
-    if (result !== undefined) {
-      setPw("");
-      setSaved(true);
-    }
-  }
-
   return (
-    <section className="max-w-lg">
-      <Card className="animate-fade-up">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent/20 text-accent">
-              <KeyRound className="h-4 w-4" />
-            </span>
-            <CardTitle className="text-base">
-              {t("settings.debugPw.heading")}
-            </CardTitle>
-          </div>
-          <CardDescription>{t("settings.debugPw.hint")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            {isSet === undefined ? (
-              <Skeleton className="h-5 w-32" />
-            ) : isSet ? (
-              <Badge variant="ok">{t("settings.debugPw.set")}</Badge>
-            ) : (
-              <Badge variant="muted">{t("settings.debugPw.unset")}</Badge>
-            )}
-          </div>
+    <section className="space-y-5">
+      <div>
+        <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
+          {t("settings.heading")}
+        </h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.subtitle")}</p>
+      </div>
 
-          <form onSubmit={onSave} className="flex gap-2">
-            <Input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder={t("settings.debugPw.new")}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={busy}>
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t("settings.debugPw.save")}
-            </Button>
-          </form>
+      <Tabs defaultValue="config">
+        <TabsList>
+          <TabsTrigger value="config">{t("settings.tabs.config")}</TabsTrigger>
+          <TabsTrigger value="system">{t("settings.tabs.system")}</TabsTrigger>
+          <TabsTrigger value="users">{t("settings.tabs.users")}</TabsTrigger>
+          <TabsTrigger value="audit">{t("settings.tabs.audit")}</TabsTrigger>
+        </TabsList>
 
-          <Reveal show={saved}>
-            <p className="flex items-center gap-1.5 text-sm text-ok">
-              <CheckCircle2 className="h-4 w-4" />
-              {t("settings.debugPw.saved")}
-            </p>
-          </Reveal>
-        </CardContent>
-      </Card>
+        <TabsContent value="config">
+          <ConfigPanel />
+        </TabsContent>
+        <TabsContent value="system">
+          <SystemPanel />
+        </TabsContent>
+        <TabsContent value="users">
+          <UsersPanel />
+        </TabsContent>
+        <TabsContent value="audit">
+          <AuditPanel />
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

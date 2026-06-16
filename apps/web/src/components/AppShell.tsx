@@ -7,14 +7,10 @@ import { useQuery } from "convex/react";
 import { UserButton } from "@clerk/nextjs";
 import {
   Activity,
-  HeartPulse,
   LayoutDashboard,
   Menu,
   MonitorSmartphone,
-  Radio,
-  ScrollText,
   Settings,
-  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -38,14 +34,12 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+// Trimmed to four clear destinations. The former Live-Status folds into the
+// Overview/timeline; Health, Users and Audit are sub-tabs inside Settings.
 const NAV: NavItem[] = [
   { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
-  { href: "/state", labelKey: "nav.state", minRole: "viewer", icon: Radio },
   { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
-  { href: "/health", labelKey: "nav.health", minRole: "viewer", icon: HeartPulse },
-  { href: "/users", labelKey: "nav.users", minRole: "it_admin", icon: ShieldCheck },
-  { href: "/audit", labelKey: "nav.audit", minRole: "it_admin", icon: ScrollText },
   { href: "/settings", labelKey: "nav.settings", minRole: "it_admin", icon: Settings },
 ];
 

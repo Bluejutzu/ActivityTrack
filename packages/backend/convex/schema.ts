@@ -133,6 +133,25 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_employeeId", ["employeeId"]),
 
+  // Append-only history of an employee's fused state, written on every change
+  // by `state.pushSignal`. Powers the per-hour state breakdown on the device
+  // timeline (idle / in-call / break / wrap-up by hour of day). Insert-on-change
+  // keeps this bounded; pruned on the same retention window as raw samples.
+  stateSamples: defineTable({
+    employeeId: v.string(),
+    state: v.union(
+      v.literal("ABSENT"),
+      v.literal("BREAK"),
+      v.literal("IN_CALL"),
+      v.literal("WRAP_UP"),
+      v.literal("ACTIVE"),
+      v.literal("IDLE"),
+    ),
+    at: v.number(),
+  })
+    .index("by_employee_time", ["employeeId", "at"])
+    .index("by_at", ["at"]),
+
   // Integration health, one row per external source. Lets the dashboard show
   // "Genesys unavailable due to <reason>" without the failure ever breaking the
   // state pipeline — a down source simply stops contributing fresh signals.

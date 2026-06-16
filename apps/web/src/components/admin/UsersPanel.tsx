@@ -26,7 +26,8 @@ import {
 
 const ROLES: Role[] = ["it_admin", "manager", "viewer"];
 
-export default function UsersPage() {
+/** User role management (IT admin). Lives in the Settings hub. */
+export function UsersPanel() {
   const { t } = useI18n();
   const users = useQuery(api.users.list);
   const setRole = useMutationWithToast(api.users.setRole);

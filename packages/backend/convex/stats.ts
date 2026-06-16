@@ -1,16 +1,16 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireViewer } from "./rbac";
+import { readConfig } from "./settings";
 import type { QueryCtx } from "./_generated/server";
 
 /**
  * Read models for the dashboard. All gated at viewer+; managers/admins use the
  * same data (extra capabilities are about mutations, not visibility).
+ *
+ * The "online" window and the idle→inactive threshold come from the operational
+ * config (Settings → Configuration), defaulting to 2 min / 5 min.
  */
-
-// A device is "online" if we've heard from it within this window. flush=30s,
-// poll=15s by default, so ~3 missed flushes.
-const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
 
 function localDay(at: number, tzOffsetMinutes: number): string {
   return new Date(at - tzOffsetMinutes * 60_000).toISOString().slice(0, 10);
@@ -35,6 +35,9 @@ export const teamOverview = query({
   handler: async (ctx) => {
     await requireViewer(ctx);
     const now = Date.now();
+    const config = await readConfig(ctx);
+    const onlineThresholdMs = config.offlineThresholdSeconds * 1000;
+    const inactivityMs = config.inactivityThresholdSeconds * 1000;
 
     const devices = await ctx.db
       .query("devices")
@@ -50,6 +53,29 @@ export const teamOverview = query({
       (await Promise.all(personIds.map((id) => ctx.db.get(id)))).flatMap((p) =>
         p ? [[p._id, p] as const] : [],
       ),
+    );
+
+    // Batch-load the fused state for every linked person that has an employeeId,
+    // so each card can show the rich state (IN_CALL / BREAK / ABSENT / …) that
+    // used to live on the separate Live-Status page.
+    const employeeIds = [
+      ...new Set(
+        [...peopleById.values()].flatMap((p) =>
+          p.employeeId ? [p.employeeId] : [],
+        ),
+      ),
+    ];
+    const stateByEmployee = new Map(
+      (
+        await Promise.all(
+          employeeIds.map((id) =>
+            ctx.db
+              .query("employeeStates")
+              .withIndex("by_employeeId", (q) => q.eq("employeeId", id))
+              .unique(),
+          ),
+        )
+      ).flatMap((s) => (s ? [[s.employeeId, s] as const] : [])),
     );
 
     return Promise.all(
@@ -68,8 +94,14 @@ export const teamOverview = query({
           )
           .unique();
 
-        const online = now - device.lastSeen < ONLINE_THRESHOLD_MS;
-        const active = online && (latest?.active ?? false);
+        const online = now - device.lastSeen < onlineThresholdMs;
+        // Active when the most recent sample's idle time is under the configured
+        // inactivity threshold (falls back to offline = not active).
+        const active = online && latest != null && latest.idleMs < inactivityMs;
+        const employeeId = person?.employeeId ?? null;
+        const st = employeeId
+          ? (stateByEmployee.get(employeeId) ?? null)
+          : null;
 
         return {
           deviceDocId: device._id,
@@ -77,6 +109,7 @@ export const teamOverview = query({
           hostname: device.hostname,
           personId: device.personId ?? null,
           personName: person?.name ?? null,
+          personEmployeeId: employeeId,
           windowsUser: device.lastWindowsUser,
           online,
           active,
@@ -84,6 +117,18 @@ export const teamOverview = query({
           lastSeen: device.lastSeen,
           todayActiveSeconds: stats?.activeSeconds ?? 0,
           todayIdleSeconds: stats?.idleSeconds ?? 0,
+          // Fused employee state (null when the device has no linked person or
+          // no signals have arrived yet).
+          finalState: st?.finalState ?? null,
+          deviceIdle: st?.deviceIdle ?? null,
+          stateIdleSeconds: st?.idleSeconds ?? null,
+          genesysRoutingStatus: st?.genesysRoutingStatus ?? null,
+          genesysPresence: st?.genesysPresence ?? null,
+          genesysWrapUp: st?.genesysWrapUp ?? null,
+          clockodoWorking: st?.clockodoWorking ?? null,
+          clockodoBreak: st?.clockodoBreak ?? null,
+          clockodoAbsent: st?.clockodoAbsent ?? null,
+          stateUpdatedAt: st?.updatedAt ?? null,
         };
       }),
     );
@@ -121,5 +166,41 @@ export const recentSamples = query({
       .withIndex("by_device_time", (q) => q.eq("deviceId", deviceId))
       .order("desc")
       .take(Math.min(limit ?? 200, 1000));
+  },
+});
+
+/**
+ * Per-employee export bundle for a [startDay, endDay] range: the device's daily
+ * rollups plus its raw samples in that window. Backs the JSON/CSV download on
+ * the timeline page (a fuller pull than the 1000-row preview). Viewer+, capped.
+ */
+export const exportDevice = query({
+  args: {
+    deviceId: v.string(),
+    startDay: v.string(), // YYYY-MM-DD inclusive
+    endDay: v.string(), // YYYY-MM-DD inclusive
+    sampleLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, { deviceId, startDay, endDay, sampleLimit }) => {
+    await requireViewer(ctx);
+
+    const daily = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_device_day", (q) =>
+        q.eq("deviceId", deviceId).gte("day", startDay).lte("day", endDay),
+      )
+      .collect();
+
+    const startMs = new Date(`${startDay}T00:00:00Z`).getTime();
+    const endMs = new Date(`${endDay}T23:59:59.999Z`).getTime();
+    const samples = await ctx.db
+      .query("activitySamples")
+      .withIndex("by_device_time", (q) =>
+        q.eq("deviceId", deviceId).gte("capturedAt", startMs).lte("capturedAt", endMs),
+      )
+      .order("desc")
+      .take(Math.min(sampleLimit ?? 10000, 20000));
+
+    return { deviceId, startDay, endDay, daily, samples };
   },
 });
