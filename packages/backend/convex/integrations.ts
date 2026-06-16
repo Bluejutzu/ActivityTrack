@@ -142,10 +142,11 @@ interface Absence {
 }
 
 async function fetchAbsences(year: number): Promise<Absence[]> {
-  const body = await clockodoGet<{ absences: Absence[] }>(
-    `/api/v4/absences?year=${year}`,
+  const qs = `year=${year}&filter[scope]=viewableAbsences`;
+  const body = await clockodoGet<{ data?: Absence[] }>(
+    `/api/v4/absences?${qs}`,
   );
-  return body.absences ?? [];
+  return body.data ?? [];
 }
 
 function isAbsentOn(
@@ -167,6 +168,10 @@ function isAbsentOn(
 
 interface ClockodoEntry {
   users_id?: number;
+  // `clocked: true` means the entry is currently running (clock still ticking).
+  // `time_until` is always present in the response even for running entries, so
+  // it cannot be used to detect a running clock.
+  clocked?: boolean;
   // A running (clocked-in) entry has no end yet. Closed entries carry a value.
   time_until?: string | null;
 }
@@ -180,13 +185,13 @@ interface ClockodoEntry {
  */
 async function fetchTodayEntries(clockodoUserId: string): Promise<ClockodoEntry[]> {
   const day = today();
-  const params = new URLSearchParams({
-    time_since: `${day}T00:00:00Z`,
-    time_until: new Date().toISOString(),
-    "filter[users_id]": clockodoUserId,
-  });
+  const qs = [
+    `time_since=${encodeURIComponent(`${day}T00:00:00Z`)}`,
+    `time_until=${encodeURIComponent(new Date().toISOString())}`,
+    `filter[users_id]=${encodeURIComponent(clockodoUserId)}`,
+  ].join("&");
   const body = await clockodoGet<{ entries?: ClockodoEntry[] }>(
-    `/api/v2/entries?${params.toString()}`,
+    `/api/v2/entries?${qs}`,
   );
   return body.entries ?? [];
 }
@@ -205,7 +210,9 @@ async function fetchClockodoWork(clockodoUserId: string): Promise<{
 }> {
   const entries = await fetchTodayEntries(clockodoUserId);
   if (entries.length === 0) return { working: false, onBreak: false };
-  const clockedIn = entries.some((e) => e.time_until == null);
+  // `clocked: true` is the authoritative "running" indicator per the API docs.
+  // `time_until` is always populated in the response, so null-checking it is wrong.
+  const clockedIn = entries.some((e) => e.clocked === true);
   return { working: clockedIn, onBreak: !clockedIn };
 }
 
