@@ -96,18 +96,14 @@ function Brand() {
   const { t } = useI18n();
   return (
     <Link href="/" className="group flex items-center gap-2.5">
-      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl border border-accent/30 bg-accent/10 text-accent shadow-signal-sm">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-white shadow-sm">
         <Activity className="h-[18px] w-[18px]" />
-        {/* faint scanline sweeping across the monogram */}
-        <span className="pointer-events-none absolute inset-x-0 top-0 h-1/3 -translate-y-full bg-gradient-to-b from-accent/40 to-transparent animate-scan" />
       </span>
       <span className="flex flex-col leading-none">
-        <span className="font-display text-[15px] font-semibold tracking-tightest text-fg">
+        <span className="text-[15px] font-semibold tracking-tightest text-fg">
           {t("app.name")}
         </span>
-        <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.28em] text-muted">
-          Signal Deck
-        </span>
+        <span className="mt-1 text-[11px] text-muted">{t("app.tagline")}</span>
       </span>
     </Link>
   );
@@ -179,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-panel/40 p-4 backdrop-blur-sm lg:flex">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-bg-2 p-4 lg:flex">
         <div className="px-1 pb-7 pt-1">
           <Brand />
         </div>
@@ -199,7 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-screen flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg/70 px-4 py-3 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg-2/85 px-4 py-3 backdrop-blur-md sm:px-6">
           {/* Mobile nav trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -220,10 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Sheet>
 
           <div className="flex flex-1 flex-col leading-none">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
-              {t("app.name")}
-            </span>
-            <h1 className="mt-1 font-display text-base font-semibold tracking-tightest text-fg">
+            <h1 className="text-base font-semibold tracking-tightest text-fg">
               {current ? t(current.labelKey) : t("app.name")}
             </h1>
           </div>

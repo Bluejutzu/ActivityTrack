@@ -9,9 +9,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Faint top-down gradient + hairline highlight reads as a lit surface,
-      // not a flat rectangle on the void.
-      "rounded-xl border border-border bg-gradient-to-b from-panel to-[#0e121a] shadow-card",
+      // Clean white surface with a soft, low shadow — light and unfussy.
+      "rounded-xl border border-border bg-panel shadow-card",
       className
     )}
     {...props}

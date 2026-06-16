@@ -1,13 +1,13 @@
 const shimmerStyle = {
   backgroundImage:
-    "linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.04) 50%, transparent 75%)",
+    "linear-gradient(90deg, transparent 25%, rgba(27,32,39,0.06) 50%, transparent 75%)",
   backgroundSize: "800px 100%",
 };
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`rounded-md bg-border/40 animate-shimmer ${className}`}
+      className={`rounded-md bg-panel-2 animate-shimmer ${className}`}
       style={shimmerStyle}
     />
   );
