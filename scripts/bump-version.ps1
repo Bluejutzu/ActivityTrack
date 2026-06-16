@@ -28,6 +28,14 @@ if ($status) {
 
 Write-Host "Bumping version to $Version..."
 
+# Check if tag already exists
+$tagName = "v$Version"
+$existingTag = git tag -l $tagName 2>$null
+if ($existingTag) {
+    Write-Error "Tag $tagName already exists. Use a different version or delete the tag first."
+    exit 1
+}
+
 # Cargo.toml — replace only the first occurrence (package version, not a dep)
 $cargoPath = "apps/desktop/src-tauri/Cargo.toml"
 $cargoContent = Get-Content $cargoPath -Raw
