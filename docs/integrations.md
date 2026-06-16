@@ -70,9 +70,10 @@ clock-ins still arrive via webhook regardless. Adjust the expression to your
 hours/timezone.
 
 The on-demand paths (`/api/integrations/genesys/sync`, and the Clockodo webhook
-re-pull) delegate to the same Convex actions (`integrations.syncGenesys` /
-`integrations.refreshClockodo`), so there is exactly one copy of the outbound
-HTTP logic.
+re-pull) delegate to the same Convex actions (`genesys.syncGenesys` /
+`clockodo.refreshClockodo`), so there is exactly one copy of the outbound
+HTTP logic. The per-source HTTP clients live in `genesys.ts` and `clockodo.ts`;
+`integrations.ts` is just the scheduled poll orchestrator.
 
 ### Resilience (graceful degradation)
 

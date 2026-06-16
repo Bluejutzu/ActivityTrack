@@ -9,17 +9,21 @@
  */
 
 import type * as audit from "../audit.js";
+import type * as clockodo from "../clockodo.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
 import type * as devices from "../devices.js";
 import type * as errors from "../errors.js";
 import type * as events from "../events.js";
+import type * as genesys from "../genesys.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as integrations from "../integrations.js";
+import type * as integrationsShared from "../integrationsShared.js";
 import type * as maintenance from "../maintenance.js";
 import type * as people from "../people.js";
 import type * as rbac from "../rbac.js";
+import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as state from "../state.js";
 import type * as stats from "../stats.js";
@@ -33,17 +37,21 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
+  clockodo: typeof clockodo;
   crons: typeof crons;
   crypto: typeof crypto;
   devices: typeof devices;
   errors: typeof errors;
   events: typeof events;
+  genesys: typeof genesys;
   http: typeof http;
   ingest: typeof ingest;
   integrations: typeof integrations;
+  integrationsShared: typeof integrationsShared;
   maintenance: typeof maintenance;
   people: typeof people;
   rbac: typeof rbac;
+  reports: typeof reports;
   settings: typeof settings;
   state: typeof state;
   stats: typeof stats;

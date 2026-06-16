@@ -92,6 +92,24 @@ export interface StateSample {
   at: number;
 }
 
+/**
+ * Whether a fused state counts as "working" for fleet tallies and labels.
+ * ACTIVE / IN_CALL / WRAP_UP are working; BREAK / ABSENT / IDLE are not. When no
+ * fused state exists yet (`null`), fall back to the device's raw active flag so
+ * unlinked devices still read sensibly.
+ */
+export function isWorkingState(
+  finalState: StateName | null | undefined,
+  fallbackActive: boolean,
+): boolean {
+  if (finalState == null) return fallbackActive;
+  return (
+    finalState === "ACTIVE" ||
+    finalState === "IN_CALL" ||
+    finalState === "WRAP_UP"
+  );
+}
+
 export type HourStateBucket = { hour: number } & Record<StateName, number>;
 
 function emptyHourBuckets(): HourStateBucket[] {
@@ -175,4 +193,134 @@ export function intradayTimeline(
       }),
       activePct: Math.round((v.active / v.total) * 100),
     }));
+}
+
+// ── Day-in-detail (minute-level) ───────────────────────────────────────────
+
+export interface StateSegment {
+  state: StateName;
+  start: number; // epoch ms, clamped to the day window
+  end: number; // epoch ms, clamped to the day window
+}
+
+/**
+ * Contiguous state runs across `[dayStart, dayEnd]`, for the horizontal timeline
+ * strip. Each on-change `samples` row holds until the next one (or `dayEnd`).
+ * Adjacent runs of the same state are merged so the strip draws one block per
+ * stretch. `samples` must be ascending by `at` (as `state.history` returns).
+ */
+export function dayStateSegments(
+  samples: StateSample[],
+  dayStart: number,
+  dayEnd: number,
+): StateSegment[] {
+  const segments: StateSegment[] = [];
+  if (samples.length === 0 || dayEnd <= dayStart) return segments;
+
+  for (let i = 0; i < samples.length; i++) {
+    const start = Math.max(samples[i].at, dayStart);
+    const rawEnd = i + 1 < samples.length ? samples[i + 1].at : dayEnd;
+    const end = Math.min(rawEnd, dayEnd);
+    if (end <= start) continue;
+
+    const last = segments[segments.length - 1];
+    if (last && last.state === samples[i].state && last.end === start) {
+      last.end = end; // merge touching same-state runs
+    } else {
+      segments.push({ state: samples[i].state, start, end });
+    }
+  }
+  return segments;
+}
+
+/**
+ * The fused state in effect for each minute of `[dayStart, dayEnd]`, as a dense
+ * array (one slot per minute, `null` where no state is known). Powers the
+ * hover-anywhere minute grid. Derived from the same segments as the strip.
+ */
+export function minuteStates(
+  samples: StateSample[],
+  dayStart: number,
+  dayEnd: number,
+): Array<StateName | null> {
+  const totalMinutes = Math.max(0, Math.round((dayEnd - dayStart) / 60_000));
+  const out: Array<StateName | null> = new Array(totalMinutes).fill(null);
+  for (const seg of dayStateSegments(samples, dayStart, dayEnd)) {
+    const from = Math.floor((seg.start - dayStart) / 60_000);
+    const to = Math.ceil((seg.end - dayStart) / 60_000);
+    for (let m = Math.max(0, from); m < Math.min(totalMinutes, to); m++) {
+      out[m] = seg.state;
+    }
+  }
+  return out;
+}
+
+// ── Weekly rollups (Reports page) ──────────────────────────────────────────
+
+/** Sum a device's daily rows to active/idle seconds over the whole range. */
+export function sumDaily(daily: DailyStat[]): {
+  activeSeconds: number;
+  idleSeconds: number;
+} {
+  return daily.reduce(
+    (acc, d) => ({
+      activeSeconds: acc.activeSeconds + d.activeSeconds,
+      idleSeconds: acc.idleSeconds + d.idleSeconds,
+    }),
+    { activeSeconds: 0, idleSeconds: 0 },
+  );
+}
+
+/** Monday (ISO week start) as YYYY-MM-DD for a given YYYY-MM-DD day. */
+export function weekStartOf(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = Monday
+  d.setUTCDate(d.getUTCDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Group daily rows into ISO weeks (Mon-start) across `[startDay, endDay]`,
+ * filling empty weeks with zeroes so the trend chart has one bar per week.
+ */
+export function weeklyTrend(
+  daily: DailyStat[],
+  startDay: string,
+  endDay: string,
+): Array<{
+  weekStart: string;
+  label: string;
+  activeHours: number;
+  idleHours: number;
+}> {
+  const byWeek = new Map<string, { active: number; idle: number }>();
+  for (const d of daily) {
+    if (d.day < startDay || d.day > endDay) continue;
+    const wk = weekStartOf(d.day);
+    const cur = byWeek.get(wk) ?? { active: 0, idle: 0 };
+    cur.active += d.activeSeconds;
+    cur.idle += d.idleSeconds;
+    byWeek.set(wk, cur);
+  }
+
+  const out: Array<{
+    weekStart: string;
+    label: string;
+    activeHours: number;
+    idleHours: number;
+  }> = [];
+  const cursor = new Date(`${weekStartOf(startDay)}T00:00:00Z`);
+  const end = new Date(`${endDay}T00:00:00Z`);
+  while (cursor <= end) {
+    const wk = cursor.toISOString().slice(0, 10);
+    const v = byWeek.get(wk) ?? { active: 0, idle: 0 };
+    out.push({
+      weekStart: wk,
+      label: `${cursor.getUTCMonth() + 1}/${cursor.getUTCDate()}`,
+      activeHours: +(v.active / 3600).toFixed(2),
+      idleHours: +(v.idle / 3600).toFixed(2),
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + 7);
+  }
+  return out;
 }

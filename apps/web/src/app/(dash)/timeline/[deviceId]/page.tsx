@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useQuery, useConvex } from "convex/react";
-import { ArrowLeft, Clock, Coffee, Download, Radio } from "lucide-react";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { ArrowLeft, Clock, Coffee, Radio } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import type { EmployeeState } from "@activitytrack/shared";
 import { useI18n } from "@/lib/i18n";
 import {
   formatDuration,
   formatRelativeTime,
-  formatTime,
   localDay,
   todayLocalDay,
 } from "@/lib/format";
@@ -23,26 +22,15 @@ import {
   type Sample,
   type StateName,
 } from "@/lib/activity";
-import { downloadFile, toCsv, toJson } from "@/lib/export";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DailyTrendChart } from "@/components/charts/DailyTrendChart";
-import { IntradayChart } from "@/components/charts/IntradayChart";
-import { HourHeatmap } from "@/components/charts/HourHeatmap";
-import { HourlyStateChart } from "@/components/charts/HourlyStateChart";
 import { StateBadge, SourceSignals } from "@/components/state/StateBits";
+import { ChartsTab } from "@/components/timeline/ChartsTab";
+import { RawTab } from "@/components/timeline/RawTab";
+import { ExportTab } from "@/components/timeline/ExportTab";
+import { DayDetailTab } from "@/components/timeline/DayDetailTab";
 
 const TREND_DAYS = 14;
 
@@ -88,7 +76,6 @@ export default function TimelinePage({
   params: { deviceId: string };
 }) {
   const { t, lang } = useI18n();
-  const convex = useConvex();
   const deviceId = decodeURIComponent(params.deviceId);
 
   const samples = useQuery(api.stats.recentSamples, { deviceId, limit: 1000 });
@@ -153,47 +140,6 @@ export default function TimelinePage({
     [t],
   );
 
-  // ── Per-employee export (JSON / CSV over a date range) ──────────────────
-  const [exportStart, setExportStart] = useState(startDay);
-  const [exportEnd, setExportEnd] = useState(today);
-  const [exporting, setExporting] = useState(false);
-
-  async function runExport(format: "json" | "csv") {
-    setExporting(true);
-    try {
-      const data = await convex.query(api.stats.exportDevice, {
-        deviceId,
-        startDay: exportStart,
-        endDay: exportEnd,
-      });
-      const base = `${device?.personName ?? device?.hostname ?? deviceId}_${exportStart}_${exportEnd}`.replace(
-        /[^\w.-]+/g,
-        "-",
-      );
-      if (format === "json") {
-        downloadFile(`${base}.json`, "application/json", toJson(data));
-      } else {
-        const rows = data.samples.map((s) => ({
-          capturedAt: new Date(s.capturedAt).toISOString(),
-          active: s.active,
-          idleMs: s.idleMs,
-          windowsUser: s.windowsUser,
-          hostname: s.hostname,
-        }));
-        const csv = toCsv(rows, [
-          "capturedAt",
-          "active",
-          "idleMs",
-          "windowsUser",
-          "hostname",
-        ]);
-        downloadFile(`${base}.csv`, "text/csv;charset=utf-8", csv);
-      }
-    } finally {
-      setExporting(false);
-    }
-  }
-
   if (samples === undefined) {
     return (
       <section className="space-y-5">
@@ -209,6 +155,7 @@ export default function TimelinePage({
   }
 
   const title = device?.personName ?? device?.hostname ?? deviceId;
+  const fileLabel = device?.personName ?? device?.hostname ?? deviceId;
 
   return (
     <section className="space-y-5">
@@ -304,176 +251,38 @@ export default function TimelinePage({
       <Tabs defaultValue="charts">
         <TabsList>
           <TabsTrigger value="charts">{t("timeline.tabs.charts")}</TabsTrigger>
+          <TabsTrigger value="day">{t("timeline.tabs.day")}</TabsTrigger>
           <TabsTrigger value="raw">{t("timeline.tabs.raw")}</TabsTrigger>
           <TabsTrigger value="export">{t("timeline.tabs.export")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="charts" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <Card className="animate-fade-up">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("timeline.trend.heading")}
-                </CardTitle>
-                <p className="text-sm text-muted">{t("timeline.trend.sub")}</p>
-              </CardHeader>
-              <CardContent>
-                <DailyTrendChart
-                  data={trend}
-                  activeLabel={t("common.active")}
-                  idleLabel={t("common.idle")}
-                />
-              </CardContent>
-            </Card>
+        <TabsContent value="charts">
+          <ChartsTab
+            trend={trend}
+            heatmap={heatmap}
+            intraday={intraday}
+            hourlyStates={hourlyStates}
+            stateLabels={stateLabels}
+            employeeId={employeeId}
+            stateHistory={stateHistory}
+          />
+        </TabsContent>
 
-            <Card className="animate-fade-up">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("timeline.intraday.heading")}
-                </CardTitle>
-                <p className="text-sm text-muted">
-                  {t("timeline.intraday.sub")}
-                </p>
-              </CardHeader>
-              <CardContent>
-                {intraday.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted">
-                    {t("timeline.empty")}
-                  </p>
-                ) : (
-                  <IntradayChart
-                    data={intraday}
-                    seriesLabel={t("timeline.intraday.series")}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="animate-fade-up">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t("timeline.heatmap.heading")}
-              </CardTitle>
-              <p className="text-sm text-muted">{t("timeline.heatmap.sub")}</p>
-            </CardHeader>
-            <CardContent>
-              <HourHeatmap data={heatmap} />
-            </CardContent>
-          </Card>
-
-          {/* Per-hour state breakdown — what they were doing each hour today. */}
-          <Card className="animate-fade-up">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t("timeline.hourly.heading")}
-              </CardTitle>
-              <p className="text-sm text-muted">{t("timeline.hourly.sub")}</p>
-            </CardHeader>
-            <CardContent>
-              {!employeeId ? (
-                <p className="py-8 text-center text-sm text-muted">
-                  {t("timeline.hourly.unlinked")}
-                </p>
-              ) : stateHistory === undefined ? (
-                <Skeleton className="h-56 w-full" />
-              ) : stateHistory.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted">
-                  {t("timeline.hourly.empty")}
-                </p>
-              ) : (
-                <HourlyStateChart data={hourlyStates} labels={stateLabels} />
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="day">
+          <DayDetailTab employeeId={employeeId} today={today} />
         </TabsContent>
 
         <TabsContent value="raw">
-          {samples.length === 0 ? (
-            <p className="py-8 text-center text-muted">{t("timeline.empty")}</p>
-          ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("timeline.time")}</TableHead>
-                    <TableHead>{t("timeline.state")}</TableHead>
-                    <TableHead>{t("timeline.idle")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {samples.map((s) => (
-                    <TableRow key={s._id}>
-                      <TableCell className="tabular-nums">
-                        {formatTime(s.capturedAt, lang)}
-                      </TableCell>
-                      <TableCell>
-                        <span className={s.active ? "text-ok" : "text-warn"}>
-                          {s.active ? t("common.active") : t("common.idle")}
-                        </span>
-                      </TableCell>
-                      <TableCell className="tabular-nums text-muted">
-                        {formatDuration(Math.floor(s.idleMs / 1000), lang)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
+          <RawTab samples={samples} />
         </TabsContent>
 
         <TabsContent value="export">
-          <Card className="animate-fade-up max-w-xl">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t("timeline.export.heading")}
-              </CardTitle>
-              <p className="text-sm text-muted">{t("timeline.export.sub")}</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1 text-xs text-muted">
-                  {t("timeline.export.from")}
-                  <Input
-                    type="date"
-                    value={exportStart}
-                    max={exportEnd}
-                    onChange={(e) => setExportStart(e.target.value)}
-                    className="w-40"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-muted">
-                  {t("timeline.export.to")}
-                  <Input
-                    type="date"
-                    value={exportEnd}
-                    min={exportStart}
-                    max={today}
-                    onChange={(e) => setExportEnd(e.target.value)}
-                    className="w-40"
-                  />
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => void runExport("csv")}
-                  disabled={exporting}
-                >
-                  <Download className="h-4 w-4" />
-                  {t("timeline.export.csv")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => void runExport("json")}
-                  disabled={exporting}
-                >
-                  <Download className="h-4 w-4" />
-                  {t("timeline.export.json")}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <ExportTab
+            deviceId={deviceId}
+            fileLabel={fileLabel}
+            startDay={startDay}
+            today={today}
+          />
         </TabsContent>
       </Tabs>
     </section>

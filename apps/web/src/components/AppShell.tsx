@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { UserButton } from "@clerk/nextjs";
 import {
   Activity,
+  CalendarRange,
   LayoutDashboard,
   Menu,
   MonitorSmartphone,
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
   { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
+  { href: "/reports", labelKey: "nav.reports", minRole: "viewer", icon: CalendarRange },
   { href: "/settings", labelKey: "nav.settings", minRole: "it_admin", icon: Settings },
 ];
 

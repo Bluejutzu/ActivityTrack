@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { Check, Copy, KeyRound, Plus, X } from "lucide-react";
@@ -278,6 +279,8 @@ export default function DevicesPage() {
   const link = useMutationWithToast(api.devices.link);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   const role = (me?.role ?? "viewer") as Role;
   const isAdmin = roleAtLeast(role, "it_admin");
@@ -288,6 +291,19 @@ export default function DevicesPage() {
     active: t("status.active"),
     disabled: t("status.disabled"),
   };
+
+  // Filter the table by status and a free-text match on hostname / windows
+  // user / linked person, so a larger fleet stays scannable.
+  const visibleDevices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (devices ?? []).filter((d) => {
+      if (statusFilter !== "all" && d.status !== statusFilter) return false;
+      if (!q) return true;
+      return [d.hostname, d.lastWindowsUser, d.personName]
+        .filter(Boolean)
+        .some((s) => String(s).toLowerCase().includes(q));
+    });
+  }, [devices, statusFilter, search]);
 
   if (devices === undefined || people === undefined) {
     return <p className="text-muted">{t("common.loading")}</p>;
@@ -337,9 +353,32 @@ export default function DevicesPage() {
 
       {/* ── Devices table ── */}
       <div>
-        <h2 className="mb-4 font-display text-lg font-semibold tracking-tightest text-fg">
-          {t("devices.slots.heading.devices")}
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
+            {t("devices.slots.heading.devices")}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder={t("devices.filter.search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-48"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("devices.filter.all")}</SelectItem>
+                <SelectItem value="active">{t("status.active")}</SelectItem>
+                <SelectItem value="pending">{t("status.pending")}</SelectItem>
+                <SelectItem value="disabled">
+                  {t("status.disabled")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Card>
           <Table>
             <TableHeader>
@@ -355,7 +394,7 @@ export default function DevicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {devices.length === 0 ? (
+              {visibleDevices.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -365,10 +404,15 @@ export default function DevicesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                devices.map((d) => (
+                visibleDevices.map((d) => (
                   <TableRow key={d._id}>
                     <TableCell className="font-medium text-fg">
-                      {d.hostname}
+                      <Link
+                        href={`/timeline/${encodeURIComponent(d.deviceId)}`}
+                        className="text-fg transition-colors hover:text-accent"
+                      >
+                        {d.hostname}
+                      </Link>
                     </TableCell>
                     <TableCell className="text-muted">
                       {d.lastWindowsUser}
