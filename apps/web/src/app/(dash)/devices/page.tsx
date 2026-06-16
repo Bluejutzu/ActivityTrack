@@ -353,19 +353,19 @@ export default function DevicesPage() {
 
       {/* ── Devices table ── */}
       <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
             {t("devices.slots.heading.devices")}
           </h2>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               placeholder={t("devices.filter.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-48"
+              className="w-full sm:w-48"
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -439,7 +439,7 @@ export default function DevicesPage() {
                             )
                           }
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className="min-w-[8rem]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

@@ -32,6 +32,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
 }
 
 /* Keyboard focus ring — brand blue; pointer interactions stay ring-free. */

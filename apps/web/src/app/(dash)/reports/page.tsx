@@ -124,14 +124,14 @@ export default function ReportsPage() {
       </div>
 
       {/* Controls: time frame, optional custom range, device filter */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="flex flex-col gap-1 text-xs text-muted">
           {t("reports.timeframe")}
           <Select
             value={timeFrame}
             onValueChange={(v) => setTimeFrame(v as TimeFrame)}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -155,7 +155,7 @@ export default function ReportsPage() {
                 onChange={(e) =>
                   setCustom((c) => ({ ...c, from: e.target.value }))
                 }
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-muted">
@@ -168,7 +168,7 @@ export default function ReportsPage() {
                 onChange={(e) =>
                   setCustom((c) => ({ ...c, to: e.target.value }))
                 }
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </label>
           </>
@@ -177,7 +177,7 @@ export default function ReportsPage() {
         <label className="flex flex-col gap-1 text-xs text-muted">
           {t("reports.filter")}
           <Select value={deviceFilter} onValueChange={setDeviceFilter}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-full sm:w-52">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
