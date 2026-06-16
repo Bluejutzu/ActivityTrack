@@ -1,6 +1,7 @@
 const shimmerStyle = {
+  // CSS variable resolves per theme, so the shimmer stays visible in dark too.
   backgroundImage:
-    "linear-gradient(90deg, transparent 25%, rgba(27,32,39,0.06) 50%, transparent 75%)",
+    "linear-gradient(90deg, transparent 25%, rgb(var(--c-fg) / 0.06) 50%, transparent 75%)",
   backgroundSize: "800px 100%",
 };
 

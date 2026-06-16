@@ -1,13 +1,17 @@
-/** Shared chart colours, kept in sync with the "Daylight" Tailwind tokens. */
+/**
+ * Shared chart colours. Each token resolves to a CSS variable (defined per theme
+ * in globals.css), so charts recolour automatically in light/dark — Recharts
+ * passes these straight through as SVG stroke/fill, which accept `var()`.
+ */
 export const CHART = {
-  active: "#10A372", // green (= working/ok)
-  idle: "#C2740C", // amber (= idle/warn)
-  accent: "#2E6CF6", // brand blue
-  info: "#0E92C9", // secondary cool series
-  grid: "#E4E8EE", // border
-  axis: "#5B6573", // muted
-  panel: "#FFFFFF",
-  fg: "#1B2027",
+  active: "var(--chart-active)", // green (= working/ok)
+  idle: "var(--chart-idle)", // amber (= idle/warn)
+  accent: "var(--chart-accent)", // brand blue
+  info: "var(--chart-info)", // secondary cool series
+  grid: "var(--chart-grid)", // border
+  axis: "var(--chart-axis)", // muted
+  panel: "var(--chart-panel)",
+  fg: "var(--chart-fg)",
 } as const;
 
 /** Per-state colours for the fused-state breakdown (idle/in-call/break/…). */
@@ -23,14 +27,14 @@ export const STATE_COLOR = {
 /** Common tooltip styling props for Recharts <Tooltip />. */
 export const tooltipStyle = {
   contentStyle: {
-    background: "#FFFFFF",
-    border: "1px solid #E4E8EE",
+    background: "var(--chart-panel)",
+    border: "1px solid var(--chart-grid)",
     borderRadius: "0.5rem",
-    color: "#1B2027",
+    color: "var(--chart-fg)",
     fontSize: "0.75rem",
     fontFamily: "var(--font-sans)",
-    boxShadow: "0 6px 16px -8px rgba(16,24,40,0.18)",
+    boxShadow: "var(--chart-tooltip-shadow)",
   },
-  labelStyle: { color: "#5B6573" },
-  cursor: { fill: "rgba(46,108,246,0.08)" },
+  labelStyle: { color: "var(--chart-axis)" },
+  cursor: { fill: "var(--chart-cursor)" },
 } as const;

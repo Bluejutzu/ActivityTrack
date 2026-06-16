@@ -7,6 +7,10 @@
    A soft off-white base, clean Inter type, and plenty of breathing room. No
    grain, no glow, no graph paper — just quiet surfaces with one brand blue and
    plain traffic-light status colours.
+
+   Light (`:root`) and dark (`.dark`) share the same token names. Colours are
+   stored as space-separated RGB channels so Tailwind utilities — including
+   `/20`-style alpha — recolour automatically when `.dark` is toggled on <html>.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -14,12 +18,73 @@
   --font-display: var(--font-sans);
   /* Numerals share the body face; tabular figures do the aligning. */
   --font-mono: var(--font-sans);
+
+  /* ── Light surfaces ─────────────────────────────────────────────────── */
+  --c-bg: 247 248 250;
+  --c-bg-2: 255 255 255;
+  --c-panel: 255 255 255;
+  --c-panel-2: 241 243 246;
+  --c-border: 228 232 238;
+  --c-border-soft: 238 241 244;
+  --c-muted: 91 101 115;
+  --c-fg: 27 32 39;
+  /* ── Brand + status ─────────────────────────────────────────────────── */
+  --c-accent: 46 108 246;
+  --c-ok: 16 163 114;
+  --c-warn: 194 116 12;
+  --c-danger: 220 75 71;
+  --c-info: 14 146 201;
+
+  /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ──────── */
+  --chart-active: #10a372;
+  --chart-idle: #c2740c;
+  --chart-accent: #2e6cf6;
+  --chart-info: #0e92c9;
+  --chart-grid: #e4e8ee;
+  --chart-axis: #5b6573;
+  --chart-panel: #ffffff;
+  --chart-fg: #1b2027;
+  --chart-cursor: rgba(46, 108, 246, 0.08);
+  --chart-tooltip-shadow: 0 6px 16px -8px rgba(16, 24, 40, 0.18);
+
+  color-scheme: light;
+}
+
+.dark {
+  /* ── Dark surfaces — a calm slate, not the old "Signal" command deck ──── */
+  --c-bg: 14 17 22;
+  --c-bg-2: 21 26 33;
+  --c-panel: 22 28 36;
+  --c-panel-2: 30 37 47;
+  --c-border: 42 51 63;
+  --c-border-soft: 33 41 51;
+  --c-muted: 142 154 169;
+  --c-fg: 230 234 240;
+  /* ── Brand + status — same hues, lifted for contrast on dark ─────────── */
+  --c-accent: 88 142 255;
+  --c-ok: 45 192 138;
+  --c-warn: 224 150 60;
+  --c-danger: 240 99 94;
+  --c-info: 56 174 219;
+
+  --chart-active: #2dc08a;
+  --chart-idle: #e0963c;
+  --chart-accent: #588eff;
+  --chart-info: #38aedb;
+  --chart-grid: #2a333f;
+  --chart-axis: #8e9aa9;
+  --chart-panel: #161c24;
+  --chart-fg: #e6eaf0;
+  --chart-cursor: rgba(88, 142, 255, 0.12);
+  --chart-tooltip-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
 }
 
 html,
 body {
-  background-color: #f7f8fa;
-  color: #1b2027;
+  background-color: rgb(var(--c-bg));
+  color: rgb(var(--c-fg));
 }
 
 html {
@@ -37,7 +102,7 @@ body {
 
 /* Keyboard focus ring — brand blue; pointer interactions stay ring-free. */
 *:focus-visible {
-  outline: 2px solid #2e6cf6;
+  outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -47,13 +112,13 @@ body {
 }
 
 ::selection {
-  background: rgba(46, 108, 246, 0.16);
-  color: #14223f;
+  background: rgb(var(--c-accent) / 0.18);
+  color: rgb(var(--c-fg));
 }
 
 /* Styled checkbox in brand blue */
 input[type="checkbox"] {
-  accent-color: #2e6cf6;
+  accent-color: rgb(var(--c-accent));
   width: 1rem;
   height: 1rem;
   cursor: pointer;
@@ -68,13 +133,13 @@ input[type="checkbox"] {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d9e0;
+  background: rgb(var(--c-muted) / 0.35);
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c0c7d1;
+  background: rgb(var(--c-muted) / 0.5);
   background-clip: padding-box;
 }
 
@@ -83,8 +148,8 @@ input[type="checkbox"] {
 /* A near-invisible neutral grid for large empty surfaces — texture, not noise. */
 .signal-grid {
   background-image:
-    linear-gradient(to right, rgba(27, 32, 39, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(27, 32, 39, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgb(var(--c-fg) / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--c-fg) / 0.035) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -94,7 +159,7 @@ input[type="checkbox"] {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #5b6573;
+  color: rgb(var(--c-muted));
 }
 
 /* A live status dot with a soft expanding ring — used for working/online. */
@@ -104,14 +169,14 @@ input[type="checkbox"] {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 9999px;
-  background: #10a372;
+  background: rgb(var(--c-ok));
 }
 .signal-dot::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  box-shadow: 0 0 0 1px rgba(16, 163, 114, 0.5);
+  box-shadow: 0 0 0 1px rgb(var(--c-ok) / 0.5);
   animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 

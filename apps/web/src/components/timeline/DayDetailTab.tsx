@@ -162,7 +162,9 @@ export function DayDetailTab({
                           key={m}
                           className="h-3 flex-1 rounded-[1px]"
                           style={{
-                            background: st ? STATE_COLOR[st] : "#F1F3F6",
+                            background: st
+                              ? STATE_COLOR[st]
+                              : "rgb(var(--c-panel-2))",
                           }}
                           title={
                             st
