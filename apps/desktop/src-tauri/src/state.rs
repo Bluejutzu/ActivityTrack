@@ -80,7 +80,10 @@ impl AppState {
 
     /// The current device key, if enrolled.
     pub fn device_key(&self) -> Option<String> {
-        self.device_key.lock().expect("device_key mutex poisoned").clone()
+        self.device_key
+            .lock()
+            .expect("device_key mutex poisoned")
+            .clone()
     }
 
     /// Store a freshly-issued device key (in memory) and persist it to disk.

@@ -22,7 +22,9 @@ use crate::state::AppState;
 
 async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
     if let Some(update) = handle.updater()?.check().await? {
-        update.download_and_install(|_chunk, _total| {}, || {}).await?;
+        update
+            .download_and_install(|_chunk, _total| {}, || {})
+            .await?;
     }
     Ok(())
 }
@@ -59,6 +61,7 @@ pub fn run() {
     tracker::start(state.clone());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
