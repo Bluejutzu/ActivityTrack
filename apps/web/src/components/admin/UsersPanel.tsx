@@ -65,7 +65,7 @@ export function UsersPanel() {
                     setBusyId(null);
                   }}
                 >
-                  <SelectTrigger className="w-44">
+                  <SelectTrigger className="w-full min-w-[9rem]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

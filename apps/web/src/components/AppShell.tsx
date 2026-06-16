@@ -195,7 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen min-w-0 flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg-2/85 px-4 py-3 backdrop-blur-md sm:px-6">
           {/* Mobile nav trigger */}

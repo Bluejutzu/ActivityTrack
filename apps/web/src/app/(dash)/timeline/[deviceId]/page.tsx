@@ -172,7 +172,7 @@ export default function TimelinePage({
         <h1 className="font-display text-2xl font-semibold tracking-tightest text-fg">
           {title}
         </h1>
-        <p className="mt-1 font-mono text-xs text-muted">{deviceId}</p>
+        <p className="mt-1 truncate font-mono text-xs text-muted">{deviceId}</p>
       </div>
 
       {/* KPI row */}
