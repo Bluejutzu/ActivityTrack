@@ -80,3 +80,11 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           tauriScript: pnpm tauri
+
+      # Clean up the tag if the release build failed.
+      - name: Clean up failed tag
+        if: failure()
+        run: |
+          git push origin --delete ${{ github.ref_name }}
+          git tag -d ${{ github.ref_name }}
+        shell: bash
