@@ -130,7 +130,13 @@ async function clockodoGet<T>(path: string): Promise<T> {
   const res = await fetch(`${CLOCKODO_BASE()}${path}`, {
     headers: clockodoHeaders(),
   });
-  if (!res.ok) throw new Error(`Clockodo GET ${path} failed: ${res.status}`);
+  if (!res.ok) {
+  const text = await res.text();
+    console.log(text)
+  throw new Error(
+    `Clockodo GET ${path} failed: ${res.status} ${text}`
+  );
+}
   return (await res.json()) as T;
 }
 
@@ -227,7 +233,11 @@ async function fetchClockodoEntryUserId(id: string): Promise<string | null> {
     headers: clockodoHeaders(),
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Clockodo GET entry ${id} failed: ${res.status}`);
+  if (!res.ok) { 
+    const text = await res.text();
+    console.log(text)
+    throw new Error(`Clockodo GET entry ${id} failed: ${res.status} ${text}`)
+  }
   const body = (await res.json()) as { entry?: ClockodoEntry };
   return body.entry?.users_id != null ? String(body.entry.users_id) : null;
 }
