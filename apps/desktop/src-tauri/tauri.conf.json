@@ -46,5 +46,15 @@
       }
     }
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "pubkey": "__TAURI_UPDATE_PUBKEY__",
+      "endpoints": [
+        "https://github.com/bluejutzu/activitytrack/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }
