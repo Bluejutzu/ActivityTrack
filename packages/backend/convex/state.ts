@@ -125,6 +125,17 @@ export const pushSignal = mutation({
       });
     }
 
+    // Append to the state-history log only when the fused state actually changes
+    // (or on the very first observation). Insert-on-change bounds the table and
+    // is enough to reconstruct per-hour durations on the timeline.
+    if (!existing || existing.finalState !== finalState) {
+      await ctx.db.insert("stateSamples", {
+        employeeId: args.employeeId,
+        state: finalState,
+        at: now,
+      });
+    }
+
     return { employeeId: args.employeeId, finalState };
   },
 });
@@ -287,5 +298,41 @@ export const get = query({
   handler: async (ctx, { employeeId }) => {
     await requireViewer(ctx);
     return await getStateRow(ctx, employeeId);
+  },
+});
+
+/**
+ * State-change history for one employee since `since` (epoch ms). On-change
+ * rows; the client reconstructs per-hour durations for the timeline breakdown.
+ * Capped so a busy switcher can't return an unbounded set. Viewer+.
+ */
+export const history = query({
+  args: {
+    employeeId: v.string(),
+    since: v.number(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { employeeId, since, limit }) => {
+    await requireViewer(ctx);
+    const rows = await ctx.db
+      .query("stateSamples")
+      .withIndex("by_employee_time", (q) =>
+        q.eq("employeeId", employeeId).gte("at", since),
+      )
+      .order("asc")
+      .take(Math.min(limit ?? 5000, 10000));
+
+    // Prepend the state in effect at `since` (the last change before the window)
+    // so a day with no state changes still renders fully — the client clamps its
+    // start to the window edge.
+    const prior = await ctx.db
+      .query("stateSamples")
+      .withIndex("by_employee_time", (q) =>
+        q.eq("employeeId", employeeId).lt("at", since),
+      )
+      .order("desc")
+      .first();
+
+    return prior ? [prior, ...rows] : rows;
   },
 });

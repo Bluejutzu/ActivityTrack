@@ -96,7 +96,6 @@ signals remain.
    npx convex env set GENESYS_REGION mypurecloud.de
    npx convex env set CLOCKODO_API_USER <email>
    npx convex env set CLOCKODO_API_KEY <key>
-   npx convex env set CLOCKODO_BREAK_SERVICE_IDS <id,id>   # optional
    ```
    Then push the schema/functions: `npx convex deploy` (or `convex dev`) to apply
    the new `employeeStates` / `integrationHealth` tables, the `people` mapping
@@ -107,8 +106,12 @@ signals remain.
 4. **Genesys OAuth client:** create a *Client Credentials* OAuth app in Genesys
    Admin with read scopes for **Presence, Routing Status, Conversations, Users**;
    put its id/secret in the **Convex** env. Set `GENESYS_REGION` to your org's region.
-5. **Clockodo:** get the API key (Clockodo → Personal data → API), and note the
-   service id(s) you use for breaks → `CLOCKODO_BREAK_SERVICE_IDS`. Configure a
+5. **Clockodo:** get the API key (Clockodo → Personal data → API). Breaks are
+   inferred from the clock itself — no dedicated break services needed: a stopped
+   clock on a day the person has already booked time counts as a break (working
+   while clocked in, off-shift when there are no entries that day). State is read
+   cross-user from `/api/v2/entries` (`filter[users_id]` + a day range); absences
+   come from `/api/v4/absences`. Configure a
    Clockodo webhook pointing at `https://<dashboard>/api/webhooks/clockodo`
    (send the webhook secret as `Authorization: Bearer <secret>` or `?secret=`).
    Include `employeeId` + `clockodoUserId` in the webhook body for the re-pull

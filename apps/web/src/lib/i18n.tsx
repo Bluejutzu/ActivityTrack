@@ -107,6 +107,29 @@ const de: Dict = {
   "audit.empty": "Noch keine Einträge.",
 
   "settings.heading": "Einstellungen",
+  "settings.subtitle":
+    "Konfiguration, Systemstatus, Benutzer und Protokoll an einem Ort.",
+  "settings.tabs.config": "Konfiguration",
+  "settings.tabs.system": "Systemstatus",
+  "settings.tabs.users": "Benutzer",
+  "settings.tabs.audit": "Protokoll",
+  "settings.config.heading": "Konfiguration",
+  "settings.config.hint":
+    "Legt fest, ab wann jemand als inaktiv oder ein Gerät als offline gilt und wie lange Daten aufbewahrt werden.",
+  "settings.config.inactivity": "Inaktiv-Schwelle",
+  "settings.config.inactivityHint":
+    "Untätigkeit, ab der jemand als inaktiv zählt (für Diagramme und Kennzahlen).",
+  "settings.config.offline": "Offline-Schwelle",
+  "settings.config.offlineHint":
+    "Zeit ohne Lebenszeichen, ab der ein Gerät als offline gilt.",
+  "settings.config.retention": "Aufbewahrung",
+  "settings.config.retentionHint":
+    "Wie lange Rohdaten und Statusverlauf aufbewahrt werden, bevor sie gelöscht werden.",
+  "settings.config.seconds": "Sekunden",
+  "settings.config.days": "Tage",
+  "settings.config.save": "Konfiguration speichern",
+  "settings.config.saved": "Konfiguration gespeichert.",
+  "settings.config.invalid": "Bitte alle Felder ausfüllen.",
   "settings.debugPw.heading": "Passwort für Tracker-Debug",
   "settings.debugPw.hint":
     "Legt das Passwort fest, mit dem die Tracker-Oberfläche auf den PCs entsperrt wird.",
@@ -134,8 +157,25 @@ const de: Dict = {
   "timeline.intraday.series": "Aktiv %",
   "timeline.heatmap.heading": "Aktivität nach Tageszeit",
   "timeline.heatmap.sub": "Wann diese Person typischerweise aktiv ist.",
+  "timeline.hourly.heading": "Status je Stunde (heute)",
+  "timeline.hourly.sub":
+    "Minuten pro Stunde nach Zustand — inaktiv, im Gespräch, Pause, Nachbearbeitung.",
+  "timeline.hourly.empty":
+    "Noch kein Statusverlauf für heute. Daten erscheinen, sobald Signale eintreffen.",
+  "timeline.hourly.unlinked":
+    "Dieses Gerät ist keinem Mitarbeiter mit Integrationen zugeordnet.",
+  "timeline.state.heading": "Aktueller Status",
+  "timeline.state.empty": "Noch keine Statusdaten für diesen Mitarbeiter.",
   "timeline.tabs.charts": "Übersicht",
   "timeline.tabs.raw": "Rohdaten",
+  "timeline.tabs.export": "Export",
+  "timeline.export.heading": "Daten exportieren",
+  "timeline.export.sub":
+    "Aktivitätsdaten dieses Mitarbeiters für einen Zeitraum als CSV oder JSON.",
+  "timeline.export.from": "Von",
+  "timeline.export.to": "Bis",
+  "timeline.export.csv": "CSV herunterladen",
+  "timeline.export.json": "JSON herunterladen",
   "timeline.online": "Online",
   "timeline.offline": "Offline",
 
@@ -213,6 +253,7 @@ const de: Dict = {
   "error.notFound.slot": "Der Code wurde nicht gefunden.",
   "error.notFound.event": "Der Eintrag wurde nicht gefunden.",
   "error.validation.password_short": "Das Passwort muss mindestens 6 Zeichen haben.",
+  "error.validation.out_of_range": "Der Wert liegt außerhalb des zulässigen Bereichs.",
   "error.user.cannot_demote_self":
     "Sie können sich nicht selbst die IT-Administratorrolle entziehen.",
 
@@ -374,6 +415,29 @@ const en: Dict = {
   "audit.empty": "No entries yet.",
 
   "settings.heading": "Settings",
+  "settings.subtitle":
+    "Configuration, system health, users and the audit log in one place.",
+  "settings.tabs.config": "Configuration",
+  "settings.tabs.system": "System health",
+  "settings.tabs.users": "Users",
+  "settings.tabs.audit": "Audit log",
+  "settings.config.heading": "Configuration",
+  "settings.config.hint":
+    "Controls when someone counts as inactive, when a device is offline, and how long data is kept.",
+  "settings.config.inactivity": "Inactivity threshold",
+  "settings.config.inactivityHint":
+    "Idle time before someone counts as inactive (used in charts and KPIs).",
+  "settings.config.offline": "Offline threshold",
+  "settings.config.offlineHint":
+    "Time without a heartbeat before a device shows as offline.",
+  "settings.config.retention": "Data retention",
+  "settings.config.retentionHint":
+    "How long raw samples and state history are kept before pruning.",
+  "settings.config.seconds": "seconds",
+  "settings.config.days": "days",
+  "settings.config.save": "Save configuration",
+  "settings.config.saved": "Configuration saved.",
+  "settings.config.invalid": "Please fill in every field.",
   "settings.debugPw.heading": "Tracker debug password",
   "settings.debugPw.hint":
     "Sets the password that unlocks the tracker UI on the PCs.",
@@ -401,8 +465,25 @@ const en: Dict = {
   "timeline.intraday.series": "Active %",
   "timeline.heatmap.heading": "Activity by time of day",
   "timeline.heatmap.sub": "When this person is typically active.",
+  "timeline.hourly.heading": "State by hour (today)",
+  "timeline.hourly.sub":
+    "Minutes per hour by state — idle, on a call, break, wrap-up.",
+  "timeline.hourly.empty":
+    "No state history for today yet. Data appears as signals arrive.",
+  "timeline.hourly.unlinked":
+    "This device isn't linked to a person with integrations.",
+  "timeline.state.heading": "Current state",
+  "timeline.state.empty": "No state data for this person yet.",
   "timeline.tabs.charts": "Overview",
   "timeline.tabs.raw": "Raw data",
+  "timeline.tabs.export": "Export",
+  "timeline.export.heading": "Export data",
+  "timeline.export.sub":
+    "This person's activity for a date range, as CSV or JSON.",
+  "timeline.export.from": "From",
+  "timeline.export.to": "To",
+  "timeline.export.csv": "Download CSV",
+  "timeline.export.json": "Download JSON",
   "timeline.online": "Online",
   "timeline.offline": "Offline",
 
@@ -478,6 +559,7 @@ const en: Dict = {
   "error.notFound.slot": "That code was not found.",
   "error.notFound.event": "That entry was not found.",
   "error.validation.password_short": "The password must be at least 6 characters.",
+  "error.validation.out_of_range": "That value is outside the allowed range.",
   "error.user.cannot_demote_self":
     "You can't remove your own IT admin role.",
 

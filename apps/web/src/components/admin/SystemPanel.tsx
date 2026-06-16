@@ -45,7 +45,8 @@ function friendly(
   return msg === key ? t("health.friendly.unknown") : msg;
 }
 
-export default function HealthPage() {
+/** System health: device connectivity + reported issues. Settings hub tab. */
+export function SystemPanel() {
   const { t, lang } = useI18n();
   const me = useQuery(api.users.me);
   const health = useQuery(api.events.health);

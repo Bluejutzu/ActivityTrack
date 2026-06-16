@@ -69,6 +69,84 @@ export function hourOfDayActivity(
   }));
 }
 
+/** The six fused employee states, matching the backend `stateSamples.state`. */
+export type StateName =
+  | "ABSENT"
+  | "BREAK"
+  | "IN_CALL"
+  | "WRAP_UP"
+  | "ACTIVE"
+  | "IDLE";
+
+export const STATE_NAMES: StateName[] = [
+  "ACTIVE",
+  "IN_CALL",
+  "WRAP_UP",
+  "IDLE",
+  "BREAK",
+  "ABSENT",
+];
+
+export interface StateSample {
+  state: StateName;
+  at: number;
+}
+
+export type HourStateBucket = { hour: number } & Record<StateName, number>;
+
+function emptyHourBuckets(): HourStateBucket[] {
+  return Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    ACTIVE: 0,
+    IN_CALL: 0,
+    WRAP_UP: 0,
+    IDLE: 0,
+    BREAK: 0,
+    ABSENT: 0,
+  }));
+}
+
+/**
+ * Minutes spent in each fused state, bucketed by local hour of day, over the
+ * window `[windowStart, windowEnd]`. `samples` are on-change state rows (asc by
+ * `at`); each one's state holds until the next sample (or `windowEnd` for the
+ * last). Intervals are split at hour boundaries so a state spanning multiple
+ * hours is credited proportionally. Powers the per-hour timeline breakdown.
+ */
+export function hourlyStateBreakdown(
+  samples: StateSample[],
+  windowStart: number,
+  windowEnd: number,
+): HourStateBucket[] {
+  const buckets = emptyHourBuckets();
+  if (samples.length === 0 || windowEnd <= windowStart) return buckets;
+
+  for (let i = 0; i < samples.length; i++) {
+    const segStart = Math.max(samples[i].at, windowStart);
+    const rawEnd = i + 1 < samples.length ? samples[i + 1].at : windowEnd;
+    const segEnd = Math.min(rawEnd, windowEnd);
+    if (segEnd <= segStart) continue;
+
+    const state = samples[i].state;
+    let cur = segStart;
+    while (cur < segEnd) {
+      const d = new Date(cur);
+      const hour = d.getHours();
+      d.setMinutes(0, 0, 0);
+      const hourEnd = d.getTime() + 3_600_000;
+      const chunkEnd = Math.min(hourEnd, segEnd);
+      buckets[hour][state] += (chunkEnd - cur) / 60_000;
+      cur = chunkEnd;
+    }
+  }
+
+  // Round for stable rendering/tooltips.
+  for (const b of buckets) {
+    for (const s of STATE_NAMES) b[s] = +b[s].toFixed(1);
+  }
+  return buckets;
+}
+
 /**
  * Activity through the most recent day, in `slotMinutes` buckets, as the percent
  * of samples that were active. Only buckets covered by samples are returned.

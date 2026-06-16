@@ -1,12 +1,109 @@
 import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import { requireAdmin } from "./rbac";
+import { requireAdmin, requireViewer } from "./rbac";
 import { writeAudit } from "./audit";
 import { hashPassword } from "./crypto";
 import { appError } from "./errors";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 const DEBUG_PASSWORD_KEY = "debugToolPasswordHash";
+
+/**
+ * Operational configuration, persisted as individual `settings` rows keyed by
+ * the constants below. `readConfig` merges stored overrides onto the defaults so
+ * every consumer (overview thresholds, daily accrual, retention prune) reads one
+ * coherent shape. Editable by IT in the dashboard Settings hub.
+ */
+const CONFIG_KEYS = {
+  inactivityThresholdSeconds: "config.inactivityThresholdSeconds",
+  offlineThresholdSeconds: "config.offlineThresholdSeconds",
+  retentionDays: "config.retentionDays",
+} as const;
+
+export interface AppConfig {
+  inactivityThresholdSeconds: number;
+  offlineThresholdSeconds: number;
+  retentionDays: number;
+}
+
+export const CONFIG_DEFAULTS: AppConfig = {
+  inactivityThresholdSeconds: 300, // 5 min idle before counted inactive
+  offlineThresholdSeconds: 120, // 2 min without a heartbeat → offline
+  retentionDays: 90, // keep raw samples / state history this long
+};
+
+/** Allowed ranges for each numeric config (inclusive). */
+const CONFIG_BOUNDS: Record<keyof AppConfig, { min: number; max: number }> = {
+  inactivityThresholdSeconds: { min: 30, max: 7200 },
+  offlineThresholdSeconds: { min: 30, max: 3600 },
+  retentionDays: { min: 1, max: 3650 },
+};
+
+/** Read the merged operational config (defaults + any stored overrides). */
+export async function readConfig(
+  ctx: QueryCtx | MutationCtx,
+): Promise<AppConfig> {
+  const out: AppConfig = { ...CONFIG_DEFAULTS };
+  for (const [field, key] of Object.entries(CONFIG_KEYS) as [
+    keyof AppConfig,
+    string,
+  ][]) {
+    const row = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+    if (row) {
+      const n = Number(row.value);
+      if (Number.isFinite(n)) out[field] = n;
+    }
+  }
+  return out;
+}
+
+/** Reactive read of the operational config for the Settings form. Viewer+. */
+export const getConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireViewer(ctx);
+    return await readConfig(ctx);
+  },
+});
+
+/** Update one or more operational config values. IT-only, range-validated. */
+export const setConfig = mutation({
+  args: {
+    inactivityThresholdSeconds: v.optional(v.number()),
+    offlineThresholdSeconds: v.optional(v.number()),
+    retentionDays: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const me = await requireAdmin(ctx);
+    const now = Date.now();
+    for (const field of Object.keys(CONFIG_KEYS) as (keyof AppConfig)[]) {
+      const value = args[field];
+      if (value === undefined) continue;
+      const { min, max } = CONFIG_BOUNDS[field];
+      if (!Number.isFinite(value) || value < min || value > max) {
+        throw appError(
+          "validation.out_of_range",
+          `${field} must be between ${min} and ${max}`,
+        );
+      }
+      const key = CONFIG_KEYS[field];
+      const existing = await ctx.db
+        .query("settings")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .unique();
+      if (existing) {
+        await ctx.db.patch(existing._id, { value: String(value), updatedAt: now });
+      } else {
+        await ctx.db.insert("settings", { key, value: String(value), updatedAt: now });
+      }
+    }
+    await writeAudit(ctx, me._id, "settings.config", "operational config");
+  },
+});
 
 /** Read a setting row (internal — used by the verify HTTP endpoint). */
 export const getByKey = internalQuery({
