@@ -69,7 +69,7 @@ if ($DryRun) {
 
 git add $files
 git commit -m "chore: bump version to $Version"
-git tag "v$Version"
+git tag -a "v$Version" -m "v$Version"
 
 Write-Host ""
 Write-Host "Committed and tagged v$Version. Pushing..."
