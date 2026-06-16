@@ -79,4 +79,3 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
-          packageManager: pnpm
