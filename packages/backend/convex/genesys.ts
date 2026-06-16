@@ -114,6 +114,7 @@ export async function pollGenesys(
 ): Promise<void> {
   const genesysPeople = mappings.filter((p) => p.genesysUserId);
   if (genesysPeople.length === 0) return;
+  console.log(`[genesys] poll: ${genesysPeople.length} mapped user(s)`);
   try {
     for (const p of genesysPeople) {
       const s = await fetchGenesysUserState(p.genesysUserId!);

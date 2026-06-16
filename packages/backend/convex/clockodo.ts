@@ -126,11 +126,18 @@ async function fetchClockodoWork(clockodoUserId: string): Promise<{
   onBreak: boolean;
 }> {
   const entries = await fetchTodayEntries(clockodoUserId);
-  if (entries.length === 0) return { working: false, onBreak: false };
   // `clocked: true` is the authoritative "running" indicator per the API docs.
   // `time_until` is always populated in the response, so null-checking it is wrong.
   const clockedIn = entries.some((e) => e.clocked === true);
-  return { working: clockedIn, onBreak: !clockedIn };
+  const result =
+    entries.length === 0
+      ? { working: false, onBreak: false }
+      : { working: clockedIn, onBreak: !clockedIn };
+  // Debug: the raw entries we read and the working/break we derived from them.
+  console.log(
+    `[clockodo] day state user=${clockodoUserId} entriesToday=${entries.length} clockedIn=${clockedIn} → working=${result.working} onBreak=${result.onBreak}`,
+  );
+  return result;
 }
 
 /**
@@ -161,6 +168,7 @@ export async function pollClockodo(
 ): Promise<void> {
   const clockodoPeople = mappings.filter((p) => p.clockodoUserId);
   if (clockodoPeople.length === 0) return;
+  console.log(`[clockodo] poll: ${clockodoPeople.length} mapped user(s)`);
   try {
     const absences = await fetchAbsences(new Date().getFullYear());
     const day = today();
@@ -245,6 +253,9 @@ export const refreshClockodoByEntry = action({
       // A deleted entry (or one with no user) carries nothing authoritative to
       // push — acknowledge without touching state so Clockodo won't retry.
       if (!clockodoUserId) {
+        console.log(
+          `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} → no user (deleted?), ignored`,
+        );
         await reportHealth(ctx, "clockodo", "ok");
         return { ok: true as const, ignored: true as const };
       }
@@ -255,6 +266,9 @@ export const refreshClockodoByEntry = action({
       });
       // The Clockodo user isn't mapped to anyone here — not an error.
       if (!employeeId) {
+        console.log(
+          `[clockodo] webhook entry=${entryId} user=${clockodoUserId} → not mapped to an employee, skipped`,
+        );
         await reportHealth(ctx, "clockodo", "ok");
         return { ok: true as const, unmapped: true as const };
       }
@@ -274,6 +288,13 @@ export const refreshClockodoByEntry = action({
         working = work.working;
         onBreak = work.onBreak;
       }
+
+      // Debug: how we resolved this webhook into a pushed signal.
+      console.log(
+        `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} user=${clockodoUserId} employee=${employeeId} → working=${working} onBreak=${onBreak} absent=${absent}${
+          eventName === "entry.stopped" ? " (trusted stop event)" : ""
+        }`,
+      );
 
       await ctx.runMutation(api.state.pushSignal, {
         secret,

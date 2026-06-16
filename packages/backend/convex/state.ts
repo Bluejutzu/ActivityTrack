@@ -129,6 +129,11 @@ export const pushSignal = mutation({
     // (or on the very first observation). Insert-on-change bounds the table and
     // is enough to reconstruct per-hour durations on the timeline.
     if (!existing || existing.finalState !== finalState) {
+      // Debug: only log real transitions so frequent agent heartbeats that don't
+      // change the fused state stay quiet.
+      console.log(
+        `[state] ${args.employeeId}: ${existing?.finalState ?? "—"} → ${finalState} (via ${args.source})`,
+      );
       await ctx.db.insert("stateSamples", {
         employeeId: args.employeeId,
         state: finalState,
