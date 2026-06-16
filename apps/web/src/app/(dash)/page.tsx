@@ -7,6 +7,7 @@ import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { isWorkingState, type StateName } from "@/lib/activity";
 import type { EmployeeState } from "@activitytrack/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,11 +20,16 @@ import { HealthBanner, StateBadge } from "@/components/state/StateBits";
 function FleetSummary({
   rows,
 }: {
-  rows: { online: boolean; active: boolean }[];
+  rows: { online: boolean; active: boolean; finalState: string | null }[];
 }) {
   const { t } = useI18n();
-  const working = rows.filter((d) => d.online && d.active).length;
-  const idle = rows.filter((d) => d.online && !d.active).length;
+  // "Working" follows the fused state (a person on BREAK/ABSENT isn't working,
+  // even if their PC is still on), falling back to the raw active flag when no
+  // fused state exists yet. Keeps the count in step with the per-card badges.
+  const isWorking = (d: { active: boolean; finalState: string | null }) =>
+    isWorkingState(d.finalState as StateName | null, d.active);
+  const working = rows.filter((d) => d.online && isWorking(d)).length;
+  const idle = rows.filter((d) => d.online && !isWorking(d)).length;
   const offline = rows.filter((d) => !d.online).length;
 
   const stats: { label: string; value: number; tone: string; live?: boolean }[] = [

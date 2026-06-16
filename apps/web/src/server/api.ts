@@ -123,7 +123,7 @@ export const app = new Elysia({ prefix: "/api" })
       set.status = 400;
       return { ok: false, error: "bad_request" };
     }
-    return await convex.action(api.integrations.syncGenesys, {
+    return await convex.action(api.genesys.syncGenesys, {
       secret: signalSecret(),
       employeeId: b.employeeId,
       genesysUserId: b.genesysUserId,
@@ -164,9 +164,13 @@ export const app = new Elysia({ prefix: "/api" })
       }
       const payload = (b.payload ?? {}) as { entry?: { id?: number | string } };
       const entryId = payload.entry?.id;
+      // Debug: what Clockodo actually pushed (event + which entry changed).
+      console.log(
+        `[clockodo] webhook received event=${b.event_name} entryId=${entryId ?? "—"}`,
+      );
       // Acknowledge events without an entry id so Clockodo doesn't retry them.
       if (entryId == null) return { ok: true, ignored: true };
-      return await convex.action(api.integrations.refreshClockodoByEntry, {
+      return await convex.action(api.clockodo.refreshClockodoByEntry, {
         secret: signalSecret(),
         entryId: String(entryId),
         eventName: b.event_name,
@@ -183,7 +187,7 @@ export const app = new Elysia({ prefix: "/api" })
 
     const raw = b as { employeeId?: string; clockodoUserId?: string };
     if (raw.employeeId && raw.clockodoUserId) {
-      return await convex.action(api.integrations.refreshClockodo, {
+      return await convex.action(api.clockodo.refreshClockodo, {
         secret: signalSecret(),
         employeeId: raw.employeeId,
         clockodoUserId: raw.clockodoUserId,

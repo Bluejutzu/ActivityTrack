@@ -129,6 +129,11 @@ export const pushSignal = mutation({
     // (or on the very first observation). Insert-on-change bounds the table and
     // is enough to reconstruct per-hour durations on the timeline.
     if (!existing || existing.finalState !== finalState) {
+      // Debug: only log real transitions so frequent agent heartbeats that don't
+      // change the fused state stay quiet.
+      console.log(
+        `[state] ${args.employeeId}: ${existing?.finalState ?? "—"} → ${finalState} (via ${args.source})`,
+      );
       await ctx.db.insert("stateSamples", {
         employeeId: args.employeeId,
         state: finalState,
@@ -302,22 +307,27 @@ export const get = query({
 });
 
 /**
- * State-change history for one employee since `since` (epoch ms). On-change
- * rows; the client reconstructs per-hour durations for the timeline breakdown.
- * Capped so a busy switcher can't return an unbounded set. Viewer+.
+ * State-change history for one employee in `[since, until]` (epoch ms; `until`
+ * defaults to "now"/open-ended). On-change rows; the client reconstructs per-hour
+ * or per-minute durations for the timeline breakdown. An explicit `until` lets the
+ * day-detail view fetch any past day's window. Capped so a busy switcher can't
+ * return an unbounded set. Viewer+.
  */
 export const history = query({
   args: {
     employeeId: v.string(),
     since: v.number(),
+    until: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { employeeId, since, limit }) => {
+  handler: async (ctx, { employeeId, since, until, limit }) => {
     await requireViewer(ctx);
     const rows = await ctx.db
       .query("stateSamples")
       .withIndex("by_employee_time", (q) =>
-        q.eq("employeeId", employeeId).gte("at", since),
+        until !== undefined
+          ? q.eq("employeeId", employeeId).gte("at", since).lte("at", until)
+          : q.eq("employeeId", employeeId).gte("at", since),
       )
       .order("asc")
       .take(Math.min(limit ?? 5000, 10000));
