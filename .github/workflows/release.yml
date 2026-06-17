@@ -46,15 +46,15 @@ jobs:
           $configJson | Out-File -Encoding UTF8 -FilePath "apps/desktop/src-tauri/bundle/nsis/config-staging/config.json"
         shell: pwsh
 
-      # Generate changelog from commits since the previous tag.
+      # Generate changelog from commits in apps/desktop since the previous tag.
       - name: Generate changelog
         id: changelog
         run: |
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -n "$PREVIOUS_TAG" ]; then
-            CHANGES=$(git log --pretty=format:"- %s" "$PREVIOUS_TAG"..HEAD)
+            CHANGES=$(git log --pretty=format:"- %h %s" "$PREVIOUS_TAG"..HEAD -- apps/desktop)
           else
-            CHANGES=$(git log --pretty=format:"- %s")
+            CHANGES=$(git log --pretty=format:"- %h %s" -- apps/desktop)
           fi
           {
             echo "changes<<EOF"
