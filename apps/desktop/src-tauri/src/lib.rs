@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_updater::UpdaterExt;
 
@@ -25,7 +25,7 @@ async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Res
 
     match handle.updater()?.check().await {
         Ok(Some(update)) => {
-            let version = update.version().to_string();
+            let version = update.version.to_string();
             let _ = handle.emit("update:available", &version);
 
             match update.download_and_install(|_chunk, _total| {}, || {}).await {
