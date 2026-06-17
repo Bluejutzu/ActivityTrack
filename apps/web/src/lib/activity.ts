@@ -48,9 +48,11 @@ export function dailyTrend(
 /**
  * 24 buckets (one per local hour) giving the share of samples that were active.
  * Powers the "when is this person usually active" heatmap strip.
+ * `tzOffsetMinutes` is the browser's timezone offset (from Date.prototype.getTimezoneOffset).
  */
 export function hourOfDayActivity(
   samples: Sample[],
+  tzOffsetMinutes = 0,
 ): Array<{ hour: number; ratio: number; total: number }> {
   const buckets = Array.from({ length: 24 }, (_, hour) => ({
     hour,
@@ -58,7 +60,7 @@ export function hourOfDayActivity(
     total: 0,
   }));
   for (const s of samples) {
-    const h = new Date(s.capturedAt).getHours();
+    const h = new Date(s.capturedAt - tzOffsetMinutes * 60_000).getUTCHours();
     buckets[h].total += 1;
     if (s.active) buckets[h].active += 1;
   }
@@ -130,11 +132,13 @@ function emptyHourBuckets(): HourStateBucket[] {
  * `at`); each one's state holds until the next sample (or `windowEnd` for the
  * last). Intervals are split at hour boundaries so a state spanning multiple
  * hours is credited proportionally. Powers the per-hour timeline breakdown.
+ * `tzOffsetMinutes` is the browser's timezone offset (from Date.prototype.getTimezoneOffset).
  */
 export function hourlyStateBreakdown(
   samples: StateSample[],
   windowStart: number,
   windowEnd: number,
+  tzOffsetMinutes = 0,
 ): HourStateBucket[] {
   const buckets = emptyHourBuckets();
   if (samples.length === 0 || windowEnd <= windowStart) return buckets;
@@ -148,9 +152,9 @@ export function hourlyStateBreakdown(
     const state = samples[i].state;
     let cur = segStart;
     while (cur < segEnd) {
-      const d = new Date(cur);
-      const hour = d.getHours();
-      d.setMinutes(0, 0, 0);
+      const d = new Date(cur - tzOffsetMinutes * 60_000);
+      const hour = d.getUTCHours();
+      d.setUTCMinutes(0, 0, 0);
       const hourEnd = d.getTime() + 3_600_000;
       const chunkEnd = Math.min(hourEnd, segEnd);
       buckets[hour][state] += (chunkEnd - cur) / 60_000;

@@ -113,20 +113,22 @@ export default function TimelinePage({
 
   // Aggregations (memoised; samples can be up to 1000 rows).
   const { trend, heatmap, intraday, hourlyStates } = useMemo(() => {
+    const tzOffset = new Date().getTimezoneOffset();
     const s: Sample[] = samples ?? [];
     const newestDay =
-      s.length > 0 ? localDay(s[0].capturedAt, new Date().getTimezoneOffset()) : today;
+      s.length > 0 ? localDay(s[0].capturedAt, tzOffset) : today;
     const sameDay = s.filter(
-      (x) => localDay(x.capturedAt, new Date().getTimezoneOffset()) === newestDay,
+      (x) => localDay(x.capturedAt, tzOffset) === newestDay,
     );
     return {
       trend: dailyTrend(daily ?? [], startDay, today),
-      heatmap: hourOfDayActivity(s),
+      heatmap: hourOfDayActivity(s, tzOffset),
       intraday: intradayTimeline(sameDay, 30),
       hourlyStates: hourlyStateBreakdown(
         stateHistory ?? [],
         dayStartMs,
         Date.now(),
+        tzOffset,
       ),
     };
   }, [samples, daily, startDay, today, stateHistory, dayStartMs]);
