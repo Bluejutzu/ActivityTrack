@@ -56,6 +56,8 @@ jobs:
           else
             CHANGES=$(git log --pretty=format:"- %h %s" -- apps/desktop)
           fi
+          # Linkify PR references (#123)
+          CHANGES=$(echo "$CHANGES" | sed 's/#\([0-9]\+\)/#\1/g' | sed 's/\s#\([0-9]\+\)/\n              (#\1)/g')
           {
             echo "changes<<EOF"
             echo "$CHANGES"
