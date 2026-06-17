@@ -7,16 +7,11 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, "..");
 
-interface Config {
-  version: string;
-  dryRun: boolean;
-}
-
-function parseArgs(): Config {
+function parseArgs() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.error("Usage: node scripts/bump-version.ts <version> [--dry-run]");
-    console.error("Example: node scripts/bump-version.ts 0.2.5");
+    console.error("Usage: node scripts/bump-version.js <version> [--dry-run]");
+    console.error("Example: node scripts/bump-version.js 0.2.5");
     process.exit(1);
   }
 
@@ -32,7 +27,7 @@ function parseArgs(): Config {
   return { version, dryRun };
 }
 
-function exec(cmd: string, silent = false): string {
+function exec(cmd, silent = false) {
   try {
     return execSync(cmd, { cwd: ROOT_DIR, encoding: "utf-8" }).toString();
   } catch (e) {
@@ -41,7 +36,7 @@ function exec(cmd: string, silent = false): string {
   }
 }
 
-function checkGitStatus(): void {
+function checkGitStatus() {
   const status = exec("git status --porcelain", true);
   if (status.trim()) {
     console.error("❌ Working tree has uncommitted changes.");
@@ -50,7 +45,7 @@ function checkGitStatus(): void {
   }
 }
 
-function checkTagExists(version: string): void {
+function checkTagExists(version) {
   const tagName = `v${version}`;
   const existingTag = exec(`git tag -l ${tagName}`, true);
   if (existingTag.trim()) {
@@ -60,7 +55,7 @@ function checkTagExists(version: string): void {
   }
 }
 
-function updateCargoToml(version: string): void {
+function updateCargoToml(version) {
   const path = resolve(ROOT_DIR, "apps/desktop/src-tauri/Cargo.toml");
   let content = readFileSync(path, "utf-8");
 
@@ -74,14 +69,14 @@ function updateCargoToml(version: string): void {
   writeFileSync(path, content);
 }
 
-function updateTauriConf(version: string): void {
+function updateTauriConf(version) {
   const path = resolve(ROOT_DIR, "apps/desktop/src-tauri/tauri.conf.json");
   const content = JSON.parse(readFileSync(path, "utf-8"));
   content.version = version;
   writeFileSync(path, JSON.stringify(content, null, 2) + "\n");
 }
 
-function updatePackageJson(version: string): void {
+function updatePackageJson(version) {
   const path = resolve(ROOT_DIR, "apps/desktop/package.json");
   const content = JSON.parse(readFileSync(path, "utf-8"));
   content.version = version;
