@@ -233,9 +233,29 @@ export const refreshClockodo = action({
  * but Clockodo's entries API can still report the just-stopped entry as
  * `clocked: true` for a few seconds. Re-reading the day state there would race
  * and leave the person stuck showing "working", so we trust the event and set
- * not-working / on-break directly. Other events (created/updated/deleted) re-pull
- * the authoritative day state as before.
+ * not-working / on-break directly. To avoid subsequent webhooks (like
+ * entry.updated) from re-pulling stale API state, we defer pulling state again
+ * for 3 seconds after entry.stopped via a grace-period record.
  */
+
+// In-memory grace periods: Map<employeeId, expiresAt>. After entry.stopped,
+// ignore entry.updated/created/deleted for this user until the grace period expires.
+const stopGracePeriods = new Map<string, number>();
+
+function isInStopGracePeriod(employeeId: string): boolean {
+  const expiresAt = stopGracePeriods.get(employeeId);
+  if (!expiresAt) return false;
+  if (Date.now() >= expiresAt) {
+    stopGracePeriods.delete(employeeId);
+    return false;
+  }
+  return true;
+}
+
+function setStopGracePeriod(employeeId: string, durationMs: number = 3000): void {
+  stopGracePeriods.set(employeeId, Date.now() + durationMs);
+}
+
 export const refreshClockodoByEntry = action({
   args: {
     secret: v.string(),
@@ -283,6 +303,16 @@ export const refreshClockodoByEntry = action({
         // Trust the event over the eventually-consistent entries read.
         working = false;
         onBreak = true;
+        // Grace period: defer re-pulling day state for subsequent webhooks on this
+        // user until Clockodo's API has caught up to the stop.
+        setStopGracePeriod(employeeId);
+      } else if (isInStopGracePeriod(employeeId)) {
+        // Within grace period: skip this webhook, API state is unreliable.
+        console.log(
+          `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} user=${clockodoUserId} employee=${employeeId} → in stop grace period, skipped`,
+        );
+        await reportHealth(ctx, "clockodo", "ok");
+        return { ok: true as const, inGracePeriod: true as const };
       } else {
         const work = await fetchClockodoWork(clockodoUserId);
         working = work.working;
