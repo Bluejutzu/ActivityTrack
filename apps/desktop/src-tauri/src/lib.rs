@@ -21,10 +21,16 @@ use tauri_plugin_updater::UpdaterExt;
 use crate::state::AppState;
 
 async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = handle.updater()?.check().await? {
-        update
-            .download_and_install(|_chunk, _total| {}, || {})
-            .await?;
+    match handle.updater()?.check().await {
+        Ok(Some(update)) => {
+            println!("Update available: {} -> {}", handle.package_info().version, update.body);
+            match update.download_and_install(|_chunk, _total| {}, || {}).await {
+                Ok(_) => println!("Update installed successfully"),
+                Err(e) => println!("Update installation failed: {}", e),
+            }
+        }
+        Ok(None) => println!("App is up to date"),
+        Err(e) => println!("Update check failed: {}", e),
     }
     Ok(())
 }
