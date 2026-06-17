@@ -1,6 +1,6 @@
 {
   "name": "@activitytrack/desktop",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "description": "ActivityTrack tracker — a tray-resident Tauri app that detects active/idle via Win32 input timing and reports to Convex. UI is hidden on startup and locked behind a dashboard-set password.",
   "type": "module",
