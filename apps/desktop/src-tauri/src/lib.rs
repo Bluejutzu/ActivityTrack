@@ -21,16 +21,34 @@ use tauri_plugin_updater::UpdaterExt;
 use crate::state::AppState;
 
 async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    let _ = handle.emit("update:checking", ());
+
     match handle.updater()?.check().await {
         Ok(Some(update)) => {
-            println!("Update available: {} -> {}", handle.package_info().version, update.body);
+            let version = update.version().to_string();
+            let _ = handle.emit("update:available", &version);
+
             match update.download_and_install(|_chunk, _total| {}, || {}).await {
-                Ok(_) => println!("Update installed successfully"),
-                Err(e) => println!("Update installation failed: {}", e),
+                Ok(_) => {
+                    let _ = handle.emit("update:installed", ());
+                    println!("Update to {} installed successfully", version);
+                }
+                Err(e) => {
+                    let error_msg = format!("Update installation failed: {}", e);
+                    let _ = handle.emit("update:error", &error_msg);
+                    println!("{}", error_msg);
+                }
             }
         }
-        Ok(None) => println!("App is up to date"),
-        Err(e) => println!("Update check failed: {}", e),
+        Ok(None) => {
+            let _ = handle.emit("update:uptodate", ());
+            println!("App is up to date");
+        }
+        Err(e) => {
+            let error_msg = format!("Update check failed: {}", e);
+            let _ = handle.emit("update:error", &error_msg);
+            println!("{}", error_msg);
+        }
     }
     Ok(())
 }

@@ -5,6 +5,7 @@ import { StatusBadge } from "./StatusBadge.js";
 import { KeyValueTable } from "./KeyValueTable.js";
 import { SamplesTable } from "./SamplesTable.js";
 import { ErrorsSection } from "./ErrorsSection.js";
+import { UpdateStatus } from "./UpdateStatus.js";
 
 interface Props {
   lang: Lang;
@@ -25,6 +26,7 @@ export function StatusPanel({
 }: Props) {
   return (
     <div id="status-panel" className="card panel">
+      <UpdateStatus />
       <PanelHeader lang={lang} onLangChange={onLangChange} />
       <div className="badges">
         <StatusBadge
