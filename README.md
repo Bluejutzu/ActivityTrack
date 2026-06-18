@@ -38,6 +38,21 @@ packages/
    `it_admin` (IT — manage everything), `manager` (boss — manage people/views),
    `viewer` (read-only). UI in German (default) or English.
 
+## Who can access the dashboard
+
+Clerk owns sign-in; access is decided server-side (single-tenant, no Clerk orgs):
+
+- **Admins** are pinned in the `ACTIVITYTRACK_ADMIN_EMAILS` Convex env var. These
+  emails are always `it_admin` and can never be locked out. Set once (Convex
+  dashboard → Settings → Environment Variables) — this is the durable root of
+  trust, so keep at least one boss's email here.
+- **Everyone else** can sign in only if their email **domain** is on the
+  allow-list, which any admin edits in the app under **Settings → Access** (no
+  redeploy, no developer). They get the `viewer` role; admins can promote to
+  `manager` under Settings → Users.
+- Removing a domain (or an admin email) revokes that access on the person's next
+  load. Clearing the domain list leaves only the admins — it can't lock them out.
+
 See [`PLAN.md`](./PLAN.md) for the full build plan and decisions.
 
 ## Getting started
@@ -57,8 +72,10 @@ pnpm dev:backend
 #    Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY); see
 #    .env.example. Then:
 pnpm dev:web
-#    The first account you sign in with becomes it_admin. Set the tracker debug
-#    password under Settings.
+#    Set the permanent admins (always full access, can't be locked out):
+#      npx convex env set ACTIVITYTRACK_ADMIN_EMAILS "you@company.com, boss@company.com"
+#    If you skip this, the first account to sign in becomes it_admin (bootstrap).
+#    Set the tracker debug password under Settings.
 
 # 3. Tracker — create %ProgramData%\ActivityTrack\config.json with the Convex
 #    URL + ingest key (the installer does this for you), then on Windows:

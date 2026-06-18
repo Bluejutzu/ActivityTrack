@@ -6,7 +6,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useState, type ReactNode } from "react";
 import { I18nProvider } from "@/lib/i18n";
 import { ThemeProvider } from "@/lib/theme";
-import { ToastProvider } from "@/components/Toast";
+import { Toaster } from "@/components/ui/sonner";
 
 /**
  * Client-side providers. Clerk owns identity; Convex verifies the Clerk JWT via
@@ -40,7 +40,8 @@ export function Providers({ children }: { children: ReactNode }) {
       <ConvexProviderWithClerk client={client} useAuth={useAuth}>
         <ThemeProvider>
           <I18nProvider>
-            <ToastProvider>{children}</ToastProvider>
+            {children}
+            <Toaster />
           </I18nProvider>
         </ThemeProvider>
       </ConvexProviderWithClerk>

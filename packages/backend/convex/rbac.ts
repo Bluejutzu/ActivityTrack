@@ -70,11 +70,3 @@ export function hasRole(user: Doc<"users"> | null, min: Role): boolean {
 }
 
 export type { Id, Doc };
-
-/** Return the active organization id for the signed-in user, if Clerk orgs are enabled. */
-export async function currentOrgId(
-  ctx: QueryCtx,
-): Promise<Id<"organizations"> | undefined> {
-  const user = await requireUser(ctx);
-  return user.orgId;
-}

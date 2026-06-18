@@ -107,15 +107,15 @@ export function ConfigPanel() {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const org = useQuery(api.orgs.getCurrent);
-  const setAllowedDomains = useMutationWithToast(api.orgs.setAllowedDomains);
+  const access = useQuery(api.access.getAccessControl);
+  const setAllowedDomains = useMutationWithToast(api.access.setAllowedDomains);
   const [domains, setDomains] = useState("");
   const [savingDomains, setSavingDomains] = useState(false);
 
   useEffect(() => {
-    if (!org) return;
-    setDomains(org.allowedDomains.join(", "));
-  }, [org]);
+    if (!access) return;
+    setDomains(access.allowedDomains.join(", "));
+  }, [access]);
 
   async function saveDomains(e: React.FormEvent) {
     e.preventDefault();
@@ -127,7 +127,7 @@ export function ConfigPanel() {
           .map((domain) => domain.trim())
           .filter(Boolean),
       },
-      { success: t("settings.orgDomains.saved") },
+      { success: t("settings.access.saved") },
     );
     setSavingDomains(false);
   }
@@ -261,33 +261,54 @@ export function ConfigPanel() {
               <Building2 className="h-4 w-4" />
             </span>
             <CardTitle className="text-base">
-              {t("settings.orgDomains.heading")}
+              {t("settings.access.heading")}
             </CardTitle>
           </div>
-          <CardDescription>{t("settings.orgDomains.hint")}</CardDescription>
+          <CardDescription>{t("settings.access.hint")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {org === undefined ? (
+          {access === undefined ? (
             <Skeleton className="h-24 w-full" />
-          ) : org === null ? (
-            <p className="text-sm text-muted">
-              {t("settings.orgDomains.noOrg")}
-            </p>
           ) : (
-            <form onSubmit={saveDomains} className="space-y-3">
-              <Input
-                value={domains}
-                onChange={(e) => setDomains(e.target.value)}
-                placeholder={t("settings.orgDomains.placeholder")}
-              />
-              <p className="text-xs text-muted">
-                {t("settings.orgDomains.note")}
-              </p>
-              <Button type="submit" disabled={savingDomains}>
-                {savingDomains && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t("settings.orgDomains.save")}
-              </Button>
-            </form>
+            <div className="space-y-5">
+              <form onSubmit={saveDomains} className="space-y-3">
+                <Input
+                  value={domains}
+                  onChange={(e) => setDomains(e.target.value)}
+                  placeholder={t("settings.access.placeholder")}
+                />
+                <p className="text-xs text-muted">
+                  {t("settings.access.note")}
+                </p>
+                <Button type="submit" disabled={savingDomains}>
+                  {savingDomains && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {t("settings.access.save")}
+                </Button>
+              </form>
+
+              {/* Admins are server-controlled (env var) and read-only here. */}
+              <div className="border-t border-border pt-4">
+                <p className="text-sm font-medium text-fg">
+                  {t("settings.access.adminsLabel")}
+                </p>
+                {access.adminEmails.length === 0 ? (
+                  <p className="mt-1 text-xs text-muted">
+                    {t("settings.access.noAdmins")}
+                  </p>
+                ) : (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {access.adminEmails.map((email) => (
+                      <Badge key={email} variant="muted">
+                        {email}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-muted">
+                  {t("settings.access.adminsHint")}
+                </p>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

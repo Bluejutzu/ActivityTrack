@@ -22,14 +22,8 @@ function generateSlotCode(): string {
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const viewer = await requireViewer(ctx);
-    const orgId = viewer.orgId;
-    const devices = orgId
-      ? await ctx.db
-          .query("devices")
-          .withIndex("by_org_status", (q) => q.eq("orgId", orgId))
-          .collect()
-      : await ctx.db.query("devices").collect();
+    await requireViewer(ctx);
+    const devices = await ctx.db.query("devices").collect();
 
     // Batch-load the linked people once instead of one get() per device.
     const personIds = [
@@ -54,18 +48,11 @@ export const list = query({
 export const listPending = query({
   args: {},
   handler: async (ctx) => {
-    const viewer = await requireViewer(ctx);
-    return viewer.orgId
-      ? await ctx.db
-          .query("devices")
-          .withIndex("by_org_status", (q) =>
-            q.eq("orgId", viewer.orgId).eq("status", "pending"),
-          )
-          .collect()
-      : await ctx.db
-          .query("devices")
-          .withIndex("by_status", (q) => q.eq("status", "pending"))
-          .collect();
+    await requireViewer(ctx);
+    return await ctx.db
+      .query("devices")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
   },
 });
 
@@ -76,8 +63,6 @@ export const approve = mutation({
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
     if (!device) throw appError("notFound.device", "Device not found");
-    if (actor.orgId && device.orgId !== actor.orgId)
-      throw appError("auth.forbidden", "Forbidden");
     await ctx.db.patch(deviceId, { status: "active" });
     await writeAudit(ctx, actor._id, "device.approve", device.hostname);
   },
@@ -90,8 +75,6 @@ export const disable = mutation({
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
     if (!device) throw appError("notFound.device", "Device not found");
-    if (actor.orgId && device.orgId !== actor.orgId)
-      throw appError("auth.forbidden", "Forbidden");
     await ctx.db.patch(deviceId, { status: "disabled" });
     await writeAudit(ctx, actor._id, "device.disable", device.hostname);
   },
@@ -107,13 +90,9 @@ export const link = mutation({
     const actor = await requireManager(ctx);
     const device = await ctx.db.get(deviceId);
     if (!device) throw appError("notFound.device", "Device not found");
-    if (actor.orgId && device.orgId !== actor.orgId)
-      throw appError("auth.forbidden", "Forbidden");
     if (personId) {
       const person = await ctx.db.get(personId);
       if (!person) throw appError("notFound.person", "Person not found");
-      if (actor.orgId && person.orgId !== actor.orgId)
-        throw appError("auth.forbidden", "Forbidden");
     }
     await ctx.db.patch(deviceId, { personId: personId ?? undefined });
     await writeAudit(
@@ -138,7 +117,6 @@ export const createDeviceSlot = mutation({
     await ctx.db.insert("deviceSlots", {
       code,
       label,
-      orgId: actor.orgId,
       createdBy: actor._id,
       createdAt: now,
       expiresAt: now + expiresInHours * 60 * 60 * 1000,
@@ -152,15 +130,12 @@ export const createDeviceSlot = mutation({
 export const listSlots = query({
   args: {},
   handler: async (ctx) => {
-    const actor = await requireAdmin(ctx);
-    const slots = await ctx.db
+    await requireAdmin(ctx);
+    return await ctx.db
       .query("deviceSlots")
       .withIndex("by_createdAt")
       .order("desc")
       .take(50);
-    return actor.orgId
-      ? slots.filter((slot) => slot.orgId === actor.orgId)
-      : slots;
   },
 });
 
@@ -171,8 +146,6 @@ export const revokeSlot = mutation({
     const actor = await requireAdmin(ctx);
     const slot = await ctx.db.get(slotId);
     if (!slot) throw appError("notFound.slot", "Slot not found");
-    if (actor.orgId && slot.orgId !== actor.orgId)
-      throw appError("auth.forbidden", "Forbidden");
     await ctx.db.patch(slotId, {
       usedAt: Date.now(),
       usedByDeviceId: "__revoked__",
@@ -194,7 +167,7 @@ export const validateEnrollmentCode = internalQuery({
       return { valid: false as const, reason: "used" as const };
     if (slot.expiresAt < Date.now())
       return { valid: false as const, reason: "expired" as const };
-    return { valid: true as const, slotId: slot._id, orgId: slot.orgId };
+    return { valid: true as const, slotId: slot._id };
   },
 });
 
@@ -207,11 +180,10 @@ export const completeRegistration = internalMutation({
     windowsUser: v.string(),
     agentVersion: v.string(),
     keyHash: v.string(),
-    orgId: v.optional(v.id("organizations")),
   },
   handler: async (
     ctx,
-    { slotId, deviceId, hostname, windowsUser, agentVersion, keyHash, orgId },
+    { slotId, deviceId, hostname, windowsUser, agentVersion, keyHash },
   ) => {
     const now = Date.now();
     await ctx.db.patch(slotId, { usedAt: now, usedByDeviceId: deviceId });
@@ -222,7 +194,6 @@ export const completeRegistration = internalMutation({
       .unique();
     if (existing) {
       await ctx.db.patch(existing._id, {
-        orgId,
         hostname,
         lastWindowsUser: windowsUser,
         agentVersion,
@@ -231,7 +202,6 @@ export const completeRegistration = internalMutation({
     } else {
       await ctx.db.insert("devices", {
         deviceId,
-        orgId,
         hostname,
         lastWindowsUser: windowsUser,
         status: "pending",
@@ -248,7 +218,6 @@ export const completeRegistration = internalMutation({
     if (oldKey) await ctx.db.delete(oldKey._id);
 
     await ctx.db.insert("deviceKeys", {
-      orgId,
       deviceId,
       keyHash,
       createdAt: now,
@@ -270,6 +239,6 @@ export const lookupDeviceByKeyHash = internalQuery({
       .withIndex("by_deviceId", (q) => q.eq("deviceId", entry.deviceId))
       .unique();
     if (!device || device.status === "disabled") return null;
-    return { deviceId: entry.deviceId, orgId: entry.orgId };
+    return { deviceId: entry.deviceId };
   },
 });

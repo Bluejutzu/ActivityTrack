@@ -39,9 +39,6 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "resources": [
-      "bundle/nsis/config-staging/config.json"
-    ],
     "windows": {
       "nsis": {
         "installMode": "perMachine",

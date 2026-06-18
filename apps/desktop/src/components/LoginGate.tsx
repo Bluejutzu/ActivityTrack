@@ -1,8 +1,30 @@
-import { useState } from "react";
-import { useSignIn, useUser } from "@clerk/clerk-react";
+import { useEffect, useRef } from "react";
+import { SignIn, useUser } from "@clerk/clerk-react";
 import { t, type Lang } from "../i18n.js";
+import { getTheme } from "../theme.js";
 import { PanelHeader } from "./PanelHeader.js";
 import { DiagnosticsPanel } from "./DiagnosticsPanel.js";
+
+// Clerk can't read our CSS variables, so hand it the resolved palette per theme.
+// Kept in step with the tray's styles.css tokens.
+const CLERK_VARS = {
+  light: {
+    colorBackground: "#ffffff",
+    colorInputBackground: "#ffffff",
+    colorText: "#1b2027",
+    colorTextSecondary: "#5b6573",
+    colorInputText: "#1b2027",
+    colorPrimary: "#2e6cf6",
+  },
+  dark: {
+    colorBackground: "#161c24",
+    colorInputBackground: "#1e252f",
+    colorText: "#e6eaf0",
+    colorTextSecondary: "#8e9aa9",
+    colorInputText: "#e6eaf0",
+    colorPrimary: "#588eff",
+  },
+} as const;
 
 interface Props {
   lang: Lang;
@@ -32,95 +54,36 @@ function MissingClerkConfig({ lang, onLangChange }: Props) {
 }
 
 function ClerkLoginGate({ lang, onLangChange, onUnlocked }: Props) {
-  const { isLoaded, signIn, setActive } = useSignIn();
-  const { isSignedIn } = useUser();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [checking, setChecking] = useState(false);
+  const { isLoaded, isSignedIn } = useUser();
+  const calledRef = useRef(false);
 
-  async function unlockSignedIn() {
-    setError(undefined);
-    await onUnlocked();
-  }
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (checking) return;
-    setChecking(true);
-    try {
-      if (isSignedIn) {
-        await unlockSignedIn();
-        return;
-      }
-      if (!isLoaded || !signIn || !setActive) return;
-      const result = await signIn.create({ identifier: email, password });
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        await unlockSignedIn();
-      } else {
-        setError(t("login.error.server"));
-      }
-    } catch (err) {
-      const clerkError = err as {
-        errors?: Array<{ longMessage?: string; message?: string }>;
-      };
-      setError(
-        clerkError.errors?.[0]?.longMessage ??
-          clerkError.errors?.[0]?.message ??
-          String(err),
-      );
-    } finally {
-      setChecking(false);
+  // As soon as Clerk confirms the session is active, hand off to the app.
+  // calledRef prevents firing twice if the component re-renders before the
+  // parent has had a chance to unmount this gate.
+  useEffect(() => {
+    if (isLoaded && isSignedIn && !calledRef.current) {
+      calledRef.current = true;
+      void onUnlocked();
     }
-  };
+  }, [isLoaded, isSignedIn, onUnlocked]);
+
+  // Already signed in — onUnlocked() is in flight; show nothing while the
+  // parent transitions away from this gate.
+  if (isLoaded && isSignedIn) return null;
 
   return (
     <div className="card panel">
       <PanelHeader lang={lang} onLangChange={onLangChange} />
-      <h2>{t("login.heading")}</h2>
-      <p className="hint">{t("login.hint")}</p>
-      <form id="login-form" onSubmit={onSubmit}>
-        {!isSignedIn ? (
-          <input
-            id="email"
-            type="email"
-            placeholder={t("login.email")}
-            autoComplete="email"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        ) : null}
-        {!isSignedIn ? (
-          <input
-            id="pw"
-            type="password"
-            placeholder={t("login.password")}
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        ) : null}
-        <button type="submit" id="submit" disabled={checking || !isLoaded}>
-          {checking ? (
-            <>
-              <span className="spinner" /> {t("login.checking")}
-            </>
-          ) : isSignedIn ? (
-            t("login.unlock")
-          ) : (
-            t("login.submit")
-          )}
-        </button>
-      </form>
-      {error ? (
-        <div className="error fade-up" id="error">
-          <p className="error-msg">{error}</p>
-        </div>
-      ) : (
-        <p className="error" id="error" />
-      )}
+      <SignIn
+        routing="virtual"
+        appearance={{
+          variables: { ...CLERK_VARS[getTheme()], borderRadius: "0.5rem" },
+          elements: {
+            // This is an internal tool — self-registration isn't available.
+            footerAction: { display: "none" },
+          },
+        }}
+      />
       <DiagnosticsPanel />
     </div>
   );

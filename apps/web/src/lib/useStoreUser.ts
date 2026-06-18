@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
+import { errorCode } from "./errors";
 
 export type StoreUserStatus = "pending" | "ready" | "error";
 
@@ -16,18 +17,24 @@ const MAX_ATTEMPTS = 5;
  *
  * Provisioning can fail transiently right after sign-in (the Convex auth token
  * isn't settled yet), so we retry with exponential backoff. Only a *persistent*
- * failure becomes `"error"` — at which point the UI shows a real retry
- * affordance instead of silently rendering the app with a guessed `viewer` role.
+ * failure becomes `"error"` — at which point `errorCode` carries the structured
+ * error code (e.g. `auth.domain_not_allowed`) so the UI can show a specific
+ * message rather than a generic retry prompt.
  */
 export function useStoreUser(): {
   status: StoreUserStatus;
+  errorCode: string | null;
   retry: () => void;
 } {
   const store = useMutation(api.users.store);
   const [status, setStatus] = useState<StoreUserStatus>("pending");
+  const [lastErrorCode, setLastErrorCode] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
-  const retry = useCallback(() => setNonce((n) => n + 1), []);
+  const retry = useCallback(() => {
+    setLastErrorCode(null);
+    setNonce((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +50,7 @@ export function useStoreUser(): {
         if (tries >= MAX_ATTEMPTS) {
           if (!cancelled) {
             console.error("[useStoreUser] provisioning failed", err);
+            setLastErrorCode(errorCode(err));
             setStatus("error");
           }
           return;
@@ -64,5 +72,5 @@ export function useStoreUser(): {
     };
   }, [store, nonce]);
 
-  return { status, retry };
+  return { status, errorCode: lastErrorCode, retry };
 }

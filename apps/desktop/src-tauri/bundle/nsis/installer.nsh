@@ -1,12 +1,21 @@
 ; Custom NSIS installer hooks for ActivityTrack.
 ; Tauri injects these macros at the matching points of its generated installer.
-; We use the post-install hook to seed %ProgramData%\ActivityTrack\config.json
-; from the config bundled into the install dir (which the release workflow fills
-; from GitHub secrets at build time) — without overwriting an existing config.
+;
+; The release workflow (release.yml) overwrites this file at build time, baking
+; the real convexUrl / ingestKey / clerkPublishableKey values from GitHub
+; secrets directly into the FileWrite call. The empty values here are the
+; fallback for local/dev builds where the secrets aren't available.
+;
+; On install: creates %ProgramData%\ActivityTrack\config.json if it doesn't
+; exist yet, so IT can still place their own config.json before first run and
+; it won't be overwritten.
 
 !macro NSIS_HOOK_POSTINSTALL
+  Push $0
   CreateDirectory "$COMMONAPPDATA\ActivityTrack"
-  IfFileExists "$INSTDIR\config.json" +1 +3
-  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" +2 +1
-  CopyFiles /SILENT "$INSTDIR\config.json" "$COMMONAPPDATA\ActivityTrack\config.json"
+  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" +4
+  FileOpen $0 "$COMMONAPPDATA\ActivityTrack\config.json" w
+  FileWrite $0 '{"convexUrl":"","ingestKey":"","clerkPublishableKey":""}'
+  FileClose $0
+  Pop $0
 !macroend

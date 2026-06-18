@@ -4,30 +4,9 @@ import { SignIn } from "@clerk/nextjs";
 import { Activity, BarChart3, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
+import { clerkAppearance } from "@/lib/clerkAppearance";
 import { LangSwitcher } from "./LangSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
-
-// Clerk's widget is themed via explicit colour variables, so it has to be told
-// the resolved palette (it can't read our CSS variables). Kept in step with the
-// `--c-*` tokens in globals.css.
-const CLERK_VARS = {
-  light: {
-    colorBackground: "#ffffff",
-    colorInputBackground: "#ffffff",
-    colorText: "#1b2027",
-    colorTextSecondary: "#5b6573",
-    colorInputText: "#1b2027",
-    colorPrimary: "#2e6cf6",
-  },
-  dark: {
-    colorBackground: "#161c24",
-    colorInputBackground: "#1e252f",
-    colorText: "#e6eaf0",
-    colorTextSecondary: "#8e9aa9",
-    colorInputText: "#e6eaf0",
-    colorPrimary: "#588eff",
-  },
-} as const;
 
 /** A small, friendly preview of exactly what the dashboard shows: a few people
  *  and their plain-language status. Concrete beats abstract on a sign-in page. */
@@ -142,24 +121,7 @@ export function LoginScreen() {
               <LangSwitcher />
             </div>
           </div>
-          <SignIn
-            routing="hash"
-            appearance={{
-              variables: {
-                ...CLERK_VARS[theme],
-                borderRadius: "0.75rem",
-              },
-              elements: {
-                card: "bg-panel border border-border shadow-card",
-                headerTitle: "text-fg",
-                headerSubtitle: "text-muted",
-                socialButtonsBlockButton: "border-border",
-                footerActionLink: "text-accent hover:text-accent/80",
-                formButtonPrimary:
-                  "bg-accent hover:bg-accent/90 text-white font-semibold normal-case",
-              },
-            }}
-          />
+          <SignIn routing="hash" appearance={clerkAppearance(theme)} />
           <div className="hidden lg:block">
             <LangSwitcher />
           </div>
