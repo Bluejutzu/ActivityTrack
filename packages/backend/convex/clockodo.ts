@@ -2,7 +2,7 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import {
   signalSecret,
@@ -141,23 +141,31 @@ async function fetchClockodoWork(clockodoUserId: string): Promise<{
 }
 
 /**
- * Look up a single entry by id, only to learn which Clockodo user it belongs to.
- * A webhook carries just the entry id, so we resolve the user, then read their
- * authoritative day state via `fetchClockodoWork`. Returns null when the entry
- * no longer exists (e.g. it was deleted).
+ * Fetch a single entry by id. Returns the owning user id AND the entry's
+ * current `clocked` state. Used by the webhook path to determine state directly
+ * from the specific entry that changed, avoiding a full day-scan re-fetch that
+ * races with Clockodo's eventual consistency.
+ *
+ * Returns `{ usersId: null, clocked: null }` when the entry is gone (deleted).
  */
-async function fetchClockodoEntryUserId(id: string): Promise<string | null> {
+async function fetchClockodoEntry(
+  id: string,
+): Promise<{ usersId: string | null; clocked: boolean | null }> {
   const res = await fetch(`${CLOCKODO_BASE()}/api/v2/entries/${id}`, {
     headers: clockodoHeaders(),
   });
-  if (res.status === 404) return null;
+  if (res.status === 404) return { usersId: null, clocked: null };
   if (!res.ok) {
     const text = await res.text();
     console.log(text);
     throw new Error(`Clockodo GET entry ${id} failed: ${res.status} ${text}`);
   }
   const body = (await res.json()) as { entry?: ClockodoEntry };
-  return body.entry?.users_id != null ? String(body.entry.users_id) : null;
+  return {
+    usersId:
+      body.entry?.users_id != null ? String(body.entry.users_id) : null,
+    clocked: body.entry?.clocked ?? null,
+  };
 }
 
 /** Poll slice: org-wide approved absences + each mapped user's working/break state. */
@@ -225,37 +233,23 @@ export const refreshClockodo = action({
 });
 
 /**
- * Re-pull state from a Clockodo webhook event. Clockodo sends only the id of the
- * changed entry, so we fetch the entry, resolve the user behind it, and push the
- * derived working/break/absent state. Used by the `/api/webhooks/clockodo` route.
+ * Re-pull state from a Clockodo webhook event. Clockodo sends only the id of
+ * the changed entry, so we fetch the entry (to learn the user AND its current
+ * `clocked` state), then push the derived working/break/absent signal.
  *
- * `entry.stopped` is handled specially: stopping the clock IS the break gesture,
- * but Clockodo's entries API can still report the just-stopped entry as
- * `clocked: true` for a few seconds. Re-reading the day state there would race
- * and leave the person stuck showing "working", so we trust the event and set
- * not-working / on-break directly. To avoid subsequent webhooks (like
- * entry.updated) from re-pulling stale API state, we defer pulling state again
- * for 3 seconds after entry.stopped via a grace-period record.
+ * State resolution per event type:
+ *   entry.stopped  — trust the event directly (working=false, onBreak=true).
+ *                    The entry's API state may still lag; the event is definitive.
+ *   entry.created  — entry.clocked drives working/break (newly started = clocked).
+ *   entry.updated  — same: use the entry's own `clocked` field, which reflects
+ *                    its current state at the time Clockodo sent this webhook.
+ *                    This replaces the former "re-scan all today's entries" approach
+ *                    that raced with Clockodo's eventual consistency and could
+ *                    revert a freshly stopped clock back to working.
+ *
+ * Note: GET /v2/clock is not usable here — it only returns the authenticated
+ * API user's own running clock, not other employees' state.
  */
-
-// In-memory grace periods: Map<employeeId, expiresAt>. After entry.stopped,
-// ignore entry.updated/created/deleted for this user until the grace period expires.
-const stopGracePeriods = new Map<string, number>();
-
-function isInStopGracePeriod(employeeId: string): boolean {
-  const expiresAt = stopGracePeriods.get(employeeId);
-  if (!expiresAt) return false;
-  if (Date.now() >= expiresAt) {
-    stopGracePeriods.delete(employeeId);
-    return false;
-  }
-  return true;
-}
-
-function setStopGracePeriod(employeeId: string, durationMs: number = 3000): void {
-  stopGracePeriods.set(employeeId, Date.now() + durationMs);
-}
-
 export const refreshClockodoByEntry = action({
   args: {
     secret: v.string(),
@@ -267,11 +261,9 @@ export const refreshClockodoByEntry = action({
       return { ok: false, error: "forbidden" as const };
     }
     try {
-      // The webhook only carries the entry id — read it to learn the user, then
-      // resolve their day state cross-user (same path as `refreshClockodo`).
-      const clockodoUserId = await fetchClockodoEntryUserId(entryId);
-      // A deleted entry (or one with no user) carries nothing authoritative to
-      // push — acknowledge without touching state so Clockodo won't retry.
+      const { usersId: clockodoUserId, clocked: entryClocked } =
+        await fetchClockodoEntry(entryId);
+
       if (!clockodoUserId) {
         console.log(
           `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} → no user (deleted?), ignored`,
@@ -284,7 +276,6 @@ export const refreshClockodoByEntry = action({
         secret,
         clockodoUserId,
       });
-      // The Clockodo user isn't mapped to anyone here — not an error.
       if (!employeeId) {
         console.log(
           `[clockodo] webhook entry=${entryId} user=${clockodoUserId} → not mapped to an employee, skipped`,
@@ -293,37 +284,35 @@ export const refreshClockodoByEntry = action({
         return { ok: true as const, unmapped: true as const };
       }
 
-      // Absence is read regardless of the event type.
       const absences = await fetchAbsences(new Date().getFullYear());
       const absent = isAbsentOn(absences, clockodoUserId, today());
 
       let working: boolean;
       let onBreak: boolean;
+
       if (eventName === "entry.stopped") {
-        // Trust the event over the eventually-consistent entries read.
+        // The stop event is definitive — the entry's API state may still show
+        // clocked:true briefly due to eventual consistency.
         working = false;
         onBreak = true;
-        // Grace period: defer re-pulling day state for subsequent webhooks on this
-        // user until Clockodo's API has caught up to the stop.
-        setStopGracePeriod(employeeId);
-      } else if (isInStopGracePeriod(employeeId)) {
-        // Within grace period: skip this webhook, API state is unreliable.
-        console.log(
-          `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} user=${clockodoUserId} employee=${employeeId} → in stop grace period, skipped`,
-        );
-        await reportHealth(ctx, "clockodo", "ok");
-        return { ok: true as const, inGracePeriod: true as const };
       } else {
-        const work = await fetchClockodoWork(clockodoUserId);
-        working = work.working;
-        onBreak = work.onBreak;
+        // For entry.created and entry.updated: the entry's own clocked field is
+        // the authoritative source. Clockodo sets clocked:false on the entry
+        // before sending entry.updated, so this avoids the race that caused a
+        // freshly stopped clock to revert to working.
+        working = entryClocked === true;
+        onBreak = entryClocked === false;
       }
 
-      // Debug: how we resolved this webhook into a pushed signal.
+      const resolution =
+        eventName === "entry.stopped"
+          ? "trusted_stop"
+          : entryClocked === true
+            ? "entry_clocked_true"
+            : "entry_clocked_false";
+
       console.log(
-        `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} user=${clockodoUserId} employee=${employeeId} → working=${working} onBreak=${onBreak} absent=${absent}${
-          eventName === "entry.stopped" ? " (trusted stop event)" : ""
-        }`,
+        `[clockodo] webhook entry=${entryId} event=${eventName ?? "—"} user=${clockodoUserId} employee=${employeeId} entryClocked=${entryClocked} → working=${working} onBreak=${onBreak} absent=${absent} (${resolution})`,
       );
 
       await ctx.runMutation(api.state.pushSignal, {
@@ -334,6 +323,28 @@ export const refreshClockodoByEntry = action({
         clockodoBreak: onBreak,
         clockodoAbsent: absent,
       });
+
+      // Log to the structured events table so IT can inspect webhook outcomes
+      // without grepping through serverless logs.
+      const logSeverity =
+        working && eventName !== "entry.created" ? "warning" : "info";
+      await ctx.runMutation(internal.events.record, {
+        source: "backend",
+        severity: logSeverity,
+        code: `clockodo.webhook.${eventName ?? "unknown"}`,
+        message: `entry=${entryId} employee=${employeeId} → working=${working} onBreak=${onBreak} (${resolution})`,
+        context: JSON.stringify({
+          eventName,
+          entryId,
+          clockodoUserId,
+          employeeId,
+          entryClocked,
+          working,
+          onBreak,
+          absent,
+        }),
+      });
+
       await reportHealth(ctx, "clockodo", "ok");
       return { ok: true as const };
     } catch (err) {

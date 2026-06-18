@@ -142,16 +142,19 @@ const de: Dict = {
   "settings.debugPw.save": "Passwort speichern",
   "settings.debugPw.saved": "Passwort gespeichert.",
   "settings.debugPw.tooShort": "Mindestens 6 Zeichen.",
-  "settings.orgDomains.heading": "Organisations-Domains",
-  "settings.orgDomains.hint":
-    "Beschränkt neue Konten in dieser Clerk-Organisation auf freigegebene E-Mail-Domains.",
-  "settings.orgDomains.noOrg":
-    "Wählen Sie in Clerk eine Organisation aus, um Domain-Freigaben zu verwalten.",
-  "settings.orgDomains.placeholder": "example.com, firma.de",
-  "settings.orgDomains.note":
-    "Kommagetrennt. Leer bedeutet: keine zusätzliche Domain-Beschränkung.",
-  "settings.orgDomains.save": "Domains speichern",
-  "settings.orgDomains.saved": "Domain-Freigabe gespeichert.",
+  "settings.access.heading": "Zugriffskontrolle",
+  "settings.access.hint":
+    "Legen Sie fest, welche E-Mail-Domains sich am Dashboard anmelden dürfen.",
+  "settings.access.placeholder": "example.com, firma.de",
+  "settings.access.note":
+    "Kommagetrennt. Jeder mit einer dieser Domains kann sich als Betrachter anmelden. Leer bedeutet: nur Administratoren.",
+  "settings.access.save": "Domains speichern",
+  "settings.access.saved": "Zugriffsliste gespeichert.",
+  "settings.access.adminsLabel": "Administratoren",
+  "settings.access.adminsHint":
+    "Festgelegt über die Server-Umgebungsvariable ACTIVITYTRACK_ADMIN_EMAILS — immer voller Zugriff.",
+  "settings.access.noAdmins":
+    "Keine festgelegt — der erste Anmeldende wird automatisch Administrator.",
 
   "timeline.heading": "Verlauf",
   "timeline.back": "Zurück zur Übersicht",
@@ -373,6 +376,10 @@ const de: Dict = {
   "auth.error.title": "Anmeldung konnte nicht abgeschlossen werden",
   "auth.error.body":
     "Ihr Konto konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "auth.error.not_allowed":
+    "Ihr Konto ist für dieses Dashboard nicht freigeschaltet. Wenden Sie sich an Ihren Administrator.",
+  "auth.error.domain_not_allowed":
+    "Ihre E-Mail-Domain ist nicht zugelassen. Wenden Sie sich an Ihren Administrator.",
   "auth.error.retry": "Erneut versuchen",
 };
 
@@ -498,16 +505,19 @@ const en: Dict = {
   "settings.debugPw.save": "Save password",
   "settings.debugPw.saved": "Password saved.",
   "settings.debugPw.tooShort": "At least 6 characters.",
-  "settings.orgDomains.heading": "Organization domains",
-  "settings.orgDomains.hint":
-    "Restricts new accounts in this Clerk organization to allowed email domains.",
-  "settings.orgDomains.noOrg":
-    "Select a Clerk organization to manage domain allow-listing.",
-  "settings.orgDomains.placeholder": "example.com, company.com",
-  "settings.orgDomains.note":
-    "Comma-separated. Leave empty for no extra domain restriction.",
-  "settings.orgDomains.save": "Save domains",
-  "settings.orgDomains.saved": "Domain allow-list saved.",
+  "settings.access.heading": "Access control",
+  "settings.access.hint":
+    "Choose which email domains may sign in to the dashboard.",
+  "settings.access.placeholder": "example.com, company.com",
+  "settings.access.note":
+    "Comma-separated. Anyone with one of these domains can sign in as a viewer. Empty means admins only.",
+  "settings.access.save": "Save domains",
+  "settings.access.saved": "Access list saved.",
+  "settings.access.adminsLabel": "Administrators",
+  "settings.access.adminsHint":
+    "Set via the ACTIVITYTRACK_ADMIN_EMAILS server environment variable — always full access.",
+  "settings.access.noAdmins":
+    "None set — the first person to sign in becomes admin automatically.",
 
   "timeline.heading": "Timeline",
   "timeline.back": "Back to overview",
@@ -719,6 +729,10 @@ const en: Dict = {
   "auth.error.title": "Couldn't finish signing you in",
   "auth.error.body":
     "We couldn't load your account. Please check your connection and try again.",
+  "auth.error.not_allowed":
+    "Your account isn't permitted to access this dashboard. Contact your administrator.",
+  "auth.error.domain_not_allowed":
+    "Your email domain isn't allowed. Contact your administrator.",
   "auth.error.retry": "Try again",
 };
 

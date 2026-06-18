@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as access from "../access.js";
 import type * as audit from "../audit.js";
 import type * as clockodo from "../clockodo.js";
 import type * as crons from "../crons.js";
@@ -21,7 +22,6 @@ import type * as ingest from "../ingest.js";
 import type * as integrations from "../integrations.js";
 import type * as integrationsShared from "../integrationsShared.js";
 import type * as maintenance from "../maintenance.js";
-import type * as orgs from "../orgs.js";
 import type * as people from "../people.js";
 import type * as rbac from "../rbac.js";
 import type * as reports from "../reports.js";
@@ -37,6 +37,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  access: typeof access;
   audit: typeof audit;
   clockodo: typeof clockodo;
   crons: typeof crons;
@@ -50,7 +51,6 @@ declare const fullApi: ApiFromModules<{
   integrations: typeof integrations;
   integrationsShared: typeof integrationsShared;
   maintenance: typeof maintenance;
-  orgs: typeof orgs;
   people: typeof people;
   rbac: typeof rbac;
   reports: typeof reports;

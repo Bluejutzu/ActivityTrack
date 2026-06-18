@@ -1,25 +1,30 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { toast as sonnerToast } from "sonner";
 
 export type ToastVariant = "ok" | "warn" | "danger";
 
-export interface ToastItem {
-  id: number;
-  message: string;
-  variant: ToastVariant;
-  exiting: boolean;
+/** Map our semantic variants onto Sonner's typed toast helpers. */
+function emit(message: string, variant: ToastVariant = "ok") {
+  switch (variant) {
+    case "danger":
+      sonnerToast.error(message);
+      break;
+    case "warn":
+      sonnerToast.warning(message);
+      break;
+    default:
+      sonnerToast.success(message);
+  }
 }
 
-export interface ToastContextValue {
-  items: ToastItem[];
-  toast: (message: string, variant?: ToastVariant) => void;
-}
-
-export const ToastContext = createContext<ToastContextValue | null>(null);
-
+/**
+ * Toasts, backed by Sonner. The `(message, variant)` signature is unchanged from
+ * the previous in-house implementation, so every call site (and the
+ * `useMutationWithToast` / `useActionWithToast` helpers) works as-is. Sonner's
+ * `toast` is a module-level singleton, so no provider/context is needed — only
+ * the `<Toaster />` rendered once in providers.tsx.
+ */
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used within ToastProvider");
-  return ctx.toast;
+  return emit;
 }

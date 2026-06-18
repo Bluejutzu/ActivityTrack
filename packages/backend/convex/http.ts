@@ -108,7 +108,6 @@ http.route({
     if (accepted.length > 0) {
       const result = await ctx.runMutation(internal.ingest.recordSamples, {
         samples: accepted,
-        orgId: deviceAuth.orgId,
       });
       inserted = result.inserted;
     }
@@ -192,7 +191,6 @@ http.route({
 
     await ctx.runMutation(internal.devices.completeRegistration, {
       slotId: validation.slotId,
-      orgId: validation.orgId,
       deviceId,
       hostname,
       windowsUser,

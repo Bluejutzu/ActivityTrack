@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import {
   Activity,
   CalendarRange,
@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
+import { CLERK_VARS } from "@/lib/clerkAppearance";
 import { useStoreUser } from "@/lib/useStoreUser";
 import { roleAtLeast, type Role } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -149,9 +151,22 @@ function BootstrapSkeleton() {
   );
 }
 
+const ERROR_CODE_MESSAGES: Record<string, string> = {
+  "auth.not_allowed": "auth.error.not_allowed",
+  "auth.domain_not_allowed": "auth.error.domain_not_allowed",
+};
+
 /** Shown when provisioning fails for real (after retries) — calm, with retry. */
-function AuthErrorPanel({ onRetry }: { onRetry: () => void }) {
+function AuthErrorPanel({
+  onRetry,
+  errorCode,
+}: {
+  onRetry: () => void;
+  errorCode: string | null;
+}) {
   const { t } = useI18n();
+  const bodyKey =
+    (errorCode && ERROR_CODE_MESSAGES[errorCode]) ?? "auth.error.body";
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <div className="max-w-md rounded-xl border border-danger/30 bg-danger/5 p-8 text-center shadow-soft animate-fade-up">
@@ -161,7 +176,7 @@ function AuthErrorPanel({ onRetry }: { onRetry: () => void }) {
         <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
           {t("auth.error.title")}
         </h2>
-        <p className="mt-2 text-sm text-muted">{t("auth.error.body")}</p>
+        <p className="mt-2 text-sm text-muted">{t(bodyKey)}</p>
         <Button className="mt-5" onClick={onRetry}>
           {t("auth.error.retry")}
         </Button>
@@ -175,15 +190,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const me = useQuery(api.users.me);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme } = useTheme();
 
-  // Provision the Convex user row (and first-user it_admin) once authenticated.
-  const { status, retry } = useStoreUser();
+  // Provision (and access-gate) the Convex user row once authenticated.
+  const { status, errorCode, retry } = useStoreUser();
 
   // Gate: never render the role-aware shell until the user row is provisioned
-  // AND loaded. Otherwise affordances flicker as the role resolves, and a failed
-  // provision would silently leave the user stuck as a viewer.
+  // AND loaded. A provisioning failure (e.g. not on the access allowlist)
+  // surfaces a specific message instead of silently rendering an empty app.
   if (status === "error") {
-    return <AuthErrorPanel onRetry={retry} />;
+    return <AuthErrorPanel onRetry={retry} errorCode={errorCode} />;
   }
   if (status !== "ready" || me === undefined || me === null) {
     return <BootstrapSkeleton />;
@@ -211,7 +227,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {t(`role.${role}`)}
               </Badge>
             </div>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{ variables: CLERK_VARS[theme] }}
+            />
           </div>
         </div>
       </aside>
@@ -247,14 +266,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </h1>
           </div>
 
-          <OrganizationSwitcher
-            afterCreateOrganizationUrl="/"
-            afterSelectOrganizationUrl="/"
-          />
           <ThemeToggle />
           <LangSwitcher />
           <div className="lg:hidden">
-            <UserButton afterSignOutUrl="/" />
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{ variables: CLERK_VARS[theme] }}
+            />
           </div>
         </header>
 

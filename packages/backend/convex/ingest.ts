@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { readConfig } from "./settings";
+import { logEvent } from "./events";
 
 /**
  * Server-side persistence for agent samples. This is the ONLY place samples
@@ -23,6 +24,10 @@ import { readConfig } from "./settings";
 const MAX_ATTRIBUTION_MS = 120_000;
 // Nominal interval credited to the first-ever sample from a device (≈ poll).
 const NOMINAL_FIRST_MS = 15_000;
+// Real-world timezone range is UTC−12 to UTC+14 (840 minutes). Anything beyond
+// this is a device bug; we clamp to UTC (0) to avoid attributing stats to a
+// nonsensical date.
+const MAX_TZ_OFFSET_MINUTES = 840;
 
 const sampleValidator = v.object({
   deviceId: v.string(),
@@ -45,9 +50,8 @@ function localDay(capturedAt: number, tzOffsetMinutes: number): string {
 export const recordSamples = internalMutation({
   args: {
     samples: v.array(sampleValidator),
-    orgId: v.optional(v.id("organizations")),
   },
-  handler: async (ctx, { samples, orgId }) => {
+  handler: async (ctx, { samples }) => {
     const receivedAt = Date.now();
     // Idle→inactive threshold (Settings → Configuration). Daily active/idle
     // accrual is derived from each sample's idleMs against this, so changing it
@@ -75,7 +79,19 @@ export const recordSamples = internalMutation({
       let prevCapturedAt = device?.lastSeen;
 
       for (const s of deviceSamples) {
-        await ctx.db.insert("activitySamples", { ...s, orgId, receivedAt });
+        if (Math.abs(s.tzOffsetMinutes) > MAX_TZ_OFFSET_MINUTES) {
+          await logEvent(ctx, {
+            severity: "warning",
+            source: "backend",
+            code: "ingest.bad_tz_offset",
+            message: `Device ${deviceId} sent tzOffsetMinutes=${s.tzOffsetMinutes}, clamped to 0`,
+            deviceId,
+            hostname: s.hostname,
+          });
+          s.tzOffsetMinutes = 0;
+        }
+
+        await ctx.db.insert("activitySamples", { ...s, receivedAt });
         inserted++;
 
         // Attribute elapsed wall-clock time to active or idle.
@@ -86,14 +102,13 @@ export const recordSamples = internalMutation({
         const gapMs = Math.max(0, Math.min(rawGap, MAX_ATTRIBUTION_MS));
         prevCapturedAt = s.capturedAt;
 
-        await accrueDaily(ctx, orgId, deviceId, s, gapMs, inactivityMs);
+        await accrueDaily(ctx, deviceId, s, gapMs, inactivityMs);
       }
 
       // Upsert the device row from the newest sample we saw.
       const newest = deviceSamples[deviceSamples.length - 1]!;
       if (device) {
         await ctx.db.patch(device._id, {
-          orgId,
           hostname: newest.hostname,
           lastWindowsUser: newest.windowsUser,
           lastSeen: Math.max(device.lastSeen, newest.capturedAt),
@@ -104,7 +119,6 @@ export const recordSamples = internalMutation({
       } else {
         await ctx.db.insert("devices", {
           deviceId,
-          orgId,
           hostname: newest.hostname,
           lastWindowsUser: newest.windowsUser,
           status: "pending",
@@ -130,7 +144,6 @@ async function getDevice(
 
 async function accrueDaily(
   ctx: MutationCtx,
-  orgId: Doc<"devices">["orgId"],
   deviceId: string,
   sample: { idleMs: number; capturedAt: number; tzOffsetMinutes: number },
   gapMs: number,
@@ -160,7 +173,6 @@ async function accrueDaily(
     });
   } else {
     await ctx.db.insert("dailyStats", {
-      orgId,
       deviceId,
       day,
       activeSeconds: activeDelta,
