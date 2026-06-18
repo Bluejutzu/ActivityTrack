@@ -24,7 +24,8 @@ export function DiagnosticsPanel() {
 
   if (!diag) return null;
 
-  const healthy = diag.hasConvexUrl && diag.hasBootstrapKey;
+  const healthy =
+    diag.hasConvexUrl && diag.hasBootstrapKey && diag.hasClerkPublishableKey;
 
   return (
     <details className="diag" open={!healthy}>
@@ -46,6 +47,14 @@ export function DiagnosticsPanel() {
             <th>{t("diag.bootstrapKey")}</th>
             <td>
               {diag.hasBootstrapKey ? t("diag.present") : t("diag.missing")}
+            </td>
+          </tr>
+          <tr>
+            <th>{t("diag.clerkKey")}</th>
+            <td>
+              {diag.hasClerkPublishableKey
+                ? t("diag.present")
+                : t("diag.missing")}
             </td>
           </tr>
           <tr>

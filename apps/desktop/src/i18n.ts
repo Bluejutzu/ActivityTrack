@@ -22,6 +22,8 @@ const de: Dict = {
     "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
   "login.error.notConfigured":
     "Dieser Computer ist nicht konfiguriert. Siehe Diagnose unten.",
+  "login.error.missingClerkKey":
+    "Der Clerk Publishable Key fehlt in config.json. Der Release-Build muss ihn aus ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY setzen.",
   "login.error.server": "Serverfehler. Technische Details unten.",
   "login.checking": "Wird geprüft …",
   "enroll.heading": "Geräteregistrierung",
@@ -75,6 +77,7 @@ const de: Dict = {
   "diag.heading": "Diagnose",
   "diag.configFile": "Konfigurationsdatei",
   "diag.bootstrapKey": "Zugangsschlüssel",
+  "diag.clerkKey": "Clerk Publishable Key",
   "diag.enrollment": "Registrierung",
   "diag.notSet": "nicht gesetzt",
   "diag.present": "vorhanden",
@@ -100,6 +103,8 @@ const en: Dict = {
   "login.error.network": "Cannot reach the server. Network/connection error.",
   "login.error.notConfigured":
     "This computer isn't configured. See diagnostics below.",
+  "login.error.missingClerkKey":
+    "The Clerk publishable key is missing from config.json. The release build must set it from ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY.",
   "login.error.server": "Server error. Technical details below.",
   "login.checking": "Checking …",
   "enroll.heading": "Device Enrollment",
@@ -151,6 +156,7 @@ const en: Dict = {
   "diag.heading": "Diagnostics",
   "diag.configFile": "Config file",
   "diag.bootstrapKey": "Access key",
+  "diag.clerkKey": "Clerk publishable key",
   "diag.enrollment": "Enrollment",
   "diag.notSet": "not set",
   "diag.present": "present",

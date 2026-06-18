@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tauri::State;
 
-use crate::model::{AgentStatus, Diagnostics, Outcome, AGENT_VERSION};
+use crate::model::{AgentStatus, AuthConfig, Diagnostics, Outcome, AGENT_VERSION};
 use crate::paths::config_file;
 use crate::sender;
 use crate::state::AppState;
@@ -12,6 +12,16 @@ use crate::state::AppState;
 #[tauri::command]
 pub fn get_status(state: State<'_, Arc<AppState>>) -> AgentStatus {
     state.snapshot()
+}
+
+/// Public browser auth configuration for the tray UI. The Clerk publishable key
+/// is not a secret; production installers place it in config.json so IT does
+/// not have to configure each endpoint by hand.
+#[tauri::command]
+pub fn get_auth_config(state: State<'_, Arc<AppState>>) -> AuthConfig {
+    AuthConfig {
+        clerk_publishable_key: state.config.clerk_publishable_key.clone(),
+    }
 }
 
 /// Verify the tray-login password against the dashboard-set hash, via the keyed
@@ -86,6 +96,7 @@ pub fn get_diagnostics(state: State<'_, Arc<AppState>>) -> Diagnostics {
         config_present: path.exists(),
         has_convex_url: !state.config.convex_url.is_empty(),
         has_bootstrap_key: !state.config.bootstrap_key.is_empty(),
+        has_clerk_publishable_key: !state.config.clerk_publishable_key.is_empty(),
         enrolled: state.device_key().is_some(),
         configured: state.is_configured(),
     }

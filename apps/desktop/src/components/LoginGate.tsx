@@ -9,10 +9,29 @@ interface Props {
   onLangChange: (lang: Lang) => void;
   /** Called once Clerk has authenticated the desktop technician session. */
   onUnlocked: () => void | Promise<void>;
+  clerkAuthAvailable: boolean;
 }
 
-export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
-  const clerkEnabled = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+export function LoginGate(props: Props) {
+  if (!props.clerkAuthAvailable) return <MissingClerkConfig {...props} />;
+  return <ClerkLoginGate {...props} />;
+}
+
+function MissingClerkConfig({ lang, onLangChange }: Props) {
+  return (
+    <div className="card panel">
+      <PanelHeader lang={lang} onLangChange={onLangChange} />
+      <h2>{t("login.heading")}</h2>
+      <p className="hint">{t("login.error.notConfigured")}</p>
+      <div className="error fade-up" id="error">
+        <p className="error-msg">{t("login.error.missingClerkKey")}</p>
+      </div>
+      <DiagnosticsPanel />
+    </div>
+  );
+}
+
+function ClerkLoginGate({ lang, onLangChange, onUnlocked }: Props) {
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isSignedIn } = useUser();
   const [email, setEmail] = useState("");
@@ -30,10 +49,6 @@ export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
     if (checking) return;
     setChecking(true);
     try {
-      if (!clerkEnabled) {
-        setError(t("login.error.notConfigured"));
-        return;
-      }
       if (isSignedIn) {
         await unlockSignedIn();
         return;
@@ -87,11 +102,7 @@ export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
             onChange={(e) => setPassword(e.target.value)}
           />
         ) : null}
-        <button
-          type="submit"
-          id="submit"
-          disabled={checking || (clerkEnabled && !isLoaded)}
-        >
+        <button type="submit" id="submit" disabled={checking || !isLoaded}>
           {checking ? (
             <>
               <span className="spinner" /> {t("login.checking")}

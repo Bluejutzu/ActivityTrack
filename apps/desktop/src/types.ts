@@ -66,6 +66,7 @@ export interface Diagnostics {
   configPresent: boolean;
   hasConvexUrl: boolean;
   hasBootstrapKey: boolean;
+  hasClerkPublishableKey: boolean;
   enrolled: boolean;
   configured: boolean;
 }

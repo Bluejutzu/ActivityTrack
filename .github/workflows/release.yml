@@ -7,7 +7,7 @@ name: Release tracker
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   build-tracker:
@@ -34,7 +34,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --filter @activitytrack/desktop...
 
-      # Create the pre-configured config.json from GitHub secrets.
+      # Create the pre-configured config.json from GitHub secrets/vars.
       # This will be bundled into the installer and copied to %ProgramData%
       # on installation. The installer uses these values by default.
       - name: Create installer config
@@ -42,6 +42,7 @@ jobs:
           $configJson = @{
             convexUrl = "${{ secrets.ACTIVITYTRACK_CONVEX_URL }}"
             ingestKey = "${{ secrets.ACTIVITYTRACK_INGEST_KEY }}"
+            clerkPublishableKey = "${{ vars.ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY }}"
           } | ConvertTo-Json
           $configJson | Out-File -Encoding UTF8 -FilePath "apps/desktop/src-tauri/bundle/nsis/config-staging/config.json"
         shell: pwsh

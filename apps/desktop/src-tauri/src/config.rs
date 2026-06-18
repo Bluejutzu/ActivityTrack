@@ -8,6 +8,9 @@ pub struct Config {
     /// Shared bootstrap secret for authenticating /agent/register calls.
     /// Stored as "ingestKey" in config.json for backward compatibility.
     pub bootstrap_key: String,
+    /// Public Clerk browser key used by the tray UI. This is safe to bundle and
+    /// is copied through the installer config so every installed device gets it.
+    pub clerk_publishable_key: String,
     /// One-time enrollment code placed in config.json by IT. Consumed on
     /// first registration and no longer needed afterward.
     pub enrollment_code: Option<String>,
@@ -23,6 +26,7 @@ struct FileConfig {
     convex_url: Option<String>,
     #[serde(rename = "ingestKey")]
     bootstrap_key: Option<String>,
+    clerk_publishable_key: Option<String>,
     enrollment_code: Option<String>,
     poll_interval_ms: Option<u64>,
     idle_threshold_ms: Option<u64>,
@@ -35,6 +39,9 @@ impl Default for Config {
         Config {
             convex_url: std::env::var("ACTIVITYTRACK_CONVEX_URL").unwrap_or_default(),
             bootstrap_key: std::env::var("ACTIVITYTRACK_INGEST_KEY").unwrap_or_default(),
+            clerk_publishable_key: std::env::var("ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY")
+                .or_else(|_| std::env::var("VITE_CLERK_PUBLISHABLE_KEY"))
+                .unwrap_or_default(),
             enrollment_code: std::env::var("ACTIVITYTRACK_ENROLLMENT_CODE").ok(),
             poll_interval_ms: 15_000,
             idle_threshold_ms: 60_000,
@@ -68,6 +75,9 @@ pub fn load_config() -> Config {
             }
             if let Some(v) = file.bootstrap_key {
                 cfg.bootstrap_key = v;
+            }
+            if let Some(v) = file.clerk_publishable_key {
+                cfg.clerk_publishable_key = v;
             }
             if let Some(v) = file.enrollment_code {
                 cfg.enrollment_code = Some(v);
