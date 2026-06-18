@@ -42,6 +42,9 @@ export function DayDetailTab({
   // Local midnight → next midnight for the selected day.
   const dayStart = useMemo(() => new Date(`${day}T00:00:00`).getTime(), [day]);
   const dayEnd = dayStart + DAY_MS;
+  // For today, don't render past the current moment — avoids extending the last
+  // known state into future minutes and showing future hours as "active".
+  const effectiveDayEnd = day === today ? Math.min(dayEnd, Date.now()) : dayEnd;
 
   const history = useQuery(
     api.state.history,
@@ -49,12 +52,17 @@ export function DayDetailTab({
   );
 
   const { segments, minutes } = useMemo(() => {
-    const rows = history ?? [];
+    // The backend prepends the prior-day state so past days render correctly
+    // across midnight. For today, that row would extend yesterday's state from
+    // 00:00 even if work hadn't started yet — filter it out.
+    const rows = (history ?? []).filter(
+      (r) => day !== today || r.at >= dayStart,
+    );
     return {
-      segments: dayStateSegments(rows, dayStart, dayEnd),
-      minutes: minuteStates(rows, dayStart, dayEnd),
+      segments: dayStateSegments(rows, dayStart, effectiveDayEnd),
+      minutes: minuteStates(rows, dayStart, effectiveDayEnd),
     };
-  }, [history, dayStart, dayEnd]);
+  }, [history, dayStart, effectiveDayEnd, day, today]);
 
   const stateLabel = (s: StateName) => t(`empstate.${s}`);
   // Mark "now" on the strip when viewing today.
