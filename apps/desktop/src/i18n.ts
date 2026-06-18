@@ -10,12 +10,16 @@ type Dict = Record<string, string>;
 const de: Dict = {
   "app.title": "ActivityTrack",
   "login.heading": "Anmeldung erforderlich",
-  "login.hint": "Bitte das von der IT festgelegte Passwort eingeben.",
+  "login.hint": "Mit Clerk anmelden, um dieses Gerät zu verwalten.",
+  "login.email": "E-Mail",
   "login.password": "Passwort",
+  "login.unlock": "Öffnen",
   "login.submit": "Entsperren",
   "login.error.wrong": "Falsches Passwort.",
-  "login.error.unset": "Es wurde noch kein Passwort in der Verwaltung festgelegt.",
-  "login.error.network": "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
+  "login.error.unset":
+    "Es wurde noch kein Passwort in der Verwaltung festgelegt.",
+  "login.error.network":
+    "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
   "login.error.notConfigured":
     "Dieser Computer ist nicht konfiguriert. Siehe Diagnose unten.",
   "login.error.server": "Serverfehler. Technische Details unten.",
@@ -25,8 +29,10 @@ const de: Dict = {
   "enroll.code": "Code (z. B. AT-ABC123)",
   "enroll.submit": "Registrieren",
   "enroll.checking": "Wird registriert …",
-  "enroll.error.invalid": "Ungültiger, bereits verwendeter oder abgelaufener Code.",
-  "enroll.error.network": "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
+  "enroll.error.invalid":
+    "Ungültiger, bereits verwendeter oder abgelaufener Code.",
+  "enroll.error.network":
+    "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
   "enroll.error.notConfigured":
     "Dieser Computer ist nicht konfiguriert. Siehe Diagnose unten.",
   "enroll.error.server": "Serverfehler. Technische Details unten.",
@@ -84,8 +90,10 @@ const de: Dict = {
 const en: Dict = {
   "app.title": "ActivityTrack",
   "login.heading": "Login required",
-  "login.hint": "Enter the password set by IT.",
+  "login.hint": "Sign in with Clerk to manage this device.",
+  "login.email": "Email",
   "login.password": "Password",
+  "login.unlock": "Open",
   "login.submit": "Unlock",
   "login.error.wrong": "Wrong password.",
   "login.error.unset": "No password has been set in the dashboard yet.",

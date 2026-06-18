@@ -1,54 +1,60 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useSignIn, useUser } from "@clerk/clerk-react";
 import { t, type Lang } from "../i18n.js";
-import type { VerifyOutcome, VerifyStatus } from "../types.js";
 import { PanelHeader } from "./PanelHeader.js";
 import { DiagnosticsPanel } from "./DiagnosticsPanel.js";
-
-const ERROR_KEYS: Record<Exclude<VerifyStatus, "ok">, string> = {
-  wrong: "login.error.wrong",
-  unset: "login.error.unset",
-  not_configured: "login.error.notConfigured",
-  server: "login.error.server",
-  network: "login.error.network",
-};
 
 interface Props {
   lang: Lang;
   onLangChange: (lang: Lang) => void;
-  /** Called with the verified result once the password is correct ("ok"). */
+  /** Called once Clerk has authenticated the desktop technician session. */
   onUnlocked: () => void | Promise<void>;
 }
 
 export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
+  const clerkEnabled = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isSignedIn } = useUser();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
-  const [detail, setDetail] = useState<string | undefined>(undefined);
-  const [errorKey, setErrorKey] = useState(0);
   const [checking, setChecking] = useState(false);
 
-  const showError = (message: string, detail?: string) => {
-    setError(message);
-    setDetail(detail);
-    setErrorKey((k) => k + 1);
-  };
+  async function unlockSignedIn() {
+    setError(undefined);
+    await onUnlocked();
+  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (checking) return;
     setChecking(true);
     try {
-      const result = await invoke<VerifyOutcome>("verify_password", {
-        password,
-      });
-      if (result.status === "ok") {
-        await onUnlocked();
+      if (!clerkEnabled) {
+        setError(t("login.error.notConfigured"));
         return;
       }
-      showError(t(ERROR_KEYS[result.status]), result.detail ?? undefined);
-    } catch (e) {
-      // The command itself failed to run (not a backend status) — surface it.
-      showError(t("login.error.network"), String(e));
+      if (isSignedIn) {
+        await unlockSignedIn();
+        return;
+      }
+      if (!isLoaded || !signIn || !setActive) return;
+      const result = await signIn.create({ identifier: email, password });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        await unlockSignedIn();
+      } else {
+        setError(t("login.error.server"));
+      }
+    } catch (err) {
+      const clerkError = err as {
+        errors?: Array<{ longMessage?: string; message?: string }>;
+      };
+      setError(
+        clerkError.errors?.[0]?.longMessage ??
+          clerkError.errors?.[0]?.message ??
+          String(err),
+      );
     } finally {
       setChecking(false);
     }
@@ -60,33 +66,46 @@ export function LoginGate({ lang, onLangChange, onUnlocked }: Props) {
       <h2>{t("login.heading")}</h2>
       <p className="hint">{t("login.hint")}</p>
       <form id="login-form" onSubmit={onSubmit}>
-        <input
-          id="pw"
-          type="password"
-          placeholder={t("login.password")}
-          autoFocus
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button type="submit" id="submit" disabled={checking}>
+        {!isSignedIn ? (
+          <input
+            id="email"
+            type="email"
+            placeholder={t("login.email")}
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        ) : null}
+        {!isSignedIn ? (
+          <input
+            id="pw"
+            type="password"
+            placeholder={t("login.password")}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        ) : null}
+        <button
+          type="submit"
+          id="submit"
+          disabled={checking || (clerkEnabled && !isLoaded)}
+        >
           {checking ? (
             <>
               <span className="spinner" /> {t("login.checking")}
             </>
+          ) : isSignedIn ? (
+            t("login.unlock")
           ) : (
             t("login.submit")
           )}
         </button>
       </form>
       {error ? (
-        <div className="error fade-up" id="error" key={errorKey}>
+        <div className="error fade-up" id="error">
           <p className="error-msg">{error}</p>
-          {detail ? (
-            <details className="error-detail">
-              <summary>{t("error.details")}</summary>
-              <pre>{detail}</pre>
-            </details>
-          ) : null}
         </div>
       ) : (
         <p className="error" id="error" />

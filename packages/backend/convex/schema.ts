@@ -18,8 +18,18 @@ export default defineSchema({
   // One row per Clerk account. `subject` is the Clerk user id (JWT `sub`); it's
   // the join key between the Clerk session and our RBAC. `role` defaults are
   // assigned in `users.store` (first user → it_admin, everyone else → viewer).
+  organizations: defineTable({
+    clerkOrgId: v.string(),
+    name: v.optional(v.string()),
+    allowedDomains: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_clerkOrgId", ["clerkOrgId"]),
+
   users: defineTable({
     subject: v.string(),
+    orgId: v.optional(v.id("organizations")),
+    clerkOrgId: v.optional(v.string()),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     image: v.optional(v.string()),
@@ -29,20 +39,28 @@ export default defineSchema({
     ),
   })
     .index("by_subject", ["subject"])
-    .index("email", ["email"]),
+    .index("email", ["email"])
+    .index("by_org", ["orgId"]),
 
   // Physical machines. A device auto-registers as "pending" on first sample;
   // an admin approves it and (optionally) links it to a person.
   devices: defineTable({
+    orgId: v.optional(v.id("organizations")),
     deviceId: v.string(), // the UUID minted by the agent (ProgramData)
     hostname: v.string(),
     lastWindowsUser: v.string(),
-    status: v.union(v.literal("pending"), v.literal("active"), v.literal("disabled")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("active"),
+      v.literal("disabled"),
+    ),
     personId: v.optional(v.id("people")),
     lastSeen: v.number(),
     agentVersion: v.optional(v.string()),
   })
     .index("by_deviceId", ["deviceId"])
+    .index("by_org_deviceId", ["orgId", "deviceId"])
+    .index("by_org_status", ["orgId", "status"])
     .index("by_status", ["status"])
     .index("by_personId", ["personId"]),
 
@@ -54,6 +72,7 @@ export default defineSchema({
   // `genesysUserId`/`clockodoUserId` let the backend resolve an inbound signal
   // (which carries a source-native user id) back to the canonical employeeId.
   people: defineTable({
+    orgId: v.optional(v.id("organizations")),
     name: v.string(),
     email: v.optional(v.string()),
     managerId: v.optional(v.id("users")),
@@ -68,6 +87,7 @@ export default defineSchema({
 
   // Raw samples (append-only). Indexed for time-range + per-device queries.
   activitySamples: defineTable({
+    orgId: v.optional(v.id("organizations")),
     deviceId: v.string(),
     windowsUser: v.string(),
     hostname: v.string(),
@@ -88,6 +108,7 @@ export default defineSchema({
   // slice of signals; `finalState` is recomputed by the state engine on every
   // write. Per-source `*UpdatedAt` timestamps support staleness detection.
   employeeStates: defineTable({
+    orgId: v.optional(v.id("organizations")),
     employeeId: v.string(),
 
     // Workstation (desktop agent).
@@ -138,6 +159,7 @@ export default defineSchema({
   // timeline (idle / in-call / break / wrap-up by hour of day). Insert-on-change
   // keeps this bounded; pruned on the same retention window as raw samples.
   stateSamples: defineTable({
+    orgId: v.optional(v.id("organizations")),
     employeeId: v.string(),
     state: v.union(
       v.literal("ABSENT"),
@@ -156,6 +178,7 @@ export default defineSchema({
   // "Genesys unavailable due to <reason>" without the failure ever breaking the
   // state pipeline — a down source simply stops contributing fresh signals.
   integrationHealth: defineTable({
+    orgId: v.optional(v.id("organizations")),
     source: v.union(v.literal("genesys"), v.literal("clockodo")),
     status: v.union(
       v.literal("ok"),
@@ -170,6 +193,7 @@ export default defineSchema({
 
   // Server-computed daily rollups (active vs idle seconds) for fast dashboards.
   dailyStats: defineTable({
+    orgId: v.optional(v.id("organizations")),
     deviceId: v.string(),
     day: v.string(), // YYYY-MM-DD in the device's local tz
     activeSeconds: v.number(),
@@ -182,6 +206,7 @@ export default defineSchema({
 
   // Append-only audit of privileged dashboard actions (IT/manager changes).
   auditLog: defineTable({
+    orgId: v.optional(v.id("organizations")),
     actorUserId: v.id("users"),
     action: v.string(),
     target: v.optional(v.string()),
@@ -194,6 +219,7 @@ export default defineSchema({
   // the technical detail for IT; the dashboard renders a plain-language
   // version from `code` for non-technical viewers. Never store secrets here.
   systemEvents: defineTable({
+    orgId: v.optional(v.id("organizations")),
     severity: v.union(
       v.literal("info"),
       v.literal("warning"),
@@ -224,12 +250,14 @@ export default defineSchema({
   // Singleton-ish key/value settings (e.g. hashed debug-tool password). Keyed
   // by `key`; written only by it_admin.
   settings: defineTable({
+    orgId: v.optional(v.id("organizations")),
     key: v.string(),
     value: v.string(),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
   deviceSlots: defineTable({
+    orgId: v.optional(v.id("organizations")),
     code: v.string(),
     label: v.optional(v.string()),
     createdBy: v.id("users"),
@@ -239,13 +267,16 @@ export default defineSchema({
     usedByDeviceId: v.optional(v.string()),
   })
     .index("by_code", ["code"])
+    .index("by_org_code", ["orgId", "code"])
     .index("by_createdAt", ["createdAt"]),
 
   deviceKeys: defineTable({
+    orgId: v.optional(v.id("organizations")),
     deviceId: v.string(),
     keyHash: v.string(),
     createdAt: v.number(),
   })
     .index("by_keyHash", ["keyHash"])
-    .index("by_deviceId", ["deviceId"]),
+    .index("by_deviceId", ["deviceId"])
+    .index("by_org_deviceId", ["orgId", "deviceId"]),
 });

@@ -2,7 +2,10 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { ingestPayloadSchema, type ActivitySample } from "@activitytrack/shared";
+import {
+  ingestPayloadSchema,
+  type ActivitySample,
+} from "@activitytrack/shared";
 import { z } from "zod";
 import { verifyPassword, generateDeviceKey, hashDeviceKey } from "./crypto";
 import { DEBUG_PASSWORD_SETTING_KEY } from "./settings";
@@ -59,11 +62,11 @@ http.route({
     }
     const rawKey = authHeader.slice(7);
     const keyHash = await hashDeviceKey(rawKey);
-    const deviceId = await ctx.runQuery(
+    const deviceAuth = await ctx.runQuery(
       internal.devices.lookupDeviceByKeyHash,
       { keyHash },
     );
-    if (!deviceId) {
+    if (!deviceAuth) {
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -75,7 +78,7 @@ http.route({
         severity: "warning",
         code: "ingest.bad_payload",
         message: "Ingest rejected: request body was not valid JSON.",
-        deviceId,
+        deviceId: deviceAuth.deviceId,
       });
       return new Response("bad request", { status: 400 });
     }
@@ -86,7 +89,7 @@ http.route({
         severity: "warning",
         code: "ingest.bad_payload",
         message: "Ingest rejected: payload failed schema validation.",
-        deviceId,
+        deviceId: deviceAuth.deviceId,
         context: JSON.stringify(parsed.error.issues.slice(0, 5)),
       });
       return new Response("bad request", { status: 400 });
@@ -94,7 +97,7 @@ http.route({
 
     const now = Date.now();
     const accepted = parsed.data.samples.filter((s: ActivitySample) => {
-      if (s.deviceId !== deviceId) return false;
+      if (s.deviceId !== deviceAuth.deviceId) return false;
       const ahead = s.capturedAt - now;
       if (ahead > MAX_FUTURE_SKEW_MS) return false;
       if (now - s.capturedAt > MAX_PAST_AGE_MS) return false;
@@ -105,6 +108,7 @@ http.route({
     if (accepted.length > 0) {
       const result = await ctx.runMutation(internal.ingest.recordSamples, {
         samples: accepted,
+        orgId: deviceAuth.orgId,
       });
       inserted = result.inserted;
     }
@@ -188,6 +192,7 @@ http.route({
 
     await ctx.runMutation(internal.devices.completeRegistration, {
       slotId: validation.slotId,
+      orgId: validation.orgId,
       deviceId,
       hostname,
       windowsUser,
@@ -221,11 +226,11 @@ http.route({
       return new Response("unauthorized", { status: 401 });
     }
     const keyHash = await hashDeviceKey(authHeader.slice(7));
-    const deviceId = await ctx.runQuery(
+    const deviceAuth = await ctx.runQuery(
       internal.devices.lookupDeviceByKeyHash,
       { keyHash },
     );
-    if (!deviceId) {
+    if (!deviceAuth) {
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -245,7 +250,7 @@ http.route({
       severity: parsed.data.severity,
       code: parsed.data.code,
       message: parsed.data.message,
-      deviceId,
+      deviceId: deviceAuth.deviceId,
       hostname: parsed.data.hostname,
     });
 
@@ -276,11 +281,11 @@ http.route({
       authorized = true;
     } else {
       const keyHash = await hashDeviceKey(rawKey);
-      const deviceId = await ctx.runQuery(
+      const deviceAuth = await ctx.runQuery(
         internal.devices.lookupDeviceByKeyHash,
         { keyHash },
       );
-      authorized = deviceId !== null;
+      authorized = deviceAuth !== null;
     }
     if (!authorized) {
       return new Response("unauthorized", { status: 401 });

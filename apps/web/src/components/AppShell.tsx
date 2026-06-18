@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { UserButton } from "@clerk/nextjs";
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import {
   Activity,
   CalendarRange,
@@ -39,11 +39,31 @@ interface NavItem {
 // Trimmed to four clear destinations. The former Live-Status folds into the
 // Overview/timeline; Health, Users and Audit are sub-tabs inside Settings.
 const NAV: NavItem[] = [
-  { href: "/", labelKey: "nav.overview", minRole: "viewer", icon: LayoutDashboard },
-  { href: "/devices", labelKey: "nav.devices", minRole: "viewer", icon: MonitorSmartphone },
+  {
+    href: "/",
+    labelKey: "nav.overview",
+    minRole: "viewer",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/devices",
+    labelKey: "nav.devices",
+    minRole: "viewer",
+    icon: MonitorSmartphone,
+  },
   { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
-  { href: "/reports", labelKey: "nav.reports", minRole: "viewer", icon: CalendarRange },
-  { href: "/settings", labelKey: "nav.settings", minRole: "it_admin", icon: Settings },
+  {
+    href: "/reports",
+    labelKey: "nav.reports",
+    minRole: "viewer",
+    icon: CalendarRange,
+  },
+  {
+    href: "/settings",
+    labelKey: "nav.settings",
+    minRole: "it_admin",
+    icon: Settings,
+  },
 ];
 
 function NavLinks({
@@ -206,7 +226,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 border-border bg-panel p-4">
+            <SheetContent
+              side="left"
+              className="w-72 border-border bg-panel p-4"
+            >
               <div className="px-1 pb-6">
                 <Brand />
               </div>
@@ -224,6 +247,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </h1>
           </div>
 
+          <OrganizationSwitcher
+            afterCreateOrganizationUrl="/"
+            afterSelectOrganizationUrl="/"
+          />
           <ThemeToggle />
           <LangSwitcher />
           <div className="lg:hidden">
