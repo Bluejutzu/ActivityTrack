@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
-import { CheckCircle2, KeyRound, Loader2, SlidersHorizontal } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  KeyRound,
+  Loader2,
+  SlidersHorizontal,
+} from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/lib/useToast";
@@ -100,6 +106,31 @@ export function ConfigPanel() {
   const [pw, setPw] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const org = useQuery(api.orgs.getCurrent);
+  const setAllowedDomains = useMutationWithToast(api.orgs.setAllowedDomains);
+  const [domains, setDomains] = useState("");
+  const [savingDomains, setSavingDomains] = useState(false);
+
+  useEffect(() => {
+    if (!org) return;
+    setDomains(org.allowedDomains.join(", "));
+  }, [org]);
+
+  async function saveDomains(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingDomains(true);
+    await setAllowedDomains(
+      {
+        domains: domains
+          .split(/[\n,]/)
+          .map((domain) => domain.trim())
+          .filter(Boolean),
+      },
+      { success: t("settings.orgDomains.saved") },
+    );
+    setSavingDomains(false);
+  }
 
   useEffect(() => {
     if (!saved) return;
@@ -220,6 +251,44 @@ export function ConfigPanel() {
               {t("settings.debugPw.saved")}
             </p>
           </Reveal>
+        </CardContent>
+      </Card>
+
+      <Card className="animate-fade-up lg:col-span-2">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent/20 text-accent">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <CardTitle className="text-base">
+              {t("settings.orgDomains.heading")}
+            </CardTitle>
+          </div>
+          <CardDescription>{t("settings.orgDomains.hint")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {org === undefined ? (
+            <Skeleton className="h-24 w-full" />
+          ) : org === null ? (
+            <p className="text-sm text-muted">
+              {t("settings.orgDomains.noOrg")}
+            </p>
+          ) : (
+            <form onSubmit={saveDomains} className="space-y-3">
+              <Input
+                value={domains}
+                onChange={(e) => setDomains(e.target.value)}
+                placeholder={t("settings.orgDomains.placeholder")}
+              />
+              <p className="text-xs text-muted">
+                {t("settings.orgDomains.note")}
+              </p>
+              <Button type="submit" disabled={savingDomains}>
+                {savingDomains && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t("settings.orgDomains.save")}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

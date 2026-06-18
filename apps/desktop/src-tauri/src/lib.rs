@@ -28,7 +28,10 @@ async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Res
             let version = update.version.to_string();
             let _ = handle.emit("update:available", &version);
 
-            match update.download_and_install(|_chunk, _total| {}, || {}).await {
+            match update
+                .download_and_install(|_chunk, _total| {}, || {})
+                .await
+            {
                 Ok(_) => {
                     let _ = handle.emit("update:installed", ());
                     println!("Update to {} installed successfully", version);
@@ -94,6 +97,7 @@ pub fn run() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
+            commands::get_auth_config,
             commands::verify_password,
             commands::enroll,
             commands::get_diagnostics,

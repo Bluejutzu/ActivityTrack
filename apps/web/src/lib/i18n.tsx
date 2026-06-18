@@ -142,6 +142,16 @@ const de: Dict = {
   "settings.debugPw.save": "Passwort speichern",
   "settings.debugPw.saved": "Passwort gespeichert.",
   "settings.debugPw.tooShort": "Mindestens 6 Zeichen.",
+  "settings.orgDomains.heading": "Organisations-Domains",
+  "settings.orgDomains.hint":
+    "Beschränkt neue Konten in dieser Clerk-Organisation auf freigegebene E-Mail-Domains.",
+  "settings.orgDomains.noOrg":
+    "Wählen Sie in Clerk eine Organisation aus, um Domain-Freigaben zu verwalten.",
+  "settings.orgDomains.placeholder": "example.com, firma.de",
+  "settings.orgDomains.note":
+    "Kommagetrennt. Leer bedeutet: keine zusätzliche Domain-Beschränkung.",
+  "settings.orgDomains.save": "Domains speichern",
+  "settings.orgDomains.saved": "Domain-Freigabe gespeichert.",
 
   "timeline.heading": "Verlauf",
   "timeline.back": "Zurück zur Übersicht",
@@ -174,8 +184,7 @@ const de: Dict = {
   "timeline.tabs.day": "Tag im Detail",
   "timeline.tabs.export": "Export",
   "timeline.day.heading": "Minute für Minute",
-  "timeline.day.sub":
-    "Was an jedem Punkt des gewählten Tages passiert ist.",
+  "timeline.day.sub": "Was an jedem Punkt des gewählten Tages passiert ist.",
   "timeline.day.date": "Tag",
   "timeline.day.empty": "Kein Statusverlauf für diesen Tag.",
   "timeline.day.now": "jetzt",
@@ -233,8 +242,10 @@ const de: Dict = {
   "devices.slots.status.revoked": "Widerrufen",
   "devices.slots.expires": "Läuft ab",
   "devices.slots.usedAt": "Eingelöst",
-  "devices.slots.empty": "Noch keine Codes. Erstellen Sie einen, um ein neues Gerät einzuschreiben.",
-  "devices.slots.note": "Tragen Sie diesen Code in die config.json des Trackers ein — er wird beim ersten Start automatisch verwendet.",
+  "devices.slots.empty":
+    "Noch keine Codes. Erstellen Sie einen, um ein neues Gerät einzuschreiben.",
+  "devices.slots.note":
+    "Tragen Sie diesen Code in die config.json des Trackers ein — er wird beim ersten Start automatisch verwendet.",
   "devices.slots.heading.devices": "Alle Geräte",
   "devices.filter.search": "Suche …",
   "devices.filter.all": "Alle Status",
@@ -275,24 +286,30 @@ const de: Dict = {
 
   // Error toasts — shown when an action fails. Keyed by the backend error code.
   "error.generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
-  "error.network": "Keine Verbindung zum Server. Bitte später erneut versuchen.",
+  "error.network":
+    "Keine Verbindung zum Server. Bitte später erneut versuchen.",
   "error.auth.required": "Bitte erneut anmelden.",
   "error.auth.forbidden": "Dafür fehlt Ihnen die Berechtigung.",
-  "error.notFound.device": "Das Gerät wurde nicht gefunden (evtl. bereits gelöscht).",
+  "error.notFound.device":
+    "Das Gerät wurde nicht gefunden (evtl. bereits gelöscht).",
   "error.notFound.person": "Der Mitarbeiter wurde nicht gefunden.",
   "error.notFound.user": "Der Benutzer wurde nicht gefunden.",
   "error.notFound.slot": "Der Code wurde nicht gefunden.",
   "error.notFound.event": "Der Eintrag wurde nicht gefunden.",
-  "error.validation.password_short": "Das Passwort muss mindestens 6 Zeichen haben.",
-  "error.validation.out_of_range": "Der Wert liegt außerhalb des zulässigen Bereichs.",
+  "error.validation.password_short":
+    "Das Passwort muss mindestens 6 Zeichen haben.",
+  "error.validation.out_of_range":
+    "Der Wert liegt außerhalb des zulässigen Bereichs.",
   "error.user.cannot_demote_self":
     "Sie können sich nicht selbst die IT-Administratorrolle entziehen.",
 
   // System health page.
   "health.heading": "Systemstatus",
-  "health.subtitle": "Verbindung der Geräte und gemeldete Störungen auf einen Blick.",
+  "health.subtitle":
+    "Verbindung der Geräte und gemeldete Störungen auf einen Blick.",
   "health.allGood.title": "Alles in Ordnung",
-  "health.allGood.body": "Alle Geräte melden sich und es liegen keine offenen Störungen vor.",
+  "health.allGood.body":
+    "Alle Geräte melden sich und es liegen keine offenen Störungen vor.",
   "health.attention.title": "{count} Sache(n) brauchen Aufmerksamkeit",
   "health.attention.body": "Eine Übersicht finden Sie unten.",
   "health.offline.heading": "Geräte, die sich nicht melden",
@@ -481,6 +498,16 @@ const en: Dict = {
   "settings.debugPw.save": "Save password",
   "settings.debugPw.saved": "Password saved.",
   "settings.debugPw.tooShort": "At least 6 characters.",
+  "settings.orgDomains.heading": "Organization domains",
+  "settings.orgDomains.hint":
+    "Restricts new accounts in this Clerk organization to allowed email domains.",
+  "settings.orgDomains.noOrg":
+    "Select a Clerk organization to manage domain allow-listing.",
+  "settings.orgDomains.placeholder": "example.com, company.com",
+  "settings.orgDomains.note":
+    "Comma-separated. Leave empty for no extra domain restriction.",
+  "settings.orgDomains.save": "Save domains",
+  "settings.orgDomains.saved": "Domain allow-list saved.",
 
   "timeline.heading": "Timeline",
   "timeline.back": "Back to overview",
@@ -572,7 +599,8 @@ const en: Dict = {
   "devices.slots.expires": "Expires",
   "devices.slots.usedAt": "Used",
   "devices.slots.empty": "No codes yet. Create one to enroll a new device.",
-  "devices.slots.note": "Add this code to the tracker’s config.json — it will be used automatically on first launch.",
+  "devices.slots.note":
+    "Add this code to the tracker’s config.json — it will be used automatically on first launch.",
   "devices.slots.heading.devices": "All Devices",
   "devices.filter.search": "Search …",
   "devices.filter.all": "All statuses",
@@ -614,21 +642,23 @@ const en: Dict = {
   "error.network": "Can't reach the server. Please try again shortly.",
   "error.auth.required": "Please sign in again.",
   "error.auth.forbidden": "You don't have permission to do that.",
-  "error.notFound.device": "That device was not found (it may have been removed).",
+  "error.notFound.device":
+    "That device was not found (it may have been removed).",
   "error.notFound.person": "That person was not found.",
   "error.notFound.user": "That user was not found.",
   "error.notFound.slot": "That code was not found.",
   "error.notFound.event": "That entry was not found.",
-  "error.validation.password_short": "The password must be at least 6 characters.",
+  "error.validation.password_short":
+    "The password must be at least 6 characters.",
   "error.validation.out_of_range": "That value is outside the allowed range.",
-  "error.user.cannot_demote_self":
-    "You can't remove your own IT admin role.",
+  "error.user.cannot_demote_self": "You can't remove your own IT admin role.",
 
   // System health page.
   "health.heading": "System health",
   "health.subtitle": "Device connectivity and reported issues at a glance.",
   "health.allGood.title": "All systems normal",
-  "health.allGood.body": "Every device is reporting and there are no open issues.",
+  "health.allGood.body":
+    "Every device is reporting and there are no open issues.",
   "health.attention.title": "{count} thing(s) need attention",
   "health.attention.body": "See the breakdown below.",
   "health.offline.heading": "Devices that have gone quiet",
@@ -673,12 +703,10 @@ const en: Dict = {
     "An invalid or expired enrollment code was used.",
   "health.friendly.tracker.send_failed":
     "A computer can't reach the server to send data.",
-  "health.friendly.tracker.enroll_failed":
-    "A computer's initial setup failed.",
+  "health.friendly.tracker.enroll_failed": "A computer's initial setup failed.",
   "health.friendly.tracker.queue_io":
     "A computer can't buffer its data locally.",
-  "health.friendly.dashboard.crash":
-    "The dashboard hit an unexpected error.",
+  "health.friendly.dashboard.crash": "The dashboard hit an unexpected error.",
   "health.friendly.unknown": "An issue was reported.",
 
   // ErrorBoundary fallback.

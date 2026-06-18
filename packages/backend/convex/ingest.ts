@@ -43,13 +43,17 @@ function localDay(capturedAt: number, tzOffsetMinutes: number): string {
 }
 
 export const recordSamples = internalMutation({
-  args: { samples: v.array(sampleValidator) },
-  handler: async (ctx, { samples }) => {
+  args: {
+    samples: v.array(sampleValidator),
+    orgId: v.optional(v.id("organizations")),
+  },
+  handler: async (ctx, { samples, orgId }) => {
     const receivedAt = Date.now();
     // Idle→inactive threshold (Settings → Configuration). Daily active/idle
     // accrual is derived from each sample's idleMs against this, so changing it
     // reshapes the rollups going forward.
-    const inactivityMs = (await readConfig(ctx)).inactivityThresholdSeconds * 1000;
+    const inactivityMs =
+      (await readConfig(ctx)).inactivityThresholdSeconds * 1000;
 
     // Process per device, oldest sample first, so gap attribution is correct.
     const byDevice = new Map<string, typeof samples>();
@@ -71,7 +75,7 @@ export const recordSamples = internalMutation({
       let prevCapturedAt = device?.lastSeen;
 
       for (const s of deviceSamples) {
-        await ctx.db.insert("activitySamples", { ...s, receivedAt });
+        await ctx.db.insert("activitySamples", { ...s, orgId, receivedAt });
         inserted++;
 
         // Attribute elapsed wall-clock time to active or idle.
@@ -82,13 +86,14 @@ export const recordSamples = internalMutation({
         const gapMs = Math.max(0, Math.min(rawGap, MAX_ATTRIBUTION_MS));
         prevCapturedAt = s.capturedAt;
 
-        await accrueDaily(ctx, deviceId, s, gapMs, inactivityMs);
+        await accrueDaily(ctx, orgId, deviceId, s, gapMs, inactivityMs);
       }
 
       // Upsert the device row from the newest sample we saw.
       const newest = deviceSamples[deviceSamples.length - 1]!;
       if (device) {
         await ctx.db.patch(device._id, {
+          orgId,
           hostname: newest.hostname,
           lastWindowsUser: newest.windowsUser,
           lastSeen: Math.max(device.lastSeen, newest.capturedAt),
@@ -99,6 +104,7 @@ export const recordSamples = internalMutation({
       } else {
         await ctx.db.insert("devices", {
           deviceId,
+          orgId,
           hostname: newest.hostname,
           lastWindowsUser: newest.windowsUser,
           status: "pending",
@@ -124,6 +130,7 @@ async function getDevice(
 
 async function accrueDaily(
   ctx: MutationCtx,
+  orgId: Doc<"devices">["orgId"],
   deviceId: string,
   sample: { idleMs: number; capturedAt: number; tzOffsetMinutes: number },
   gapMs: number,
@@ -153,6 +160,7 @@ async function accrueDaily(
     });
   } else {
     await ctx.db.insert("dailyStats", {
+      orgId,
       deviceId,
       day,
       activeSeconds: activeDelta,

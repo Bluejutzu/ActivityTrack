@@ -12,7 +12,11 @@ type Screen = "login" | "enroll" | "status";
 
 const POLL_INTERVAL_MS = 3000;
 
-export function App() {
+export function App({
+  clerkAuthAvailable = true,
+}: {
+  clerkAuthAvailable?: boolean;
+}) {
   const { lang, changeLang } = useLang();
   // Keep the document `lang` attribute in sync on first mount, mirroring the
   // old `setLang(getLang())` boot call.
@@ -80,7 +84,12 @@ export function App() {
 
   if (screen === "login") {
     return (
-      <LoginGate lang={lang} onLangChange={changeLang} onUnlocked={onUnlocked} />
+      <LoginGate
+        lang={lang}
+        onLangChange={changeLang}
+        onUnlocked={onUnlocked}
+        clerkAuthAvailable={clerkAuthAvailable}
+      />
     );
   }
 

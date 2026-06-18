@@ -94,12 +94,19 @@ impl Outcome {
 /// behind a generic "server unreachable" message.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AuthConfig {
+    pub clerk_publishable_key: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Diagnostics {
     pub convex_url: String,
     pub config_file: String,
     pub config_present: bool,
     pub has_convex_url: bool,
     pub has_bootstrap_key: bool,
+    pub has_clerk_publishable_key: bool,
     pub enrolled: bool,
     pub configured: bool,
 }
