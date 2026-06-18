@@ -125,7 +125,10 @@ export default function TimelinePage({
       heatmap: hourOfDayActivity(s, tzOffset),
       intraday: intradayTimeline(sameDay, 30),
       hourlyStates: hourlyStateBreakdown(
-        stateHistory ?? [],
+        // Strip the prior-day row the backend prepends: it has `at < dayStartMs`
+        // and would credit yesterday's state to hours 00-NN today even when no
+        // work had started, making the chart look wrong.
+        (stateHistory ?? []).filter((s) => s.at >= dayStartMs),
         dayStartMs,
         Date.now(),
         tzOffset,
