@@ -7,13 +7,16 @@ import {
   type ActivitySample,
 } from "@activitytrack/shared";
 import { z } from "zod";
-import {
-  verifyPassword,
-  generateDeviceKey,
-  hashDeviceKey,
-  safeEqual,
-} from "./crypto";
+import { verifyPassword, generateDeviceKey, hashDeviceKey } from "./crypto";
 import { DEBUG_PASSWORD_SETTING_KEY } from "./settings";
+import {
+  bearerToken,
+  unauthorized,
+  badRequest,
+  jsonResponse,
+  readJson,
+  bootstrapKeyValid,
+} from "./httpHelpers";
 
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const MAX_PAST_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -48,9 +51,24 @@ async function logBackendEvent(
 }
 
 /**
+ * Authenticate a request by its per-device key (issued at enrollment): hash the
+ * Bearer token and look it up. Returns the device row, or null when the header
+ * is absent or the key is unknown/disabled. Shared by the device-keyed
+ * endpoints (/ingest, /agent/event, and the device branch of verify-password).
+ */
+async function authenticateDevice(
+  ctx: ActionCtx,
+  request: Request,
+): Promise<{ deviceId: string } | null> {
+  const token = bearerToken(request);
+  if (!token) return null;
+  const keyHash = await hashDeviceKey(token);
+  return await ctx.runQuery(internal.devices.lookupDeviceByKeyHash, { keyHash });
+}
+
+/**
  * POST /ingest — authenticated by per-device key (issued at enrollment).
- * The device key is hashed and looked up in the deviceKeys table. Only
- * samples matching the authenticated deviceId are accepted.
+ * Only samples matching the authenticated deviceId are accepted.
  */
 http.route({
   path: "/ingest",
@@ -61,31 +79,18 @@ http.route({
     // anonymous spam into write amplification — and unknown-key hits are mostly
     // internet-scanner noise, not actionable signal. We only log failures from
     // an *authenticated* device (below), where the deviceId is known.
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response("unauthorized", { status: 401 });
-    }
-    const rawKey = authHeader.slice(7);
-    const keyHash = await hashDeviceKey(rawKey);
-    const deviceAuth = await ctx.runQuery(
-      internal.devices.lookupDeviceByKeyHash,
-      { keyHash },
-    );
-    if (!deviceAuth) {
-      return new Response("unauthorized", { status: 401 });
-    }
+    const deviceAuth = await authenticateDevice(ctx, request);
+    if (!deviceAuth) return unauthorized();
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
+    const body = await readJson(request);
+    if (body === undefined) {
       await logBackendEvent(ctx, {
         severity: "warning",
         code: "ingest.bad_payload",
         message: "Ingest rejected: request body was not valid JSON.",
         deviceId: deviceAuth.deviceId,
       });
-      return new Response("bad request", { status: 400 });
+      return badRequest();
     }
 
     const parsed = ingestPayloadSchema.safeParse(body);
@@ -97,7 +102,7 @@ http.route({
         deviceId: deviceAuth.deviceId,
         context: JSON.stringify(parsed.error.issues.slice(0, 5)),
       });
-      return new Response("bad request", { status: 400 });
+      return badRequest();
     }
 
     const now = Date.now();
@@ -126,7 +131,7 @@ http.route({
       }
     }
 
-    return Response.json({
+    return jsonResponse(200, {
       ok: true,
       received: parsed.data.samples.length,
       inserted,
@@ -145,40 +150,25 @@ const registerSchema = z.object({
 
 /**
  * POST /agent/register — one-time device enrollment.
- * Authenticated by the shared bootstrap key. Validates the one-time
- * enrollment code, issues a device-specific key, and registers the device.
+ * Authenticated by the shared bootstrap key (constant-time compared). Validates
+ * the one-time enrollment code, issues a device-specific key, registers the
+ * device.
  */
 http.route({
   path: "/agent/register",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     // Like /ingest, don't log the unauthenticated path (wrong/absent bootstrap
-    // key) — it's the same write-amplification vector. enroll.code_invalid
-    // below IS logged: reaching it requires a valid bootstrap key, so it's a
-    // real signal (someone with a build using a bad/expired code).
-    const expected = process.env.ACTIVITYTRACK_INGEST_KEY;
-    const authHeader = request.headers.get("authorization");
-    const presented = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : "";
-    // Constant-time compare for consistency with the device-key path (which uses
-    // safeEqual). The key is high-entropy so the timing risk is marginal, but the
-    // two auth paths should not differ in this.
-    if (!expected || !safeEqual(presented, expected)) {
-      return new Response("unauthorized", { status: 401 });
-    }
+    // key) — it's the same write-amplification vector. enroll.code_invalid below
+    // IS logged: reaching it requires a valid bootstrap key, so it's a real
+    // signal (someone with a build using a bad/expired code).
+    if (!bootstrapKeyValid(request)) return unauthorized();
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return new Response("bad request", { status: 400 });
-    }
+    const body = await readJson(request);
+    if (body === undefined) return badRequest();
 
     const parsed = registerSchema.safeParse(body);
-    if (!parsed.success) {
-      return new Response("bad request", { status: 400 });
-    }
+    if (!parsed.success) return badRequest();
 
     const { enrollmentCode, deviceId, hostname, windowsUser, agentVersion } =
       parsed.data;
@@ -218,7 +208,7 @@ http.route({
       keyHash,
     });
 
-    return Response.json({ deviceKey: rawKey });
+    return jsonResponse(200, { deviceKey: rawKey });
   }),
 });
 
@@ -231,37 +221,20 @@ const agentEventSchema = z.object({
 
 /**
  * POST /agent/event — the tracker reports its own operational problems
- * (repeated send failures, local IO errors). Authenticated by the device key
- * so events are attributed to a real enrolled device. The tracker is expected
- * to rate-limit itself; dedup on the server bounds the rest.
+ * (repeated send failures, local IO errors). Authenticated by the device key so
+ * events are attributed to a real enrolled device.
  */
 http.route({
   path: "/agent/event",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response("unauthorized", { status: 401 });
-    }
-    const keyHash = await hashDeviceKey(authHeader.slice(7));
-    const deviceAuth = await ctx.runQuery(
-      internal.devices.lookupDeviceByKeyHash,
-      { keyHash },
-    );
-    if (!deviceAuth) {
-      return new Response("unauthorized", { status: 401 });
-    }
+    const deviceAuth = await authenticateDevice(ctx, request);
+    if (!deviceAuth) return unauthorized();
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return new Response("bad request", { status: 400 });
-    }
+    const body = await readJson(request);
+    if (body === undefined) return badRequest();
     const parsed = agentEventSchema.safeParse(body);
-    if (!parsed.success) {
-      return new Response("bad request", { status: 400 });
-    }
+    if (!parsed.success) return badRequest();
 
     await ctx.runMutation(internal.events.record, {
       source: "tracker",
@@ -272,68 +245,39 @@ http.route({
       hostname: parsed.data.hostname,
     });
 
-    return Response.json({ ok: true });
+    return jsonResponse(200, { ok: true });
   }),
 });
 
 /**
  * POST /agent/verify-password — tray-app debug login.
- * Authenticated by either the device-specific key or the bootstrap key
- * (to support local dev before enrollment). Verifies the candidate against
- * the hash IT set in the dashboard; the hash never leaves the server.
+ * Authenticated by either the device-specific key or the bootstrap key (to
+ * support local dev before enrollment). Verifies the candidate against the hash
+ * IT set in the dashboard; the hash never leaves the server.
  */
 http.route({
   path: "/agent/verify-password",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response("unauthorized", { status: 401 });
-    }
-    const rawKey = authHeader.slice(7);
+    if (!bearerToken(request)) return unauthorized();
 
-    // Accept device key or bootstrap key (bootstrap allows local dev before enrollment)
-    const bootstrapKey = process.env.ACTIVITYTRACK_INGEST_KEY;
-    let authorized = false;
-    if (bootstrapKey && safeEqual(rawKey, bootstrapKey)) {
-      authorized = true;
-    } else {
-      const keyHash = await hashDeviceKey(rawKey);
-      const deviceAuth = await ctx.runQuery(
-        internal.devices.lookupDeviceByKeyHash,
-        { keyHash },
-      );
-      authorized = deviceAuth !== null;
-    }
+    // Accept the bootstrap key (dev, pre-enrollment) or a real device key.
+    let authorized = bootstrapKeyValid(request);
     if (!authorized) {
-      return new Response("unauthorized", { status: 401 });
+      authorized = (await authenticateDevice(ctx, request)) !== null;
     }
+    if (!authorized) return unauthorized();
 
-    let body: { password?: unknown };
-    try {
-      body = (await request.json()) as { password?: unknown };
-    } catch {
-      return new Response("bad request", { status: 400 });
-    }
-    if (typeof body.password !== "string") {
-      return new Response("bad request", { status: 400 });
-    }
+    const body = (await readJson(request)) as { password?: unknown } | undefined;
+    if (!body || typeof body.password !== "string") return badRequest();
 
     const row = await ctx.runQuery(internal.settings.getByKey, {
       key: DEBUG_PASSWORD_SETTING_KEY,
     });
-    if (!row) {
-      return new Response(JSON.stringify({ ok: false, reason: "unset" }), {
-        status: 503,
-        headers: { "content-type": "application/json" },
-      });
-    }
+    if (!row) return jsonResponse(503, { ok: false, reason: "unset" });
 
-    const ok = await verifyPassword(body.password, row.value);
-    return new Response(JSON.stringify({ ok }), {
-      status: ok ? 200 : 401,
-      headers: { "content-type": "application/json" },
-    });
+    const passwordOk = await verifyPassword(body.password, row.value);
+    return jsonResponse(passwordOk ? 200 : 401, { ok: passwordOk });
   }),
 });
 
