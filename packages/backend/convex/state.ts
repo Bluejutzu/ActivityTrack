@@ -5,6 +5,7 @@ import type { Doc } from "./_generated/dataModel";
 import { computeEmployeeState, type StateSignals } from "@activitytrack/shared";
 import { requireViewer } from "./rbac";
 import { appError } from "./errors";
+import { safeEqual } from "./crypto";
 
 /**
  * The fused employee-state engine — the single source of truth that combines
@@ -46,10 +47,14 @@ function signalsOf(row: Partial<Doc<"employeeStates">>): StateSignals {
   };
 }
 
-/** Constant-time-ish equality is unnecessary here; the secret is server-only. */
+/**
+ * The secret is server-only (no untrusted client reaches this), so a timing
+ * side-channel is largely theoretical — but we use the constant-time compare for
+ * consistency with the device-key and password paths rather than a bare `!==`.
+ */
 function assertSignalSecret(secret: string): void {
   const expected = process.env.ACTIVITYTRACK_SIGNAL_SECRET;
-  if (!expected || secret !== expected) {
+  if (!expected || !safeEqual(secret, expected)) {
     throw appError("auth.forbidden", "Invalid signal secret");
   }
 }
@@ -265,10 +270,11 @@ export const overview = query({
   handler: async (ctx) => {
     await requireViewer(ctx);
 
-    const rows = await ctx.db.query("employeeStates").collect();
+    // Defensive caps: ~10s of employees today, but bound the query if it grows.
+    const rows = await ctx.db.query("employeeStates").take(2000);
 
     // Join people by employeeId (cheap: ~10s of employees).
-    const people = await ctx.db.query("people").collect();
+    const people = await ctx.db.query("people").take(2000);
     const byEmployeeId = new Map(
       people.flatMap((p) => (p.employeeId ? [[p.employeeId, p] as const] : [])),
     );

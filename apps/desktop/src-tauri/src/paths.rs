@@ -34,3 +34,14 @@ pub fn queue_file() -> PathBuf {
 pub fn device_key_file() -> PathBuf {
     app_dir().join("device.key")
 }
+
+/// Size-capped operational log. A hidden tray app has nowhere to print to, so
+/// errors are also persisted here for IT to inspect after the fact.
+pub fn log_file() -> PathBuf {
+    app_dir().join("agent.log")
+}
+
+/// Single rotated generation of the log (the previous file, kept on rollover).
+pub fn log_file_rotated() -> PathBuf {
+    app_dir().join("agent.log.1")
+}

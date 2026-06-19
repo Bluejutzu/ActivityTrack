@@ -58,7 +58,15 @@ impl SampleQueue {
                 buf.push('\n');
             }
         }
-        fs::write(queue_file(), buf).map_err(|e| format!("cannot rewrite queue: {e}"))
+        // Write to a sibling temp file, then atomically rename it over the live
+        // queue. A crash or full disk mid-write can therefore only corrupt the
+        // throwaway temp file — never truncate the queue and lose pending samples
+        // (the failure mode of an in-place `fs::write`). On Windows, Rust's
+        // `fs::rename` uses MOVEFILE_REPLACE_EXISTING, so this replaces atomically.
+        let target = queue_file();
+        let tmp = target.with_extension("jsonl.tmp");
+        fs::write(&tmp, buf).map_err(|e| format!("cannot stage queue rewrite: {e}"))?;
+        fs::rename(&tmp, &target).map_err(|e| format!("cannot replace queue: {e}"))
     }
 
     /// Drop the first `n` samples (the ones we just flushed), keeping any that

@@ -100,7 +100,7 @@ fn record(state: &AppState, queue: &SampleQueue) {
         state.report_event("error", "tracker.queue_io", &err);
     }
 
-    let mut s = state.status.lock().expect("status mutex poisoned");
+    let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
     s.active = active;
     s.idle_ms = idle_ms;
     s.queue_length = queue.len();
@@ -136,7 +136,7 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
                 state.push_error("tracker.queue_io", err.clone());
                 state.report_event("error", "tracker.queue_io", &err);
             }
-            let mut s = state.status.lock().expect("status mutex poisoned");
+            let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
             s.online = true;
             s.last_error = None;
             s.last_sent_at = Some(host::now_ms());
@@ -145,7 +145,7 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
         }
         Err(err) => {
             {
-                let mut s = state.status.lock().expect("status mutex poisoned");
+                let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
                 s.online = false;
                 s.queue_length = queue.len();
             }

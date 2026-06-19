@@ -49,9 +49,22 @@ function clockodoTokenOk(token: string | null): boolean {
 }
 
 export const app = new Elysia({ prefix: "/api" })
-  .onError(({ error, set }) => {
+  .onError(async ({ error, set }) => {
     // Never leak internals; log server-side, return a terse message.
     console.error("[api] error:", error);
+    // Also surface it on the dashboard's System Health page so integration/API
+    // failures aren't buried in deploy logs. Best-effort: a logging failure (or
+    // a missing signal secret) must never mask the original error.
+    try {
+      await convex.mutation(api.events.logFromServer, {
+        secret: signalSecret(),
+        severity: "error",
+        code: "api.internal_error",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } catch {
+      /* swallow — logging is best-effort */
+    }
     set.status = 500;
     return { ok: false, error: "internal_error" };
   })

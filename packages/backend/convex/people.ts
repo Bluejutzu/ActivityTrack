@@ -9,7 +9,8 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     await requireViewer(ctx);
-    return await ctx.db.query("people").collect();
+    // Defensive cap (see devices.list): bounds the query as the roster grows.
+    return await ctx.db.query("people").take(2000);
   },
 });
 

@@ -57,6 +57,9 @@ export default defineSchema({
     personId: v.optional(v.id("people")),
     lastSeen: v.number(),
     agentVersion: v.optional(v.string()),
+    // Wall-clock time (receivedAt) of the last ACCEPTED ingest batch. Used to
+    // throttle a flood from a leaked device key; optional for pre-existing rows.
+    lastIngestAt: v.optional(v.number()),
   })
     .index("by_deviceId", ["deviceId"])
     .index("by_org_deviceId", ["orgId", "deviceId"])
