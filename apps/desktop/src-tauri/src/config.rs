@@ -1,6 +1,21 @@
 use serde::Deserialize;
 
-use crate::paths::{config_file, device_key_file};
+use crate::paths::{app_dir, config_file, device_key_file};
+
+// Values baked into the binary at build time by the release CI (via option_env!).
+// Empty strings in dev builds where the env vars are not set.
+const BUILD_CONVEX_URL: &str = match option_env!("ACTIVITYTRACK_CONVEX_URL") {
+    Some(v) => v,
+    None => "",
+};
+const BUILD_INGEST_KEY: &str = match option_env!("ACTIVITYTRACK_INGEST_KEY") {
+    Some(v) => v,
+    None => "",
+};
+const BUILD_CLERK_KEY: &str = match option_env!("ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY") {
+    Some(v) => v,
+    None => "",
+};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -37,11 +52,13 @@ struct FileConfig {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            convex_url: std::env::var("ACTIVITYTRACK_CONVEX_URL").unwrap_or_default(),
-            bootstrap_key: std::env::var("ACTIVITYTRACK_INGEST_KEY").unwrap_or_default(),
+            convex_url: std::env::var("ACTIVITYTRACK_CONVEX_URL")
+                .unwrap_or_else(|_| BUILD_CONVEX_URL.to_string()),
+            bootstrap_key: std::env::var("ACTIVITYTRACK_INGEST_KEY")
+                .unwrap_or_else(|_| BUILD_INGEST_KEY.to_string()),
             clerk_publishable_key: std::env::var("ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY")
                 .or_else(|_| std::env::var("VITE_CLERK_PUBLISHABLE_KEY"))
-                .unwrap_or_default(),
+                .unwrap_or_else(|_| BUILD_CLERK_KEY.to_string()),
             enrollment_code: std::env::var("ACTIVITYTRACK_ENROLLMENT_CODE").ok(),
             poll_interval_ms: 15_000,
             idle_threshold_ms: 60_000,
@@ -68,31 +85,48 @@ impl Config {
 pub fn load_config() -> Config {
     let mut cfg = Config::default();
 
-    if let Ok(text) = std::fs::read_to_string(config_file()) {
-        if let Ok(file) = serde_json::from_str::<FileConfig>(&text) {
-            if let Some(v) = file.convex_url {
-                cfg.convex_url = v;
+    match std::fs::read_to_string(config_file()) {
+        Ok(text) => {
+            if let Ok(file) = serde_json::from_str::<FileConfig>(&text) {
+                if let Some(v) = file.convex_url {
+                    cfg.convex_url = v;
+                }
+                if let Some(v) = file.bootstrap_key {
+                    cfg.bootstrap_key = v;
+                }
+                if let Some(v) = file.clerk_publishable_key {
+                    cfg.clerk_publishable_key = v;
+                }
+                if let Some(v) = file.enrollment_code {
+                    cfg.enrollment_code = Some(v);
+                }
+                if let Some(v) = file.poll_interval_ms {
+                    cfg.poll_interval_ms = v;
+                }
+                if let Some(v) = file.idle_threshold_ms {
+                    cfg.idle_threshold_ms = v;
+                }
+                if let Some(v) = file.flush_interval_ms {
+                    cfg.flush_interval_ms = v;
+                }
+                if let Some(v) = file.max_queue_size {
+                    cfg.max_queue_size = v;
+                }
             }
-            if let Some(v) = file.bootstrap_key {
-                cfg.bootstrap_key = v;
-            }
-            if let Some(v) = file.clerk_publishable_key {
-                cfg.clerk_publishable_key = v;
-            }
-            if let Some(v) = file.enrollment_code {
-                cfg.enrollment_code = Some(v);
-            }
-            if let Some(v) = file.poll_interval_ms {
-                cfg.poll_interval_ms = v;
-            }
-            if let Some(v) = file.idle_threshold_ms {
-                cfg.idle_threshold_ms = v;
-            }
-            if let Some(v) = file.flush_interval_ms {
-                cfg.flush_interval_ms = v;
-            }
-            if let Some(v) = file.max_queue_size {
-                cfg.max_queue_size = v;
+        }
+        Err(_) => {
+            // Config file missing — write a template so the NSIS hook failure
+            // doesn't leave the app unconfigured. Only write if we have baked
+            // values (release builds); dev builds skip this to avoid a noisy
+            // empty file.
+            if !cfg.convex_url.is_empty() || !cfg.bootstrap_key.is_empty() {
+                let _ = std::fs::create_dir_all(app_dir());
+                let json = serde_json::json!({
+                    "convexUrl": cfg.convex_url,
+                    "ingestKey": cfg.bootstrap_key,
+                    "clerkPublishableKey": cfg.clerk_publishable_key,
+                });
+                let _ = std::fs::write(config_file(), json.to_string());
             }
         }
     }

@@ -13,9 +13,10 @@
 !macro NSIS_HOOK_POSTINSTALL
   Push $0
   CreateDirectory "$COMMONAPPDATA\ActivityTrack"
-  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" +4
+  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" nsis_at_config_exists
   FileOpen $0 "$COMMONAPPDATA\ActivityTrack\config.json" w
   FileWrite $0 '{"convexUrl":"","ingestKey":"","clerkPublishableKey":""}'
   FileClose $0
+  nsis_at_config_exists:
   Pop $0
 !macroend

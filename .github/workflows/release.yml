@@ -49,10 +49,11 @@ jobs:
             '!macro NSIS_HOOK_POSTINSTALL',
             '  Push $0',
             '  CreateDirectory "$COMMONAPPDATA\ActivityTrack"',
-            '  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" +4',
+            '  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" nsis_at_config_exists',
             '  FileOpen $0 "$COMMONAPPDATA\ActivityTrack\config.json" w',
             "  FileWrite `$0 '$json'",
             '  FileClose $0',
+            '  nsis_at_config_exists:',
             '  Pop $0',
             '!macroend'
           )
@@ -85,6 +86,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          ACTIVITYTRACK_CONVEX_URL: ${{ secrets.ACTIVITYTRACK_CONVEX_URL }}
+          ACTIVITYTRACK_INGEST_KEY: ${{ secrets.ACTIVITYTRACK_INGEST_KEY }}
+          ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY: ${{ vars.ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
