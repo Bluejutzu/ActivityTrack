@@ -1,0 +1,81 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+import { FAQ_SECTIONS } from "@/lib/faq";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+/**
+ * In-app Help / FAQ. Common errors and "how do I…" questions in plain language,
+ * keyed by the same vocabulary the status tooltips use, so a non-technical admin
+ * can self-serve instead of paging the developer.
+ */
+export default function HelpPage() {
+  const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+
+  const sections = FAQ_SECTIONS.map((s) => ({
+    id: s.id,
+    entries: s.entries.filter((id) => {
+      if (!needle) return true;
+      return `${t(`faq.q.${id}`)} ${t(`faq.a.${id}`)}`
+        .toLowerCase()
+        .includes(needle);
+    }),
+  })).filter((s) => s.entries.length > 0);
+
+  return (
+    <section className="space-y-6">
+      <div>
+        <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
+          {t("help.title")}
+        </h2>
+        <p className="mt-1 text-sm text-muted">{t("help.subtitle")}</p>
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("help.search")}
+          className="pl-9"
+        />
+      </div>
+
+      {sections.length === 0 ? (
+        <Card className="border-dashed">
+          <p className="py-10 text-center text-sm text-muted">
+            {t("help.noResults")}
+          </p>
+        </Card>
+      ) : (
+        sections.map((s) => (
+          <div key={s.id} className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+              {t(`faq.section.${s.id}`)}
+            </h3>
+            <div className="space-y-2">
+              {s.entries.map((id) => (
+                <Card key={id} className="overflow-hidden">
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium text-fg transition-colors hover:bg-panel-2">
+                      {t(`faq.q.${id}`)}
+                      <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
+                    </summary>
+                    <div className="whitespace-pre-line px-4 pb-4 text-sm leading-relaxed text-muted">
+                      {t(`faq.a.${id}`)}
+                    </div>
+                  </details>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </section>
+  );
+}

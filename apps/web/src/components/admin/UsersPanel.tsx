@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
+import type { GenericId } from "convex/values";
 import { useI18n } from "@/lib/i18n";
 import type { Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,6 +34,13 @@ export function UsersPanel() {
   const users = useQuery(api.users.list);
   const setRole = useMutationWithToast(api.users.setRole);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Staged role change, applied only after confirmation — switching someone's
+  // access level shouldn't be a one-click slip.
+  const [pending, setPending] = useState<{
+    userId: GenericId<"users">;
+    email: string;
+    role: Role;
+  } | null>(null);
 
   if (users === undefined) {
     return <Skeleton className="h-64 w-full" />;
@@ -56,13 +65,13 @@ export function UsersPanel() {
                 <Select
                   value={u.role}
                   disabled={busyId === u._id}
-                  onValueChange={async (value) => {
-                    setBusyId(u._id);
-                    await setRole(
-                      { userId: u._id, role: value as Role },
-                      { success: t("users.roleUpdated") },
-                    );
-                    setBusyId(null);
+                  onValueChange={(value) => {
+                    if (value === u.role) return;
+                    setPending({
+                      userId: u._id,
+                      email: u.email ?? "",
+                      role: value as Role,
+                    });
                   }}
                 >
                   <SelectTrigger className="w-full min-w-[9rem]">
@@ -81,6 +90,32 @@ export function UsersPanel() {
           ))}
         </TableBody>
       </Table>
+
+      <ConfirmDialog
+        open={pending !== null}
+        heading={t("users.confirmRole")}
+        body={
+          pending
+            ? t("users.confirmRoleBody", {
+                email: pending.email,
+                role: t(`role.${pending.role}`),
+              })
+            : undefined
+        }
+        confirmLabel={t("users.confirmRoleConfirm")}
+        onConfirm={async () => {
+          if (pending) {
+            setBusyId(pending.userId);
+            await setRole(
+              { userId: pending.userId, role: pending.role },
+              { success: t("users.roleUpdated") },
+            );
+            setBusyId(null);
+          }
+          setPending(null);
+        }}
+        onCancel={() => setPending(null)}
+      />
     </Card>
   );
 }

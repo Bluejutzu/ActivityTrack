@@ -354,4 +354,96 @@ export const en: Dict = {
   "auth.error.domain_not_allowed":
     "Your email domain isn't allowed. Contact your administrator.",
   "auth.error.retry": "Try again",
+
+  // Help / FAQ, status tooltips, setup checklist, guardrail confirms.
+  "nav.help": "Help",
+
+  "help.title": "Help & FAQ",
+  "help.subtitle": "Common questions and fixes — search or browse by topic.",
+  "help.search": "Search help…",
+  "help.noResults": "No matching help articles.",
+  "help.deviceStatus.pending":
+    "Waiting for an admin to approve this device before its data is counted.",
+  "help.deviceStatus.active": "Approved and reporting normally.",
+  "help.deviceStatus.disabled":
+    "Turned off by an admin — it no longer reports or counts.",
+
+  "faq.section.access": "Sign-in & access",
+  "faq.section.tracker": "The desktop tracker",
+  "faq.section.integrations": "Integrations",
+  "faq.section.general": "General",
+
+  "faq.q.signin_denied": "Someone can't sign in to the dashboard",
+  "faq.a.signin_denied":
+    "Access is decided by email. Add their email domain under Settings → Access, or add their exact address to the permanent admins (ACTIVITYTRACK_ADMIN_EMAILS in Convex). They get in on their next sign-in attempt.",
+  "faq.q.domain": "How do I let a whole company domain sign in?",
+  "faq.a.domain":
+    "Settings → Access → add the domain (e.g. example.com). Everyone with that email domain can sign in as a viewer; promote individuals under Settings → Users.",
+  "faq.q.roles": "What can each role do?",
+  "faq.a.roles":
+    "Viewer: read-only dashboards. Manager: also add/edit people and link devices. IT admin: everything, including users, access, device approval and settings.",
+  "faq.q.add_admin": "How do I make someone a permanent admin?",
+  "faq.a.add_admin":
+    "Permanent admins are pinned in the ACTIVITYTRACK_ADMIN_EMAILS Convex env var and can never be locked out. Set at least one boss's email there. Anyone else can be promoted under Settings → Users.",
+  "faq.q.not_reporting": "A computer isn't showing up / not reporting",
+  "faq.a.not_reporting":
+    "Check: (1) the tracker is installed and running (system tray), (2) the device appears under Devices and is Approved (pending devices don't count), (3) the computer has internet. New installs appear as 'pending' until you approve them.",
+  "faq.q.offline": "Someone shows as offline but they're at their desk",
+  "faq.a.offline":
+    "A device goes 'offline' after it misses heartbeats for the offline window (Settings → Configuration). Causes: the PC is asleep, off the network, or the tracker was closed. It clears itself once the tracker reports again.",
+  "faq.q.enroll_failed": "The tracker says enrollment failed",
+  "faq.a.enroll_failed":
+    "The one-time enrollment code is wrong, already used, or expired. Create a fresh code under Devices → enrollment codes and put it in the device's config (or reinstall with a current code).",
+  "faq.q.debug_password": "What is the tracker debug password?",
+  "faq.a.debug_password":
+    "It unlocks the tracker's local status/diagnostics window on a PC. Set or change it under Settings → Configuration. It never unlocks the dashboard — only the on-device debug view.",
+  "faq.q.integration_down":
+    "An integration (Genesys / Clockodo) shows as unavailable",
+  "faq.a.integration_down":
+    "Usually expired or missing API credentials, or the provider is unreachable. Check the integration's keys in the Convex environment variables. The dashboard keeps working from workstation activity alone while an integration is down.",
+  "faq.q.clockodo_setup": "How do I connect the Clockodo webhook?",
+  "faq.a.clockodo_setup":
+    "Point Clockodo's webhook at /api/webhooks/clockodo. On first save Clockodo sends a validation secret, which is logged once in the deploy logs — paste that value into Clockodo's 'Token' field to finish.",
+  "faq.q.privacy": "What exactly is recorded?",
+  "faq.a.privacy":
+    "Only activity timing — whether the PC is active or idle, and for how long. No screenshots, no keystrokes, no clipboard, no file contents. It detects input timing, not input data.",
+  "faq.q.retention": "How long is data kept?",
+  "faq.a.retention":
+    "Raw samples are pruned after the retention window (Settings → Configuration, default 90 days). Daily totals are kept indefinitely, so historical reports survive even after raw samples are deleted.",
+  "faq.q.add_person": "How do I add a coworker and link their computer?",
+  "faq.a.add_person":
+    "People → add the person. Then Devices → open the device and link it to that person. After linking, the dashboard shows their name instead of the hostname.",
+  "faq.q.approve_device": "A new device is stuck on 'pending'",
+  "faq.a.approve_device":
+    "New installs auto-register as pending so nothing is tracked without your say-so. Open Devices and approve it; its activity starts counting from approval.",
+
+  "health.fix.tracker.send_failed":
+    "The tracker couldn't reach the backend. Usually a temporary network drop — it retries automatically and keeps the data. If it persists, check that PC's internet and the Convex URL.",
+  "health.fix.tracker.queue_io":
+    "The tracker couldn't write its local buffer (disk full or a locked ProgramData folder). Check free disk space on that PC.",
+  "health.fix.ingest.bad_tz_offset":
+    "A device reported an impossible timezone; the backend clamped it. Harmless unless it repeats — then check that PC's clock/timezone settings.",
+  "health.fix.enroll.code_invalid":
+    "A tracker tried to enroll with a bad or expired code. Issue a fresh enrollment code under Devices.",
+  "health.fix.api.internal_error":
+    "The dashboard's server hit an unexpected error (often a missing/invalid integration credential or secret). Check the integration settings; details are in the deploy logs.",
+  "health.fix.unknown":
+    "See the technical detail below, or the Help page. If it keeps happening, contact your administrator.",
+
+  "setup.title": "Finish setting up",
+  "setup.subtitle": "A few steps to get ActivityTrack fully running.",
+  "setup.remaining": "{count} left",
+  "setup.item.access": "Configure who can sign in (admins or allowed domains)",
+  "setup.item.approve": "Approve at least one device",
+  "setup.item.people": "Add the people you're tracking",
+  "setup.item.link": "Link a device to a person",
+  "setup.item.debugpw": "Set the tracker debug password",
+
+  "users.confirmRole": "Change this user's role?",
+  "users.confirmRoleBody":
+    "{email} will become {role}. This changes what they can see and do immediately.",
+  "users.confirmRoleConfirm": "Change role",
+
+  "error.user.last_admin":
+    "You can't demote the last IT admin — promote another admin first.",
 };
