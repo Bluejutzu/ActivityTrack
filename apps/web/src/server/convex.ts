@@ -19,6 +19,15 @@ if (!url) {
     "[server] NEXT_PUBLIC_CONVEX_URL is not set — signal ingestion will fail.",
   );
 }
+if (!process.env.ACTIVITYTRACK_SIGNAL_SECRET) {
+  // Same boot-time surfacing: previously this only blew up on the first signal
+  // push (deep in a request), which is easy to miss. Warn at module load so a
+  // missing secret is obvious in startup logs. `signalSecret()` still hard-throws
+  // on use, so requests fail closed — they never run unauthenticated.
+  console.warn(
+    "[server] ACTIVITYTRACK_SIGNAL_SECRET is not set — signal ingestion will be rejected.",
+  );
+}
 
 export const convex = new ConvexHttpClient(url ?? "");
 

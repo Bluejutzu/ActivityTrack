@@ -133,6 +133,16 @@ export default function PeoplePage() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {people.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={canEdit ? 7 : 6}
+                  className="py-10 text-center text-sm text-muted"
+                >
+                  {t("people.empty")}
+                </TableCell>
+              </TableRow>
+            )}
             {people.map((p) => (
               <TableRow key={p._id}>
                 <TableCell className="text-fg">{p.name}</TableCell>

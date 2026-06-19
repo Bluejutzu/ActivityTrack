@@ -23,7 +23,9 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     await requireViewer(ctx);
-    const devices = await ctx.db.query("devices").collect();
+    // Defensive cap: fine for the current ~10-device scale, but bounds the query
+    // (and the dashboard payload) if the fleet ever grows unexpectedly large.
+    const devices = await ctx.db.query("devices").take(2000);
 
     // Batch-load the linked people once instead of one get() per device.
     const personIds = [

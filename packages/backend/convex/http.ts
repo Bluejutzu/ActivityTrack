@@ -7,7 +7,12 @@ import {
   type ActivitySample,
 } from "@activitytrack/shared";
 import { z } from "zod";
-import { verifyPassword, generateDeviceKey, hashDeviceKey } from "./crypto";
+import {
+  verifyPassword,
+  generateDeviceKey,
+  hashDeviceKey,
+  safeEqual,
+} from "./crypto";
 import { DEBUG_PASSWORD_SETTING_KEY } from "./settings";
 
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -110,6 +115,15 @@ http.route({
         samples: accepted,
       });
       inserted = result.inserted;
+      // Per-device rate limit tripped and nothing was stored: tell the agent to
+      // back off. It keeps the batch and retries on the next flush, so no
+      // legitimate data is lost — only a flood is shed.
+      if (result.throttled && inserted === 0) {
+        return new Response("rate limited", {
+          status: 429,
+          headers: { "retry-after": "30" },
+        });
+      }
     }
 
     return Response.json({
@@ -144,7 +158,13 @@ http.route({
     // real signal (someone with a build using a bad/expired code).
     const expected = process.env.ACTIVITYTRACK_INGEST_KEY;
     const authHeader = request.headers.get("authorization");
-    if (!expected || authHeader !== `Bearer ${expected}`) {
+    const presented = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : "";
+    // Constant-time compare for consistency with the device-key path (which uses
+    // safeEqual). The key is high-entropy so the timing risk is marginal, but the
+    // two auth paths should not differ in this.
+    if (!expected || !safeEqual(presented, expected)) {
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -275,7 +295,7 @@ http.route({
     // Accept device key or bootstrap key (bootstrap allows local dev before enrollment)
     const bootstrapKey = process.env.ACTIVITYTRACK_INGEST_KEY;
     let authorized = false;
-    if (bootstrapKey && rawKey === bootstrapKey) {
+    if (bootstrapKey && safeEqual(rawKey, bootstrapKey)) {
       authorized = true;
     } else {
       const keyHash = await hashDeviceKey(rawKey);

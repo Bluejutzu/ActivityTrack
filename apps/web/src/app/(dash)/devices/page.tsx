@@ -9,6 +9,7 @@ import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatRelativeTime, roleAtLeast, type Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Collapse } from "@/components/motion/Collapse";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { MOTION } from "@/components/motion/motion-tokens";
@@ -211,6 +212,7 @@ function SlotCard({
 }) {
   const { t, lang } = useI18n();
   const revoke = useMutationWithToast(api.devices.revokeSlot);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const status = slotStatus(slot);
   const isActive = status === "active";
 
@@ -247,20 +249,27 @@ function SlotCard({
               variant="ghost"
               size="sm"
               className="text-danger hover:bg-danger/10 hover:text-danger"
-              onClick={() =>
-                void revoke(
-                  {
-                    slotId: slot._id as Parameters<typeof revoke>[0]["slotId"],
-                  },
-                  { success: t("devices.slotRevoked") },
-                )
-              }
+              onClick={() => setConfirmOpen(true)}
             >
               {t("devices.slots.revoke")}
             </Button>
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        heading={t("devices.slots.confirmRevoke")}
+        confirmLabel={t("devices.slots.revoke")}
+        onConfirm={async () => {
+          await revoke(
+            { slotId: slot._id as Parameters<typeof revoke>[0]["slotId"] },
+            { success: t("devices.slotRevoked") },
+          );
+          setConfirmOpen(false);
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Card>
   );
 }

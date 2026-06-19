@@ -82,7 +82,7 @@ impl AppState {
     pub fn device_key(&self) -> Option<String> {
         self.device_key
             .lock()
-            .expect("device_key mutex poisoned")
+            .unwrap_or_else(|e| e.into_inner())
             .clone()
     }
 
@@ -91,7 +91,7 @@ impl AppState {
     /// is surfaced as a (reportable) warning rather than lost.
     pub fn set_device_key(&self, key: String) {
         {
-            let mut k = self.device_key.lock().expect("device_key mutex poisoned");
+            let mut k = self.device_key.lock().unwrap_or_else(|e| e.into_inner());
             *k = Some(key.clone());
         }
         let _ = std::fs::create_dir_all(app_dir());
@@ -119,7 +119,8 @@ impl AppState {
     /// most recent message stays in `last_error`, and a bounded history is kept
     /// in `recent_errors`.
     pub fn push_error(&self, code: &str, message: String) {
-        let mut s = self.status.lock().expect("status mutex poisoned");
+        crate::log::write("error", code, &message);
+        let mut s = self.status.lock().unwrap_or_else(|e| e.into_inner());
         s.last_error = Some(message.clone());
         s.recent_errors.push_front(UiError {
             at: host::now_ms(),
@@ -137,12 +138,14 @@ impl AppState {
     /// recurring `send_failed` can't muffle a distinct `queue_io`. Failures here
     /// are intentionally ignored — reporting must never cascade.
     pub fn report_event(&self, severity: &str, code: &str, message: &str) {
+        // Persist locally regardless of whether we can reach the backend below.
+        crate::log::write(severity, code, message);
         let device_key = match self.device_key() {
             Some(k) if !self.config.convex_url.is_empty() => k,
             _ => return,
         };
         {
-            let mut last = self.last_report.lock().expect("report mutex poisoned");
+            let mut last = self.last_report.lock().unwrap_or_else(|e| e.into_inner());
             let now = Instant::now();
             if let Some(prev) = last.get(code) {
                 if now.duration_since(*prev) < BACKEND_REPORT_INTERVAL {
@@ -162,7 +165,7 @@ impl AppState {
     }
 
     pub fn snapshot(&self) -> AgentStatus {
-        let s = self.status.lock().expect("status mutex poisoned");
+        let s = self.status.lock().unwrap_or_else(|e| e.into_inner());
         AgentStatus {
             device_id: self.device_id.clone(),
             hostname: self.hostname.clone(),

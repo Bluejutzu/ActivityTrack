@@ -28,6 +28,11 @@ const NOMINAL_FIRST_MS = 15_000;
 // this is a device bug; we clamp to UTC (0) to avoid attributing stats to a
 // nonsensical date.
 const MAX_TZ_OFFSET_MINUTES = 840;
+// Minimum spacing between accepted ingest batches per device. The agent flushes
+// every ~30s, so a legitimate device never approaches this; it only bounds
+// write-amplification from a leaked/replayed device key. Generous on purpose —
+// tune down if you tighten the agent's flush cadence. (Flagged default.)
+const MIN_INGEST_INTERVAL_MS = 3_000;
 
 const sampleValidator = v.object({
   deviceId: v.string(),
@@ -68,12 +73,24 @@ export const recordSamples = internalMutation({
     }
 
     let inserted = 0;
+    let throttled = false;
     for (const [deviceId, deviceSamples] of byDevice) {
       deviceSamples.sort((a, b) => a.capturedAt - b.capturedAt);
 
       let device = await getDevice(ctx, deviceId);
       // Disabled devices are ignored entirely (no rows written).
       if (device && device.status === "disabled") continue;
+
+      // Per-device rate limit: drop (and signal 429 to the caller, so the agent
+      // keeps the batch and retries) when batches arrive faster than a real
+      // agent ever would. No row is written, so a flood can't amplify writes.
+      if (
+        device?.lastIngestAt !== undefined &&
+        receivedAt - device.lastIngestAt < MIN_INGEST_INTERVAL_MS
+      ) {
+        throttled = true;
+        continue;
+      }
 
       // Running cursor for gap attribution within this batch.
       let prevCapturedAt = device?.lastSeen;
@@ -115,6 +132,7 @@ export const recordSamples = internalMutation({
           agentVersion: newest.agentVersion,
           // A previously-pending device stays pending until an admin approves.
           status: device.status,
+          lastIngestAt: receivedAt,
         });
       } else {
         await ctx.db.insert("devices", {
@@ -124,11 +142,12 @@ export const recordSamples = internalMutation({
           status: "pending",
           lastSeen: newest.capturedAt,
           agentVersion: newest.agentVersion,
+          lastIngestAt: receivedAt,
         });
       }
     }
 
-    return { inserted };
+    return { inserted, throttled };
   },
 });
 
@@ -149,14 +168,51 @@ async function accrueDaily(
   gapMs: number,
   inactivityMs: number,
 ): Promise<void> {
-  const day = localDay(sample.capturedAt, sample.tzOffsetMinutes);
-  const seconds = gapMs / 1000;
   // Count the interval as active when the sample's idle time is under the
-  // configured inactivity threshold; otherwise idle.
+  // configured inactivity threshold; otherwise idle. The classification applies
+  // to the whole attributed interval [start, end].
   const isActive = sample.idleMs < inactivityMs;
-  const activeDelta = isActive ? seconds : 0;
-  const idleDelta = isActive ? 0 : seconds;
+  const tz = sample.tzOffsetMinutes;
+  const end = sample.capturedAt;
+  const start = end - gapMs;
 
+  // Split [start, end] at local-day boundaries so a gap that straddles local
+  // midnight credits each day its real share. Previously the entire gap landed
+  // on the end day, over-counting that day and under-counting the previous one
+  // for batches that crossed midnight. The gap is capped at MAX_ATTRIBUTION_MS
+  // (2 min), so this is at most a two-way split in practice.
+  let segStart = start;
+  while (segStart < end) {
+    const day = localDay(segStart, tz);
+    // Epoch ms of the start of the NEXT local day after `day`.
+    const dayStartLocalMs = Date.parse(`${day}T00:00:00.000Z`);
+    const nextDayEpoch = dayStartLocalMs + 24 * 60 * 60_000 + tz * 60_000;
+    const segEnd = Math.min(end, nextDayEpoch);
+    const seconds = (segEnd - segStart) / 1000;
+    if (seconds > 0) {
+      await accrueDay(
+        ctx,
+        deviceId,
+        day,
+        isActive ? seconds : 0,
+        isActive ? 0 : seconds,
+        segStart,
+        segEnd,
+      );
+    }
+    segStart = segEnd;
+  }
+}
+
+async function accrueDay(
+  ctx: MutationCtx,
+  deviceId: string,
+  day: string,
+  activeDelta: number,
+  idleDelta: number,
+  firstSeen: number,
+  lastSeen: number,
+): Promise<void> {
   const existing = await ctx.db
     .query("dailyStats")
     .withIndex("by_device_day", (q) =>
@@ -168,8 +224,8 @@ async function accrueDaily(
     await ctx.db.patch(existing._id, {
       activeSeconds: existing.activeSeconds + activeDelta,
       idleSeconds: existing.idleSeconds + idleDelta,
-      firstSeen: Math.min(existing.firstSeen, sample.capturedAt),
-      lastSeen: Math.max(existing.lastSeen, sample.capturedAt),
+      firstSeen: Math.min(existing.firstSeen, firstSeen),
+      lastSeen: Math.max(existing.lastSeen, lastSeen),
     });
   } else {
     await ctx.db.insert("dailyStats", {
@@ -177,8 +233,8 @@ async function accrueDaily(
       day,
       activeSeconds: activeDelta,
       idleSeconds: idleDelta,
-      firstSeen: sample.capturedAt,
-      lastSeen: sample.capturedAt,
+      firstSeen,
+      lastSeen,
     });
   }
 }

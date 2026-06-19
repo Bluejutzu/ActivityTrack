@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import { requireViewer, requireAdmin } from "./rbac";
 import { writeAudit } from "./audit";
 import { appError } from "./errors";
+import { safeEqual } from "./crypto";
 
 /**
  * Central operational event log. Every surface reports here:
@@ -257,6 +258,36 @@ export const logFromDashboard = mutation({
       severity: "error",
       code: "dashboard.crash",
       source: "dashboard",
+      message: message.slice(0, 2000),
+      context: context?.slice(0, 2000),
+    });
+  },
+});
+
+/**
+ * Server-to-server event logging from the Next.js API layer (Elysia onError,
+ * webhook handlers). That layer has no Clerk identity — it authenticates with
+ * the shared signal secret like `state.pushSignal` — so it can't use
+ * `logFromDashboard`. Lets integration/API failures show up on the System Health
+ * page instead of being buried in deploy logs.
+ */
+export const logFromServer = mutation({
+  args: {
+    secret: v.string(),
+    severity: severityValidator,
+    code: v.string(),
+    message: v.string(),
+    context: v.optional(v.string()),
+  },
+  handler: async (ctx, { secret, severity, code, message, context }) => {
+    const expected = process.env.ACTIVITYTRACK_SIGNAL_SECRET;
+    if (!expected || !safeEqual(secret, expected)) {
+      throw appError("auth.forbidden", "Invalid signal secret");
+    }
+    await logEvent(ctx, {
+      severity,
+      code,
+      source: "backend",
       message: message.slice(0, 2000),
       context: context?.slice(0, 2000),
     });

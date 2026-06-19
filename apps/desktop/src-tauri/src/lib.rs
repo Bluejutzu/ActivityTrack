@@ -3,6 +3,7 @@ mod config;
 mod device;
 mod host;
 mod idle;
+mod log;
 mod model;
 mod paths;
 mod queue;
@@ -88,6 +89,13 @@ pub fn run() {
     tracker::start(state.clone());
 
     tauri::Builder::default()
+        // Must be the FIRST plugin: a second launch (e.g. another user session, or
+        // a stray double-start) hands its args to this callback and exits, instead
+        // of running a duplicate tracker against the same device-id — which would
+        // double-count samples. We just surface the already-running window.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_main(app);
+        }))
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
@@ -142,6 +150,18 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let _ = check_for_update(handle).await;
+            });
+
+            // Re-check periodically: this is a tray-resident app that can stay up
+            // for days/weeks, so a startup-only check would leave long-running
+            // machines stuck on an old build. Runs on its own thread and blocks on
+            // the updater future so we don't depend on a specific async timer.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(6 * 60 * 60));
+                tauri::async_runtime::block_on(async {
+                    let _ = check_for_update(handle.clone()).await;
+                });
             });
 
             Ok(())

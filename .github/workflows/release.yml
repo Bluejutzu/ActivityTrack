@@ -34,6 +34,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --filter @activitytrack/desktop...
 
+      # Fail early if the three desktop version files disagree, or don't match
+      # the pushed tag — a desync makes the updater's latest.json lie.
+      - name: Check version sync
+        run: node scripts/check-version-sync.js ${{ github.ref_name }}
+        shell: bash
+
       # Bake the real config values into the NSIS hook at build time.
       # The hook writes %ProgramData%\ActivityTrack\config.json on first install
       # using FileWrite, so there's no dependency on where Tauri places resources.
