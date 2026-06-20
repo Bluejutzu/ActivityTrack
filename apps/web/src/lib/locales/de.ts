@@ -365,4 +365,101 @@ export const de: Dict = {
   "auth.error.domain_not_allowed":
     "Ihre E-Mail-Domain ist nicht zugelassen. Wenden Sie sich an Ihren Administrator.",
   "auth.error.retry": "Erneut versuchen",
+
+  // Hilfe / FAQ, Status-Tooltips, Einrichtungs-Checkliste, Schutzabfragen.
+  "nav.help": "Hilfe",
+
+  "help.title": "Hilfe & FAQ",
+  "help.subtitle":
+    "Häufige Fragen und Lösungen — suchen oder nach Thema stöbern.",
+  "help.search": "Hilfe durchsuchen…",
+  "help.noResults": "Keine passenden Hilfeartikel.",
+  "help.deviceStatus.pending":
+    "Wartet auf Freigabe durch eine:n Admin, bevor die Daten gezählt werden.",
+  "help.deviceStatus.active": "Freigegeben und meldet normal.",
+  "help.deviceStatus.disabled":
+    "Von einer:m Admin deaktiviert — meldet und zählt nicht mehr.",
+
+  "faq.section.access": "Anmeldung & Zugriff",
+  "faq.section.tracker": "Der Desktop-Tracker",
+  "faq.section.integrations": "Integrationen",
+  "faq.section.general": "Allgemein",
+
+  "faq.q.signin_denied": "Jemand kann sich nicht am Dashboard anmelden",
+  "faq.a.signin_denied":
+    "Der Zugriff wird per E-Mail entschieden. Fügen Sie die E-Mail-Domain unter Einstellungen → Zugriff hinzu, oder die genaue Adresse zu den dauerhaften Admins (ACTIVITYTRACK_ADMIN_EMAILS in Convex). Beim nächsten Anmeldeversuch klappt es.",
+  "faq.q.domain": "Wie lasse ich eine ganze Firmendomain zu?",
+  "faq.a.domain":
+    "Einstellungen → Zugriff → Domain hinzufügen (z. B. example.com). Alle mit dieser E-Mail-Domain können sich als Betrachter anmelden; einzelne Personen unter Einstellungen → Benutzer hochstufen.",
+  "faq.q.roles": "Was darf welche Rolle?",
+  "faq.a.roles":
+    "Betrachter: nur lesende Dashboards. Manager: zusätzlich Personen anlegen/bearbeiten und Geräte zuordnen. IT-Admin: alles, inklusive Benutzer, Zugriff, Gerätefreigabe und Einstellungen.",
+  "faq.q.add_admin": "Wie mache ich jemanden zum dauerhaften Admin?",
+  "faq.a.add_admin":
+    "Dauerhafte Admins stehen in der Convex-Umgebungsvariable ACTIVITYTRACK_ADMIN_EMAILS und können nie ausgesperrt werden. Hinterlegen Sie mindestens eine Chef-E-Mail. Alle anderen lassen sich unter Einstellungen → Benutzer hochstufen.",
+  "faq.q.not_reporting": "Ein Computer taucht nicht auf / meldet nicht",
+  "faq.a.not_reporting":
+    "Prüfen: (1) Tracker installiert und läuft (Infobereich), (2) Gerät erscheint unter Geräte und ist freigegeben (ausstehende Geräte zählen nicht), (3) der Computer hat Internet. Neue Installationen erscheinen als „ausstehend“, bis Sie sie freigeben.",
+  "faq.q.offline": "Jemand wird als offline angezeigt, sitzt aber am Platz",
+  "faq.a.offline":
+    "Ein Gerät gilt als „offline“, wenn es länger als das Offline-Zeitfenster (Einstellungen → Konfiguration) keine Signale sendet. Ursachen: PC im Ruhezustand, nicht im Netzwerk, oder Tracker geschlossen. Es korrigiert sich, sobald der Tracker wieder meldet.",
+  "faq.q.enroll_failed":
+    "Der Tracker meldet, dass die Registrierung fehlgeschlagen ist",
+  "faq.a.enroll_failed":
+    "Der einmalige Registrierungscode ist falsch, bereits benutzt oder abgelaufen. Erstellen Sie unter Geräte → Registrierungscodes einen neuen und tragen Sie ihn in die Gerätekonfiguration ein (oder neu installieren mit gültigem Code).",
+  "faq.q.debug_password": "Was ist das Tracker-Debug-Passwort?",
+  "faq.a.debug_password":
+    "Es entsperrt am PC das lokale Status-/Diagnosefenster des Trackers. Setzen oder ändern unter Einstellungen → Konfiguration. Es entsperrt nie das Dashboard — nur die Diagnoseansicht auf dem Gerät.",
+  "faq.q.integration_down":
+    "Eine Integration (Genesys / Clockodo) wird als nicht verfügbar angezeigt",
+  "faq.a.integration_down":
+    "Meist abgelaufene oder fehlende API-Zugangsdaten, oder der Anbieter ist nicht erreichbar. Prüfen Sie die Schlüssel in den Convex-Umgebungsvariablen. Das Dashboard arbeitet währenddessen allein mit der Arbeitsplatz-Aktivität weiter.",
+  "faq.q.clockodo_setup": "Wie verbinde ich den Clockodo-Webhook?",
+  "faq.a.clockodo_setup":
+    "Richten Sie den Clockodo-Webhook auf /api/webhooks/clockodo. Beim ersten Speichern sendet Clockodo ein Validierungs-Secret, das einmalig in den Deploy-Logs erscheint — tragen Sie diesen Wert in das Feld „Token“ bei Clockodo ein.",
+  "faq.q.privacy": "Was genau wird aufgezeichnet?",
+  "faq.a.privacy":
+    "Nur die Aktivitätszeit — ob der PC aktiv oder untätig ist und wie lange. Keine Screenshots, keine Tastenanschläge, keine Zwischenablage, keine Dateiinhalte. Erfasst wird die Eingabe-Zeit, nicht der Eingabe-Inhalt.",
+  "faq.q.retention": "Wie lange werden Daten gespeichert?",
+  "faq.a.retention":
+    "Rohdaten werden nach dem Aufbewahrungszeitraum gelöscht (Einstellungen → Konfiguration, Standard 90 Tage). Tagessummen bleiben dauerhaft erhalten, sodass Verlaufsberichte auch nach dem Löschen der Rohdaten bestehen.",
+  "faq.q.add_person":
+    "Wie füge ich eine:n Mitarbeiter:in hinzu und verknüpfe den Computer?",
+  "faq.a.add_person":
+    "Personen → Person hinzufügen. Dann Geräte → Gerät öffnen und mit der Person verknüpfen. Nach dem Verknüpfen zeigt das Dashboard den Namen statt des Hostnamens.",
+  "faq.q.approve_device": "Ein neues Gerät hängt auf „ausstehend“",
+  "faq.a.approve_device":
+    "Neue Installationen registrieren sich automatisch als „ausstehend“, damit ohne Ihre Zustimmung nichts erfasst wird. Öffnen Sie Geräte und geben Sie es frei; ab der Freigabe wird die Aktivität gezählt.",
+
+  "health.fix.tracker.send_failed":
+    "Der Tracker konnte das Backend nicht erreichen. Meist eine kurze Netzwerkstörung — er versucht es automatisch erneut und behält die Daten. Hält es an, Internet des PCs und die Convex-URL prüfen.",
+  "health.fix.tracker.queue_io":
+    "Der Tracker konnte seinen lokalen Puffer nicht schreiben (Festplatte voll oder gesperrter ProgramData-Ordner). Freien Speicher auf dem PC prüfen.",
+  "health.fix.ingest.bad_tz_offset":
+    "Ein Gerät meldete eine unmögliche Zeitzone; das Backend hat sie korrigiert. Harmlos, außer es wiederholt sich — dann Uhrzeit/Zeitzone des PCs prüfen.",
+  "health.fix.enroll.code_invalid":
+    "Ein Tracker wollte sich mit einem ungültigen oder abgelaufenen Code registrieren. Erstellen Sie unter Geräte einen neuen Registrierungscode.",
+  "health.fix.api.internal_error":
+    "Der Server des Dashboards hatte einen unerwarteten Fehler (oft fehlende/ungültige Integrationsdaten oder ein Secret). Prüfen Sie die Integrationseinstellungen; Details stehen in den Deploy-Logs.",
+  "health.fix.unknown":
+    "Siehe die technischen Details unten oder die Hilfeseite. Wenn es weiter auftritt, wenden Sie sich an Ihre:n Administrator:in.",
+
+  "setup.title": "Einrichtung abschließen",
+  "setup.subtitle":
+    "Noch ein paar Schritte, bis ActivityTrack vollständig läuft.",
+  "setup.remaining": "{count} offen",
+  "setup.item.access":
+    "Festlegen, wer sich anmelden darf (Admins oder erlaubte Domains)",
+  "setup.item.approve": "Mindestens ein Gerät freigeben",
+  "setup.item.people": "Die erfassten Personen hinzufügen",
+  "setup.item.link": "Ein Gerät mit einer Person verknüpfen",
+  "setup.item.debugpw": "Das Tracker-Debug-Passwort setzen",
+
+  "users.confirmRole": "Rolle dieser Person ändern?",
+  "users.confirmRoleBody":
+    "{email} wird zu {role}. Das ändert sofort, was die Person sehen und tun kann.",
+  "users.confirmRoleConfirm": "Rolle ändern",
+
+  "error.user.last_admin":
+    "Der letzte IT-Admin kann nicht herabgestuft werden — stufen Sie zuerst eine andere Person hoch.",
 };

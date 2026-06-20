@@ -8,6 +8,7 @@ import { UserButton } from "@clerk/nextjs";
 import {
   Activity,
   CalendarRange,
+  HelpCircle,
   LayoutDashboard,
   Menu,
   MonitorSmartphone,
@@ -66,6 +67,7 @@ const NAV: NavItem[] = [
     minRole: "it_admin",
     icon: Settings,
   },
+  { href: "/help", labelKey: "nav.help", minRole: "viewer", icon: HelpCircle },
 ];
 
 function NavLinks({

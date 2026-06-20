@@ -14,6 +14,7 @@ import {
 } from "@/lib/format";
 import { SEVERITY_DOT_CLASS as SEV_DOT, type Severity } from "@/lib/ui";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { InfoTip } from "@/components/InfoTip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,16 @@ function friendly(
   const key = `health.friendly.${code}`;
   const msg = t(key);
   return msg === key ? t("health.friendly.unknown") : msg;
+}
+
+/** Plain-language "what to do about it" for an event code (tooltip). */
+function fixFor(
+  t: (k: string, v?: Record<string, string | number>) => string,
+  code: string,
+): string {
+  const key = `health.fix.${code}`;
+  const msg = t(key);
+  return msg === key ? t("health.fix.unknown") : msg;
 }
 
 /** System health: device connectivity + reported issues. Settings hub tab. */
@@ -173,7 +184,10 @@ export function SystemPanel() {
                       className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEV_DOT[issue.severity]}`}
                     />
                     <div className="flex-1">
-                      <p className="text-sm text-fg">{friendly(t, issue.code)}</p>
+                      <p className="flex items-center gap-1.5 text-sm text-fg">
+                        {friendly(t, issue.code)}
+                        <InfoTip text={fixFor(t, issue.code)} />
+                      </p>
                       <p className="mt-0.5 text-xs text-muted">
                         {issue.hostname ? `${issue.hostname} · ` : ""}
                         {issue.count > 1 &&

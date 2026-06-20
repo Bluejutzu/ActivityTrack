@@ -123,6 +123,19 @@ export const setRole = mutation({
     }
     const target = await ctx.db.get(userId);
     if (!target) throw appError("notFound.user", "User not found");
+    // Lockout guard: never demote the last it_admin. Env-pinned admins are
+    // restored on next sign-in, but a deploy relying only on dashboard roles
+    // could otherwise be left with zero admins by demoting the other one.
+    if (target.role === "it_admin" && role !== "it_admin") {
+      const admins = await ctx.db.query("users").take(2000);
+      const adminCount = admins.filter((u) => u.role === "it_admin").length;
+      if (adminCount <= 1) {
+        throw appError(
+          "user.last_admin",
+          "Cannot demote the last it_admin — promote another admin first",
+        );
+      }
+    }
     await ctx.db.patch(userId, { role });
     await writeAudit(
       ctx,

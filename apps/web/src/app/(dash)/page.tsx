@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { QueryState } from "@/components/QueryState";
+import { SetupChecklist } from "@/components/SetupChecklist";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { HealthBanner, StateBadge } from "@/components/state/StateBits";
 
@@ -61,7 +62,9 @@ export default function OverviewPage() {
   const team = useQuery(api.stats.teamOverview);
 
   return (
-    <QueryState
+    <div className="space-y-5">
+      <SetupChecklist />
+      <QueryState
       data={team}
       loading={
         <div className="space-y-5">
@@ -162,6 +165,7 @@ export default function OverviewPage() {
           </Stagger>
         </div>
       )}
-    </QueryState>
+      </QueryState>
+    </div>
   );
 }

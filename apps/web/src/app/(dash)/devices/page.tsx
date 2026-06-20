@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatRelativeTime, roleAtLeast, type Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { InfoTip } from "@/components/InfoTip";
 import { Collapse } from "@/components/motion/Collapse";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { MOTION } from "@/components/motion/motion-tokens";
@@ -427,9 +428,11 @@ export default function DevicesPage() {
                       {d.lastWindowsUser}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={DEVICE_VARIANT[d.status] ?? "muted"}>
-                        {statusLabel[d.status]}
-                      </Badge>
+                      <InfoTip text={t(`help.deviceStatus.${d.status}`)}>
+                        <Badge variant={DEVICE_VARIANT[d.status] ?? "muted"}>
+                          {statusLabel[d.status]}
+                        </Badge>
+                      </InfoTip>
                     </TableCell>
                     <TableCell>
                       {isManager ? (
