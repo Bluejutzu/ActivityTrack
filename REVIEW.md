@@ -114,20 +114,21 @@ inferred from the repo.
 - **D5 — Startup-only update check** · *nice-to-have · owner? no* · **[fixed]**
   A tray app stays up for days; added a 6-hourly re-check so long-running
   machines don't stall on an old build.
-- **D6 — Autostart is per-user (HKCU)** · *important · owner? yes (decision)* · **[flagged]**
-  Autostart works on Windows, but via the **HKCU** Run key, so on a multi-user
-  machine it only auto-starts for the user who first ran it; the originally
-  planned **per-machine logon scheduled task** is *not* implemented (the NSIS hook
-  only writes `config.json`). **Decision:** keep per-user RunKey (simplest, and
-  one tracker per interactive session is actually correct for idle detection), or
-  add a per-machine scheduled-task registration in `installer.nsh` if you need
-  tracking the moment *any* user logs in. Recommended: keep RunKey; document that
-  the agent starts on that user's next logon.
+- **D6 — Autostart now per-machine (HKLM)** · *important · owner? no* · **[fixed]**
+  The per-user (HKCU) RunKey only auto-started for whoever first ran the app. The
+  NSIS installer now writes a **per-machine HKLM** Run key (removed on uninstall),
+  so the tracker starts for *every* user in their interactive session (correct for
+  idle detection). The app no longer force-enables the HKCU autostart plugin; the
+  single-instance guard makes any stray second launch harmless. See
+  `docs/releasing.md`.
 - **D7 — Version-sync guard** · *nice-to-have · owner? no* · **[fixed]**
   Added `scripts/check-version-sync.js` (+ a release-workflow step) to fail the
   build if the three version files ever drift or mismatch the tag.
-- **D8 — Signing-key continuity** · *critical · owner? yes* · **[flagged]**
-  See the signing-key rule in §2. Back up the key and write a rotation plan.
+- **D8 — Signing-key continuity** · *critical · owner? yes* · **[documented + CI guard]**
+  Can't escrow your key for you, but: added a release preflight that fails fast
+  with an actionable message if `TAURI_SIGNING_PRIVATE_KEY` is missing, and wrote
+  the backup/rotation policy in `docs/releasing.md`. **You still must back the
+  private key up** somewhere durable (see §2).
 
 ### Idiomatic code
 Strong `Result`-based error handling, minimal/contained `unsafe` FFI, allocation-
@@ -157,9 +158,10 @@ priority).
   Added a secret-guarded `events.logFromServer` mutation and wired the Elysia
   `onError` (best-effort) to surface API/integration 500s on the System Health
   page. Kept the by-design Clockodo handshake log (see §1).
-- **W6 — i18n is one ~700-line module** · *nice-to-have · owner? no* · **[flagged]**
-  Fine for two languages; split `lib/i18n.tsx` into `de`/`en` modules before a
-  third language or external translators arrive.
+- **W6 — i18n was one ~700-line module** · *nice-to-have · owner? no* · **[fixed]**
+  Split the dictionaries into `lib/locales/de.ts` + `lib/locales/en.ts` (+ a
+  shared `types.ts`); the provider/hook stay in `lib/i18n.tsx` so every existing
+  `@/lib/i18n` import is unchanged.
 
 **Idiomatic / UX, otherwise:** consistent `useQuery`/`QueryState` loading model,
 clean shadcn-style primitives, no-flash dark mode, server-side RBAC mirrored in
@@ -184,12 +186,11 @@ checks are for affordances only — real enforcement is server-side (verified).
   (`MIN_INGEST_INTERVAL_MS`, default 3 s — far below the 30 s flush) that returns
   **429** (agent keeps the batch and retries, so no legit data is lost) and writes
   nothing during a flood. **Tune the threshold** if you change the agent cadence.
-- **B4 — No sample idempotency** · *important · owner? yes (data model)* · **[flagged]**
-  Re-sent batches can double-count. The agent only removes from its queue after a
-  confirmed 200, so this needs a lost-ack to trigger — rare. Recommended minimal
-  fix: before insert, check the existing `by_device_time` index for
-  `(deviceId, capturedAt)` and skip duplicates (also skip their accrual). Left
-  unfixed to avoid a subtle behavior change without your sign-off.
+- **B4 — Sample idempotency** · *important · owner? no* · **[fixed]**
+  Re-sent batches could double-count. `recordSamples` now checks the
+  `by_device_time` index for an existing `(deviceId, capturedAt)` before insert
+  and skips duplicates (and their accrual), while still advancing the gap cursor
+  so genuinely-new samples in a partially-new batch keep correct attribution.
 - **B5 — Unbounded list queries** · *nice-to-have · owner? no* · **[fixed]**
   `devices.list` / `people.list` / `state.overview` used `.collect()`; added
   defensive `.take(2000)` caps (ample for current scale, bounded for growth).
@@ -199,16 +200,28 @@ checks are for affordances only — real enforcement is server-side (verified).
 
 ---
 
-## 6. What was changed in this PR (summary)
+## 6. What was changed (summary)
 
-**Desktop:** single-instance plugin (D1); mutex-poison recovery (D2); atomic queue
+**First pass (PR #32, merged).**
+*Desktop:* single-instance plugin (D1); mutex-poison recovery (D2); atomic queue
 rewrite (D3); size-capped `agent.log` (D4); 6-hourly update re-check (D5);
 `check-version-sync.js` + release step (D7).
-**Backend:** constant-time key/secret compares (B1); local-day rollup split (B2);
+*Backend:* constant-time key/secret compares (B1); local-day rollup split (B2);
 per-device ingest rate limit → 429 (B3); `.take()` caps (B5);
 `events.logFromServer` (for W5).
-**Web:** boot-time signal-secret warning (W1); people empty state (W3); slot-revoke
-confirm (W4); API errors surfaced to System Health (W5); i18n keys for the above.
+*Web:* boot-time signal-secret warning (W1); people empty state (W3); slot-revoke
+confirm (W4); API errors surfaced to System Health (W5).
 
-**Left for the owner (flagged):** D6 autostart scope, D8 signing-key continuity,
-B4 sample idempotency, W6 i18n split, X1 installer-secret model.
+**Follow-up pass (this PR) — the previously-flagged items.**
+*Desktop:* per-machine HKLM autostart in the NSIS installer, dropped forced HKCU
+autostart (D6); release preflight for the signing key + `docs/releasing.md`
+backup/rotation policy (D8).
+*Backend:* sample idempotency on `(deviceId, capturedAt)` (B4).
+*Web:* i18n dictionaries split into `lib/locales/{de,en}.ts` (W6).
+*Docs:* `docs/releasing.md` covers the signing-key policy and the
+installer-bootstrap-key trade-off + the IT-provided-`config.json` alternative (X1).
+
+**Still genuinely owner-only:** back up `TAURI_SIGNING_PRIVATE_KEY` somewhere
+durable (the code can guard against its *absence* but can't escrow the key), and
+decide whether to keep baking the bootstrap key into the installer (default) or
+distribute an empty config for IT to populate.

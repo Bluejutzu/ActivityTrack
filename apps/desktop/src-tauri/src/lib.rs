@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_updater::UpdaterExt;
 
 use crate::state::AppState;
@@ -111,7 +111,11 @@ pub fn run() {
             commands::get_diagnostics,
         ])
         .setup(|app| {
-            let _ = app.autolaunch().enable();
+            // Autostart is registered per-machine (HKLM Run key) by the NSIS
+            // installer so the tracker launches for every user in their
+            // interactive session. We deliberately do NOT enable the per-user
+            // (HKCU) autostart plugin here, which would only cover the user who
+            // first ran the app and double-register on that machine.
 
             let open = MenuItem::with_id(app, "open", "Open ActivityTrack", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

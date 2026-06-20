@@ -108,8 +108,22 @@ export const recordSamples = internalMutation({
           s.tzOffsetMinutes = 0;
         }
 
-        await ctx.db.insert("activitySamples", { ...s, receivedAt });
-        inserted++;
+        // Idempotency: skip a sample we've already stored for this device at
+        // this exact instant. Protects daily rollups from double-counting if a
+        // batch is re-sent (e.g. the agent's 200 ack was lost, so it retried).
+        // We still advance the gap cursor below, so a partially-new batch keeps
+        // correct gap attribution for its genuinely-new samples.
+        const duplicate = await ctx.db
+          .query("activitySamples")
+          .withIndex("by_device_time", (q) =>
+            q.eq("deviceId", deviceId).eq("capturedAt", s.capturedAt),
+          )
+          .first();
+
+        if (!duplicate) {
+          await ctx.db.insert("activitySamples", { ...s, receivedAt });
+          inserted++;
+        }
 
         // Attribute elapsed wall-clock time to active or idle.
         const rawGap =
@@ -119,7 +133,10 @@ export const recordSamples = internalMutation({
         const gapMs = Math.max(0, Math.min(rawGap, MAX_ATTRIBUTION_MS));
         prevCapturedAt = s.capturedAt;
 
-        await accrueDaily(ctx, deviceId, s, gapMs, inactivityMs);
+        // Only accrue for genuinely-new samples; a duplicate was already counted.
+        if (!duplicate) {
+          await accrueDaily(ctx, deviceId, s, gapMs, inactivityMs);
+        }
       }
 
       // Upsert the device row from the newest sample we saw.

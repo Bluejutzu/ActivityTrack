@@ -40,6 +40,20 @@ jobs:
         run: node scripts/check-version-sync.js ${{ github.ref_name }}
         shell: bash
 
+      # Fail fast (with an actionable message) if the updater signing key is
+      # missing, instead of a cryptic tauri-action failure deep in the build.
+      # Artifacts MUST be signed with the key matching tauri.conf.json's pubkey
+      # or every installed agent silently stops auto-updating. See docs/releasing.md.
+      - name: Verify updater signing key is configured
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is not set. Releases must be signed with the key that matches tauri.conf.json's updater pubkey, or auto-update breaks for all installed agents. Set TAURI_SIGNING_PRIVATE_KEY (+ _PASSWORD) in repo secrets. See docs/releasing.md."
+            exit 1
+          fi
+
       # Bake the real config values into the NSIS hook at build time.
       # The hook writes %ProgramData%\ActivityTrack\config.json on first install
       # using FileWrite, so there's no dependency on where Tauri places resources.
@@ -60,7 +74,11 @@ jobs:
             "  FileWrite `$0 '$json'",
             '  FileClose $0',
             '  nsis_at_config_exists:',
+            '  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "ActivityTrack" ''"$INSTDIR\ActivityTrack.exe"''',
             '  Pop $0',
+            '!macroend',
+            '!macro NSIS_HOOK_PREUNINSTALL',
+            '  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "ActivityTrack"',
             '!macroend'
           )
           $nshLines -join "`r`n" | Out-File -Encoding UTF8 -FilePath 'apps/desktop/src-tauri/bundle/nsis/installer.nsh'
