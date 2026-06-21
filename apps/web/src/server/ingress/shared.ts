@@ -66,3 +66,44 @@ export async function pushSignal(args: PushSignalArgs) {
     ...args,
   });
 }
+
+/**
+ * Validate a desktop agent's device token (issued at approval, owned by the
+ * convex-api-tokens component). Returns `{ deviceId }` when the token is good and
+ * its device is active, else `null`. The signal secret authenticates *this*
+ * server to Convex; the device token rides in `token`.
+ */
+export async function validateDeviceToken(
+  token: string,
+): Promise<{ deviceId: string } | null> {
+  return await convex.mutation(api.deviceAuth.validate, {
+    secret: signalSecret(),
+    token,
+  });
+}
+
+type RequestEnrollmentArgs = Omit<
+  FunctionArgs<typeof api.devices.requestEnrollment>,
+  "secret"
+>;
+
+/** Self-registration relay: the device posts here (no auth); we add the secret. */
+export async function requestEnrollment(args: RequestEnrollmentArgs) {
+  return await convex.mutation(api.devices.requestEnrollment, {
+    secret: signalSecret(),
+    ...args,
+  });
+}
+
+type ClaimTokenArgs = Omit<
+  FunctionArgs<typeof api.devices.claimToken>,
+  "secret"
+>;
+
+/** Approval-poll relay: returns the freshly minted token once approved. */
+export async function claimDeviceToken(args: ClaimTokenArgs) {
+  return await convex.mutation(api.devices.claimToken, {
+    secret: signalSecret(),
+    ...args,
+  });
+}

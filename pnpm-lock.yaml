@@ -10,9 +10,6 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@clerk/clerk-react':
-        specifier: ^5.61.8
-        version: 5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tauri-apps/api':
         specifier: ^2.1.1
         version: 2.11.0
@@ -168,6 +165,9 @@ importers:
       convex:
         specifier: ^1.16.0
         version: 1.41.0(@clerk/clerk-react@5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      convex-api-tokens:
+        specifier: ^0.3.2
+        version: 0.3.2(convex@1.41.0(@clerk/clerk-react@5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1))(react@18.3.1)
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -1665,6 +1665,15 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-api-tokens@0.3.2:
+    resolution: {integrity: sha512-3/85YezbO3KxS5pz7JJTFHu2G5Wb2Ck3UMjTDyHfz+gImL+3QwakCRCgFCb8qAclPzC5rYR8yo/CmCF9CejaMw==}
+    peerDependencies:
+      convex: ^1.24.0
+      react: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   convex@1.41.0:
     resolution: {integrity: sha512-euxVf6yfpB7/VGKOobkLgjpbJidsUgW+b0ezonEyCUPqlpHFwR4/yIiI1hjjErzraiw91GxrtxpXQClMLNqU+w==}
@@ -3649,6 +3658,12 @@ snapshots:
   commander@4.1.1: {}
 
   convert-source-map@2.0.0: {}
+
+  convex-api-tokens@0.3.2(convex@1.41.0(@clerk/clerk-react@5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1))(react@18.3.1):
+    dependencies:
+      convex: 1.41.0(@clerk/clerk-react@5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+    optionalDependencies:
+      react: 18.3.1
 
   convex@1.41.0(@clerk/clerk-react@5.61.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
     dependencies:

@@ -11,6 +11,16 @@ export interface AgentError {
   message: string;
 }
 
+/** Pairing sub-state (see state.rs); meaningful only while `enrolled` is false. */
+export type PairingState =
+  | "unconfigured"
+  | "registering"
+  | "pending"
+  | "disabled"
+  | "denied"
+  | "error"
+  | "paired";
+
 export interface AgentStatus {
   deviceId: string;
   hostname: string;
@@ -24,6 +34,7 @@ export interface AgentStatus {
   convexUrl: string;
   configured: boolean;
   enrolled: boolean;
+  pairing: PairingState;
   agentVersion: string;
   lastSamples: AgentSample[];
   recentErrors: AgentError[];
@@ -34,14 +45,6 @@ export type VerifyStatus =
   | "ok"
   | "wrong"
   | "unset"
-  | "not_configured"
-  | "server"
-  | "network";
-
-/** Status codes returned by the `enroll` command. */
-export type EnrollStatus =
-  | "ok"
-  | "invalid_code"
   | "not_configured"
   | "server"
   | "network";
@@ -57,16 +60,15 @@ export interface Outcome<S extends string> {
 }
 
 export type VerifyOutcome = Outcome<VerifyStatus>;
-export type EnrollOutcome = Outcome<EnrollStatus>;
 
 /** Connectivity/configuration snapshot from the `get_diagnostics` command. */
 export interface Diagnostics {
   convexUrl: string;
+  apiUrl: string;
   configFile: string;
   configPresent: boolean;
   hasConvexUrl: boolean;
-  hasBootstrapKey: boolean;
-  hasClerkPublishableKey: boolean;
+  hasApiUrl: boolean;
   enrolled: boolean;
   configured: boolean;
 }

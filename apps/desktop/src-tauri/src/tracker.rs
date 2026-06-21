@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use crate::host;
 use crate::idle::get_idle_ms;
-use crate::model::{ActivitySample, UiSample, AGENT_VERSION};
+use crate::model::{ActivitySample, ClaimOutcome, UiSample, AGENT_VERSION};
 use crate::queue::SampleQueue;
 use crate::sender;
 use crate::state::AppState;
@@ -20,28 +20,10 @@ const UI_SAMPLE_HISTORY: usize = 20;
 /// and resilient: a failed flush keeps the batch; nothing here panics the UI.
 pub fn start(state: Arc<AppState>) {
     thread::spawn(move || {
-        // First-boot enrollment, in the background. The flush guard below keeps
-        // us from sending until this succeeds; local recording starts anyway.
-        if !state.can_send() && state.config.can_register() {
-            let code = state.config.enrollment_code.clone().unwrap_or_default();
-            match sender::register_device(
-                &state.config.convex_url,
-                &state.config.bootstrap_key,
-                &code,
-                &state.device_id,
-                &state.hostname,
-                &state.windows_user,
-                AGENT_VERSION,
-            ) {
-                Ok(key) => state.set_device_key(key),
-                Err(e) => {
-                    eprintln!("ActivityTrack: enrollment failed: {e}");
-                    // Surfaced in the tray UI; can't report to the backend yet
-                    // (reporting needs the device key we just failed to get).
-                    state.push_error("tracker.enroll_failed", e);
-                }
-            }
-        }
+        // First-boot pairing, in the background. The flush guard below keeps us
+        // from sending until a token is obtained; local recording starts anyway.
+        // We keep retrying on the flush cadence until an admin approves us.
+        try_pair(&state);
 
         let queue = SampleQueue::new(state.config.max_queue_size);
         let poll = Duration::from_millis(state.config.poll_interval_ms.max(1_000));
@@ -59,20 +41,87 @@ pub fn start(state: Arc<AppState>) {
             record(&state, &queue);
 
             if last_flush.elapsed() >= flush_every {
-                match flush(&state, &queue) {
-                    Ok(_) => fail_streak = 0,
-                    Err(err) => {
-                        fail_streak += 1;
-                        if fail_streak >= 3 {
-                            // Throttled + best-effort inside report_event.
-                            state.report_event("error", "tracker.send_failed", &err);
+                if state.can_send() {
+                    match flush(&state, &queue) {
+                        Ok(_) => fail_streak = 0,
+                        Err(err) => {
+                            fail_streak += 1;
+                            if fail_streak >= 3 {
+                                // Throttled + best-effort inside report_event.
+                                state.report_event("error", "tracker.send_failed", &err);
+                            }
                         }
                     }
+                } else {
+                    // Not paired yet (or just got revoked) — keep trying so the
+                    // device comes online as soon as an admin approves it.
+                    try_pair(&state);
                 }
                 last_flush = Instant::now();
             }
         }
     });
+}
+
+/// Drive the approve-to-pair flow: announce this device, then poll for approval.
+/// Best-effort and idempotent — safe to call repeatedly while waiting for an
+/// admin. Updates the pairing sub-state for the tray UI and, once approved,
+/// stores the device token (which flips `can_send`).
+fn try_pair(state: &AppState) {
+    if state.can_send() {
+        return;
+    }
+    if !state.config.can_pair() {
+        state.set_pairing("unconfigured");
+        return;
+    }
+    let nonce = state.pairing_nonce();
+
+    state.set_pairing("registering");
+    if let Err(e) = sender::register(
+        &state.config.api_url,
+        &state.device_id,
+        &state.hostname,
+        &state.windows_user,
+        AGENT_VERSION,
+        &nonce,
+    ) {
+        state.set_pairing("error");
+        state.push_error("tracker.pair_failed", e);
+        return;
+    }
+
+    match sender::claim(&state.config.api_url, &state.device_id, &nonce) {
+        Ok(ClaimOutcome::Active(token)) => {
+            state.set_device_key(token);
+            state.clear_pairing_nonce();
+            state.set_pairing("paired");
+        }
+        Ok(ClaimOutcome::Pending) => state.set_pairing("pending"),
+        Ok(ClaimOutcome::Disabled) => state.set_pairing("disabled"),
+        Ok(ClaimOutcome::AlreadyClaimed) => {
+            // Approved, but the token was already issued and we don't hold it.
+            // An admin must disable + re-approve to mint a fresh one.
+            state.set_pairing("error");
+            state.push_error(
+                "tracker.pair_failed",
+                "Device approved but its token was already claimed; ask an admin \
+                 to disable and re-approve this device to re-pair."
+                    .to_string(),
+            );
+        }
+        Ok(ClaimOutcome::Denied) | Ok(ClaimOutcome::Unknown) => {
+            // Our nonce no longer matches the server (another machine took this
+            // deviceId, or the row was reset). Start fresh with a new nonce next
+            // tick.
+            state.clear_pairing_nonce();
+            state.set_pairing("registering");
+        }
+        Err(e) => {
+            state.set_pairing("error");
+            state.push_error("tracker.pair_failed", e);
+        }
+    }
 }
 
 fn build_sample(state: &AppState) -> (ActivitySample, bool, u64) {
@@ -148,6 +197,13 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
                 let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
                 s.online = false;
                 s.queue_length = queue.len();
+            }
+            // A 401 means the token was revoked/disabled server-side: drop it so
+            // the loop falls back into pairing (re-approval mints a fresh one).
+            // Queued samples are kept and flushed once we're paired again.
+            if err.contains("401") {
+                state.clear_device_key();
+                state.set_pairing("registering");
             }
             // Always surface locally (even the first failure); escalation to the
             // backend is gated by the caller's fail streak.

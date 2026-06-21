@@ -1,7 +1,7 @@
 import "server-only";
 import { Elysia } from "elysia";
 import { convex, api, signalSecret } from "./convex";
-import { ingestAgentHeartbeat } from "./ingress/agent";
+import { ingestAgentHeartbeat, registerAgent, pollAgent } from "./ingress/agent";
 import { ingestGenesysNotify, ingestGenesysSync } from "./ingress/genesys";
 import { ingestClockodoWebhook } from "./ingress/clockodo";
 import type { IngressRequest, IngressResult } from "./ingress/shared";
@@ -58,6 +58,12 @@ export const app = new Elysia({ prefix: "/api" })
     return { ok: false, error: "internal_error" };
   })
   .get("/health", () => ({ ok: true }))
+  .post("/agent/register", async ({ body, headers, set }) =>
+    send(set, await registerAgent(toIngressRequest({ body, headers }))),
+  )
+  .post("/agent/poll", async ({ body, headers, set }) =>
+    send(set, await pollAgent(toIngressRequest({ body, headers }))),
+  )
   .post("/activity/update", async ({ body, headers, set }) =>
     send(set, await ingestAgentHeartbeat(toIngressRequest({ body, headers }))),
   )

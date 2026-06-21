@@ -1,22 +1,10 @@
-import {
-  query,
-  mutation,
-  internalQuery,
-  internalMutation,
-} from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireViewer, requireManager, requireAdmin } from "./rbac";
 import { writeAudit } from "./audit";
 import { appError } from "./errors";
-
-function generateSlotCode(): string {
-  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let code = "AT-";
-  for (let i = 0; i < 6; i++) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return code;
-}
+import { apiTokens, assertSignalSecret } from "./deviceAuth";
+import { hashNonce, safeEqual } from "./crypto";
 
 /** All devices with their linked person's name (if any). Viewer+. */
 export const list = query({
@@ -58,26 +46,35 @@ export const listPending = query({
   },
 });
 
-/** Approve a pending device so its data counts toward the dashboard. IT-only. */
+/**
+ * Approve a device so it can claim its token and its data counts. IT-only.
+ * Clears `tokenIssued` so a freshly approved (or re-approved after disable)
+ * device mints a new token on its next poll — see `claimToken`.
+ */
 export const approve = mutation({
   args: { deviceId: v.id("devices") },
   handler: async (ctx, { deviceId }) => {
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
     if (!device) throw appError("notFound.device", "Device not found");
-    await ctx.db.patch(deviceId, { status: "active" });
+    await ctx.db.patch(deviceId, { status: "active", tokenIssued: false });
     await writeAudit(ctx, actor._id, "device.approve", device.hostname);
   },
 });
 
-/** Disable a device — ingest will drop its samples going forward. IT-only. */
+/**
+ * Disable a device. IT-only. Revokes its token immediately
+ * (`apiTokens.invalidateAll`), so ingest/heartbeat start returning 401 even
+ * though the agent still holds the now-dead token locally.
+ */
 export const disable = mutation({
   args: { deviceId: v.id("devices") },
   handler: async (ctx, { deviceId }) => {
     const actor = await requireAdmin(ctx);
     const device = await ctx.db.get(deviceId);
     if (!device) throw appError("notFound.device", "Device not found");
-    await ctx.db.patch(deviceId, { status: "disabled" });
+    await ctx.db.patch(deviceId, { status: "disabled", tokenIssued: false });
+    await apiTokens.invalidateAll(ctx, { namespace: device.deviceId });
     await writeAudit(ctx, actor._id, "device.disable", device.hostname);
   },
 });
@@ -106,141 +103,106 @@ export const link = mutation({
   },
 });
 
-/** Create a one-time enrollment code. IT admin only. */
-export const createDeviceSlot = mutation({
+/**
+ * Self-registration from the desktop agent, called server-to-server from the
+ * Elysia API layer (POST /api/agent/register). The agent has no shared secret —
+ * it announces its `deviceId` plus a locally-generated one-time pairing nonce,
+ * landing in the pending queue for an admin to approve. Deliberately minimal and
+ * idempotent (one row per deviceId) and hands nothing sensitive back: the token
+ * only exists after approval, via `claimToken`.
+ */
+export const requestEnrollment = mutation({
   args: {
-    label: v.optional(v.string()),
-    expiresInHours: v.number(),
-  },
-  handler: async (ctx, { label, expiresInHours }) => {
-    const actor = await requireAdmin(ctx);
-    const code = generateSlotCode();
-    const now = Date.now();
-    await ctx.db.insert("deviceSlots", {
-      code,
-      label,
-      createdBy: actor._id,
-      createdAt: now,
-      expiresAt: now + expiresInHours * 60 * 60 * 1000,
-    });
-    await writeAudit(ctx, actor._id, "deviceSlot.create", label ?? code);
-    return code;
-  },
-});
-
-/** List recent enrollment slots. IT admin only. */
-export const listSlots = query({
-  args: {},
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    return await ctx.db
-      .query("deviceSlots")
-      .withIndex("by_createdAt")
-      .order("desc")
-      .take(50);
-  },
-});
-
-/** Revoke an active slot so it can no longer be used. IT admin only. */
-export const revokeSlot = mutation({
-  args: { slotId: v.id("deviceSlots") },
-  handler: async (ctx, { slotId }) => {
-    const actor = await requireAdmin(ctx);
-    const slot = await ctx.db.get(slotId);
-    if (!slot) throw appError("notFound.slot", "Slot not found");
-    await ctx.db.patch(slotId, {
-      usedAt: Date.now(),
-      usedByDeviceId: "__revoked__",
-    });
-    await writeAudit(ctx, actor._id, "deviceSlot.revoke", slot.code);
-  },
-});
-
-/** Internal: validate an enrollment code. Returns { valid: true, slotId } or { valid: false, reason }. */
-export const validateEnrollmentCode = internalQuery({
-  args: { code: v.string() },
-  handler: async (ctx, { code }) => {
-    const slot = await ctx.db
-      .query("deviceSlots")
-      .withIndex("by_code", (q) => q.eq("code", code))
-      .unique();
-    if (!slot) return { valid: false as const, reason: "not_found" as const };
-    if (slot.usedAt !== undefined)
-      return { valid: false as const, reason: "used" as const };
-    if (slot.expiresAt < Date.now())
-      return { valid: false as const, reason: "expired" as const };
-    return { valid: true as const, slotId: slot._id };
-  },
-});
-
-/** Internal: mark slot used, upsert device row, store device key hash. */
-export const completeRegistration = internalMutation({
-  args: {
-    slotId: v.id("deviceSlots"),
+    secret: v.string(),
     deviceId: v.string(),
     hostname: v.string(),
     windowsUser: v.string(),
     agentVersion: v.string(),
-    keyHash: v.string(),
+    claimNonce: v.string(),
   },
   handler: async (
     ctx,
-    { slotId, deviceId, hostname, windowsUser, agentVersion, keyHash },
+    { secret, deviceId, hostname, windowsUser, agentVersion, claimNonce },
   ) => {
+    assertSignalSecret(secret);
     const now = Date.now();
-    await ctx.db.patch(slotId, { usedAt: now, usedByDeviceId: deviceId });
-
+    const claimNonceHash = await hashNonce(claimNonce);
     const existing = await ctx.db
       .query("devices")
       .withIndex("by_deviceId", (q) => q.eq("deviceId", deviceId))
       .unique();
-    if (existing) {
+
+    if (!existing) {
+      await ctx.db.insert("devices", {
+        deviceId,
+        hostname,
+        lastWindowsUser: windowsUser,
+        agentVersion,
+        status: "pending",
+        lastSeen: now,
+        claimNonceHash,
+        tokenIssued: false,
+      });
+      return { status: "pending" as const };
+    }
+
+    // An already-paired device shouldn't be re-registering; a stray call must not
+    // knock it back to pending. Just refresh its liveness fields.
+    if (existing.status === "active" && existing.tokenIssued) {
       await ctx.db.patch(existing._id, {
         hostname,
         lastWindowsUser: windowsUser,
         agentVersion,
         lastSeen: now,
       });
-    } else {
-      await ctx.db.insert("devices", {
-        deviceId,
-        hostname,
-        lastWindowsUser: windowsUser,
-        status: "pending",
-        lastSeen: now,
-        agentVersion,
-      });
+      return { status: "active" as const };
     }
 
-    // Replace any old device key on re-enrollment
-    const oldKey = await ctx.db
-      .query("deviceKeys")
-      .withIndex("by_deviceId", (q) => q.eq("deviceId", deviceId))
-      .unique();
-    if (oldKey) await ctx.db.delete(oldKey._id);
-
-    await ctx.db.insert("deviceKeys", {
-      deviceId,
-      keyHash,
-      createdAt: now,
+    // Pending, disabled, or approved-but-not-yet-claimed: accept a fresh nonce so
+    // a (re-)approval can mint a token. Status is preserved — only an admin moves
+    // a device between pending/active/disabled.
+    await ctx.db.patch(existing._id, {
+      hostname,
+      lastWindowsUser: windowsUser,
+      agentVersion,
+      lastSeen: now,
+      claimNonceHash,
     });
+    return { status: existing.status };
   },
 });
 
-/** Internal: resolve a key hash to its deviceId (null if not found or disabled). */
-export const lookupDeviceByKeyHash = internalQuery({
-  args: { keyHash: v.string() },
-  handler: async (ctx, { keyHash }) => {
-    const entry = await ctx.db
-      .query("deviceKeys")
-      .withIndex("by_keyHash", (q) => q.eq("keyHash", keyHash))
-      .unique();
-    if (!entry) return null;
+/**
+ * The agent polls this (server-to-server via Elysia, POST /api/agent/poll) with
+ * its deviceId + pairing nonce until an admin approves it. On the first poll
+ * after approval we mint the device's token and return it ONCE — it is never
+ * stored in plaintext, so this is the agent's only chance to capture it.
+ */
+export const claimToken = mutation({
+  args: { secret: v.string(), deviceId: v.string(), claimNonce: v.string() },
+  handler: async (ctx, { secret, deviceId, claimNonce }) => {
+    assertSignalSecret(secret);
     const device = await ctx.db
       .query("devices")
-      .withIndex("by_deviceId", (q) => q.eq("deviceId", entry.deviceId))
+      .withIndex("by_deviceId", (q) => q.eq("deviceId", deviceId))
       .unique();
-    if (!device || device.status === "disabled") return null;
-    return { deviceId: entry.deviceId };
+    if (!device) return { status: "unknown" as const };
+
+    const claimNonceHash = await hashNonce(claimNonce);
+    if (!device.claimNonceHash || !safeEqual(device.claimNonceHash, claimNonceHash)) {
+      // Wrong machine for this deviceId — don't leak status.
+      return { status: "denied" as const };
+    }
+
+    if (device.status === "pending") return { status: "pending" as const };
+    if (device.status === "disabled") return { status: "disabled" as const };
+
+    // Approved. Mint exactly once; a lost token requires disable + re-approve.
+    if (device.tokenIssued) {
+      return { status: "active" as const, token: null };
+    }
+    const { token } = await apiTokens.create(ctx, { namespace: deviceId });
+    await ctx.db.patch(device._id, { tokenIssued: true, lastSeen: Date.now() });
+    return { status: "active" as const, token };
   },
 });

@@ -18,6 +18,7 @@
   "dependencies": {
     "@activitytrack/shared": "workspace:*",
     "convex": "^1.16.0",
+    "convex-api-tokens": "^0.3.2",
     "zod": "^3.23.0"
   },
   "devDependencies": {

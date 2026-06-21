@@ -1,10 +1,8 @@
-import { safeEqual } from "./crypto";
-
 /**
  * Shared helpers for the agent-facing HTTP endpoints (see http.ts). Each
- * endpoint used to re-implement bearer parsing, the bootstrap-key check, and
- * response shaping inline; these factor that out so every ingress point reads
- * the same way and there's one place to change the auth/response conventions.
+ * endpoint used to re-implement bearer parsing and response shaping inline;
+ * these factor that out so every ingress point reads the same way and there's
+ * one place to change the auth/response conventions.
  */
 
 /** The Bearer token from an Authorization header, or null. */
@@ -38,16 +36,4 @@ export async function readJson(request: Request): Promise<unknown | undefined> {
   } catch {
     return undefined;
   }
-}
-
-/**
- * Validate the shared bootstrap key (ACTIVITYTRACK_INGEST_KEY) with a
- * constant-time compare. Used by the pre-enrollment endpoints (/agent/register,
- * /agent/verify-password) that authenticate with the bootstrap key rather than a
- * per-device key.
- */
-export function bootstrapKeyValid(request: Request): boolean {
-  const expected = process.env.ACTIVITYTRACK_INGEST_KEY;
-  if (!expected) return false;
-  return safeEqual(bearerToken(request) ?? "", expected);
 }

@@ -1,5 +1,24 @@
 use serde::{Deserialize, Serialize};
 
+/// Outcome of a pairing poll (`/api/agent/poll`). Drives the pairing screen and
+/// tells the tracker whether it now holds a token. Not serialized — internal to
+/// the Rust side; the UI sees the resulting `AgentStatus.pairing` string.
+#[derive(Debug, Clone)]
+pub enum ClaimOutcome {
+    /// Approved and minted: the contained device token must be stored.
+    Active(String),
+    /// Registered, awaiting an admin's approval in the dashboard.
+    Pending,
+    /// Disabled by an admin; the agent should stop and surface this.
+    Disabled,
+    /// Nonce mismatch — another machine owns this deviceId's pairing.
+    Denied,
+    /// The server has no record of this device; it should (re-)register.
+    Unknown,
+    /// Approved previously and the token was already claimed elsewhere.
+    AlreadyClaimed,
+}
+
 /// The wire contract sent to Convex `/ingest`. Field names mirror
 /// `packages/shared` `activitySampleSchema` exactly (camelCase) so the
 /// server's zod validation accepts it. The agent does no validation itself.
@@ -52,6 +71,10 @@ pub struct AgentStatus {
     pub convex_url: String,
     pub configured: bool,
     pub enrolled: bool,
+    /// Pairing sub-state for the (pre-token) pairing screen. One of:
+    /// "unconfigured" | "registering" | "pending" | "disabled" | "denied" |
+    /// "error" | "paired". Meaningful only while `enrolled` is false.
+    pub pairing: String,
     pub agent_version: String,
     pub last_samples: Vec<UiSample>,
     pub recent_errors: Vec<UiError>,
@@ -89,24 +112,18 @@ impl Outcome {
 }
 
 /// Connectivity/configuration snapshot, available *without* unlocking the tool.
-/// Surfaced on the login screen so a misconfigured machine (missing Convex URL,
-/// missing access key, not enrolled) is debuggable up front instead of hiding
-/// behind a generic "server unreachable" message.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AuthConfig {
-    pub clerk_publishable_key: String,
-}
-
+/// Surfaced on the pairing/login screen so a misconfigured machine (missing
+/// Convex URL, missing dashboard API URL, not paired) is debuggable up front
+/// instead of hiding behind a generic "server unreachable" message.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Diagnostics {
     pub convex_url: String,
+    pub api_url: String,
     pub config_file: String,
     pub config_present: bool,
     pub has_convex_url: bool,
-    pub has_bootstrap_key: bool,
-    pub has_clerk_publishable_key: bool,
+    pub has_api_url: bool,
     pub enrolled: bool,
     pub configured: bool,
 }

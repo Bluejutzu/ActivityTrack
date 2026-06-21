@@ -35,6 +35,13 @@ pub fn device_key_file() -> PathBuf {
     app_dir().join("device.key")
 }
 
+/// One-time pairing nonce, generated locally before the device is approved and
+/// deleted once it has claimed its token. Lets only this machine claim the token
+/// for its `deviceId` (the server stores only the nonce's hash).
+pub fn pair_nonce_file() -> PathBuf {
+    app_dir().join("pair.nonce")
+}
+
 /// Size-capped operational log. A hidden tray app has nowhere to print to, so
 /// errors are also persisted here for IT to inspect after the fact.
 pub fn log_file() -> PathBuf {

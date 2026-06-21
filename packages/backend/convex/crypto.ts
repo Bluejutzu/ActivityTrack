@@ -68,17 +68,15 @@ export async function verifyPassword(
   return safeEqual(candidate, parts[3]!);
 }
 
-/** Generate a 64-hex-char (32-byte) random device key. Call only from httpAction/action contexts. */
-export function generateDeviceKey(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-/** SHA-256 hex digest of a device key for storage. Call only from httpAction/action contexts. */
-export async function hashDeviceKey(key: string): Promise<string> {
-  const bytes = new TextEncoder().encode(key);
+/**
+ * SHA-256 hex digest of a device's one-time pairing nonce. The agent generates
+ * the nonce locally and sends it on register; we store only this hash and
+ * compare it on claim, so a second machine can't claim the token for someone
+ * else's `deviceId`. (Device *tokens* themselves are owned by the
+ * convex-api-tokens component — see deviceAuth.ts — and never pass through here.)
+ */
+export async function hashNonce(nonce: string): Promise<string> {
+  const bytes = new TextEncoder().encode(nonce);
   const hash = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
