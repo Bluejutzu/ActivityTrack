@@ -75,9 +75,9 @@ pub fn run() {
     let windows_user = host::windows_user();
 
     // Build state and start the tracker immediately so the tray icon appears at
-    // once. First-boot enrollment (a blocking network call) now happens inside
-    // the tracker thread, not here — a slow/down backend no longer freezes
-    // startup. The tracker's flush guard defers sending until enrolled.
+    // once. First-boot pairing (the register/approval-poll network calls) happens
+    // inside the tracker thread, not here — a slow/down backend no longer freezes
+    // startup. The tracker's flush guard defers sending until a token is claimed.
     let state = Arc::new(AppState::new(
         config,
         device_id,
@@ -105,9 +105,7 @@ pub fn run() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
-            commands::get_auth_config,
             commands::verify_password,
-            commands::enroll,
             commands::get_diagnostics,
         ])
         .setup(|app| {

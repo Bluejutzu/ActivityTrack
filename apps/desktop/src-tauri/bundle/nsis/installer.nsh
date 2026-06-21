@@ -2,9 +2,10 @@
 ; Tauri injects these macros at the matching points of its generated installer.
 ;
 ; The release workflow (release.yml) overwrites this file at build time, baking
-; the real convexUrl / ingestKey / clerkPublishableKey values from GitHub
-; secrets directly into the FileWrite call. The empty values here are the
-; fallback for local/dev builds where the secrets aren't available.
+; the real convexUrl / apiUrl values from GitHub secrets directly into the
+; FileWrite call. Both are plain URLs (no secrets) — the device's only credential
+; is the per-device token it earns at approval. The empty values here are the
+; fallback for local/dev builds.
 ;
 ; On install: (1) creates %ProgramData%\ActivityTrack\config.json if it doesn't
 ; exist yet, so IT can still place their own config.json before first run and it
@@ -19,7 +20,7 @@
   CreateDirectory "$COMMONAPPDATA\ActivityTrack"
   IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" nsis_at_config_exists
   FileOpen $0 "$COMMONAPPDATA\ActivityTrack\config.json" w
-  FileWrite $0 '{"convexUrl":"","ingestKey":"","clerkPublishableKey":""}'
+  FileWrite $0 '{"convexUrl":"","apiUrl":""}'
   FileClose $0
   nsis_at_config_exists:
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "ActivityTrack" '"$INSTDIR\ActivityTrack.exe"'

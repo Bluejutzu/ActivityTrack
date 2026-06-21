@@ -13,11 +13,13 @@ import type * as audit from "../audit.js";
 import type * as clockodo from "../clockodo.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
+import type * as deviceAuth from "../deviceAuth.js";
 import type * as devices from "../devices.js";
 import type * as errors from "../errors.js";
 import type * as events from "../events.js";
 import type * as genesys from "../genesys.js";
 import type * as http from "../http.js";
+import type * as httpHelpers from "../httpHelpers.js";
 import type * as ingest from "../ingest.js";
 import type * as integrations from "../integrations.js";
 import type * as integrationsShared from "../integrationsShared.js";
@@ -42,11 +44,13 @@ declare const fullApi: ApiFromModules<{
   clockodo: typeof clockodo;
   crons: typeof crons;
   crypto: typeof crypto;
+  deviceAuth: typeof deviceAuth;
   devices: typeof devices;
   errors: typeof errors;
   events: typeof events;
   genesys: typeof genesys;
   http: typeof http;
+  httpHelpers: typeof httpHelpers;
   ingest: typeof ingest;
   integrations: typeof integrations;
   integrationsShared: typeof integrationsShared;
@@ -86,4 +90,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  apiTokens: import("convex-api-tokens/_generated/component.js").ComponentApi<"apiTokens">;
+};

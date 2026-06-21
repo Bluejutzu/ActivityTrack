@@ -42,8 +42,9 @@ export default defineSchema({
     .index("email", ["email"])
     .index("by_org", ["orgId"]),
 
-  // Physical machines. A device auto-registers as "pending" on first sample;
-  // an admin approves it and (optionally) links it to a person.
+  // Physical machines. A device self-registers as "pending" on first run; an
+  // admin approves it (status → "active"), which lets it claim its one device
+  // token (see deviceAuth.ts / devices.claimToken) and start ingesting.
   devices: defineTable({
     orgId: v.optional(v.id("organizations")),
     deviceId: v.string(), // the UUID minted by the agent (ProgramData)
@@ -57,8 +58,15 @@ export default defineSchema({
     personId: v.optional(v.id("people")),
     lastSeen: v.number(),
     agentVersion: v.optional(v.string()),
+    // SHA-256 of the agent's one-time pairing nonce, set on register and checked
+    // on claim so only the registering machine can claim this device's token.
+    claimNonceHash: v.optional(v.string()),
+    // True once the device has claimed its token after approval. Reset by
+    // `approve` so a re-approved (previously disabled) device re-claims a fresh
+    // token; gates `claimToken` so the once-only raw token isn't re-requested.
+    tokenIssued: v.optional(v.boolean()),
     // Wall-clock time (receivedAt) of the last ACCEPTED ingest batch. Used to
-    // throttle a flood from a leaked device key; optional for pre-existing rows.
+    // throttle a flood from a leaked device token; optional for pre-existing rows.
     lastIngestAt: v.optional(v.number()),
   })
     .index("by_deviceId", ["deviceId"])
@@ -258,28 +266,4 @@ export default defineSchema({
     value: v.string(),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
-
-  deviceSlots: defineTable({
-    orgId: v.optional(v.id("organizations")),
-    code: v.string(),
-    label: v.optional(v.string()),
-    createdBy: v.id("users"),
-    createdAt: v.number(),
-    expiresAt: v.number(),
-    usedAt: v.optional(v.number()),
-    usedByDeviceId: v.optional(v.string()),
-  })
-    .index("by_code", ["code"])
-    .index("by_org_code", ["orgId", "code"])
-    .index("by_createdAt", ["createdAt"]),
-
-  deviceKeys: defineTable({
-    orgId: v.optional(v.id("organizations")),
-    deviceId: v.string(),
-    keyHash: v.string(),
-    createdAt: v.number(),
-  })
-    .index("by_keyHash", ["keyHash"])
-    .index("by_deviceId", ["deviceId"])
-    .index("by_org_deviceId", ["orgId", "deviceId"]),
 });

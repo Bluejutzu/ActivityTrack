@@ -10,7 +10,7 @@ type Dict = Record<string, string>;
 const de: Dict = {
   "app.title": "ActivityTrack",
   "login.heading": "Anmeldung erforderlich",
-  "login.hint": "Mit Clerk anmelden, um dieses Gerät zu verwalten.",
+  "login.hint": "Tray-Passwort eingeben, um dieses Gerät zu verwalten.",
   "login.email": "E-Mail",
   "login.password": "Passwort",
   "login.unlock": "Öffnen",
@@ -22,8 +22,6 @@ const de: Dict = {
     "Server nicht erreichbar. Netzwerk-/Verbindungsfehler.",
   "login.error.notConfigured":
     "Dieser Computer ist nicht konfiguriert. Siehe Diagnose unten.",
-  "login.error.missingClerkKey":
-    "Der Clerk Publishable Key fehlt in config.json. Der Release-Build muss ihn aus ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY setzen.",
   "login.error.server": "Serverfehler. Technische Details unten.",
   "login.checking": "Wird geprüft …",
   "enroll.heading": "Geräteregistrierung",
@@ -39,6 +37,19 @@ const de: Dict = {
     "Dieser Computer ist nicht konfiguriert. Siehe Diagnose unten.",
   "enroll.error.server": "Serverfehler. Technische Details unten.",
   "enroll.skip": "Überspringen (nur Status ansehen)",
+  "pairing.heading": "Gerät wird gekoppelt",
+  "pairing.unconfigured":
+    "Dieser Computer ist nicht konfiguriert (Dashboard-API-URL fehlt). Siehe Diagnose unten.",
+  "pairing.registering": "Gerät wird beim Dashboard angemeldet …",
+  "pairing.pending":
+    "Warten auf Freigabe durch die IT. Sobald das Gerät im Dashboard freigegeben ist, geht es automatisch weiter.",
+  "pairing.disabled":
+    "Dieses Gerät wurde von der IT deaktiviert. Bitte an die IT wenden.",
+  "pairing.denied":
+    "Kopplung abgelehnt (Konflikt mit der Geräte-ID). Wird automatisch neu versucht …",
+  "pairing.error":
+    "Kopplung derzeit nicht möglich. Details unten; wird automatisch erneut versucht.",
+  "pairing.waiting": "Warten auf Freigabe …",
   "status.heading": "Status",
   "status.active": "Aktiv",
   "status.idle": "Inaktiv",
@@ -72,12 +83,11 @@ const de: Dict = {
   "errors.detail": "Details",
   "error.code.tracker.send_failed": "Senden fehlgeschlagen",
   "error.code.tracker.queue_io": "Lokaler Speicher",
-  "error.code.tracker.enroll_failed": "Einrichtung fehlgeschlagen",
+  "error.code.tracker.pair_failed": "Kopplung fehlgeschlagen",
   "error.details": "Technische Details",
   "diag.heading": "Diagnose",
   "diag.configFile": "Konfigurationsdatei",
-  "diag.bootstrapKey": "Zugangsschlüssel",
-  "diag.clerkKey": "Clerk Publishable Key",
+  "diag.apiUrl": "Dashboard-API-URL",
   "diag.enrollment": "Registrierung",
   "diag.notSet": "nicht gesetzt",
   "diag.present": "vorhanden",
@@ -93,7 +103,7 @@ const de: Dict = {
 const en: Dict = {
   "app.title": "ActivityTrack",
   "login.heading": "Login required",
-  "login.hint": "Sign in with Clerk to manage this device.",
+  "login.hint": "Enter the tray password to manage this device.",
   "login.email": "Email",
   "login.password": "Password",
   "login.unlock": "Open",
@@ -103,8 +113,6 @@ const en: Dict = {
   "login.error.network": "Cannot reach the server. Network/connection error.",
   "login.error.notConfigured":
     "This computer isn't configured. See diagnostics below.",
-  "login.error.missingClerkKey":
-    "The Clerk publishable key is missing from config.json. The release build must set it from ACTIVITYTRACK_CLERK_PUBLISHABLE_KEY.",
   "login.error.server": "Server error. Technical details below.",
   "login.checking": "Checking …",
   "enroll.heading": "Device Enrollment",
@@ -118,6 +126,19 @@ const en: Dict = {
     "This computer isn't configured. See diagnostics below.",
   "enroll.error.server": "Server error. Technical details below.",
   "enroll.skip": "Skip (view status only)",
+  "pairing.heading": "Pairing device",
+  "pairing.unconfigured":
+    "This computer isn't configured (dashboard API URL missing). See diagnostics below.",
+  "pairing.registering": "Registering this device with the dashboard …",
+  "pairing.pending":
+    "Waiting for IT to approve this device. It continues automatically once approved in the dashboard.",
+  "pairing.disabled":
+    "This device has been disabled by IT. Please contact your administrator.",
+  "pairing.denied":
+    "Pairing was denied (device-id conflict). Retrying automatically …",
+  "pairing.error":
+    "Can't pair right now. Details below; it will keep retrying automatically.",
+  "pairing.waiting": "Waiting for approval …",
   "status.heading": "Status",
   "status.active": "Active",
   "status.idle": "Idle",
@@ -151,12 +172,11 @@ const en: Dict = {
   "errors.detail": "Detail",
   "error.code.tracker.send_failed": "Send failed",
   "error.code.tracker.queue_io": "Local storage",
-  "error.code.tracker.enroll_failed": "Setup failed",
+  "error.code.tracker.pair_failed": "Pairing failed",
   "error.details": "Technical details",
   "diag.heading": "Diagnostics",
   "diag.configFile": "Config file",
-  "diag.bootstrapKey": "Access key",
-  "diag.clerkKey": "Clerk publishable key",
+  "diag.apiUrl": "Dashboard API URL",
   "diag.enrollment": "Enrollment",
   "diag.notSet": "not set",
   "diag.present": "present",

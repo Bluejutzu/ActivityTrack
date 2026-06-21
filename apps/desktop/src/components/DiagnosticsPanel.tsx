@@ -4,10 +4,10 @@ import { t } from "../i18n.js";
 import type { Diagnostics } from "../types.js";
 
 /**
- * Always-available config/connectivity readout, shown on the login and enroll
+ * Always-available config/connectivity readout, shown on the pairing and login
  * screens. Lets a technician see *why* the tool can't reach the backend (missing
- * Convex URL, missing access key, not enrolled, config file path) without first
- * getting past the password gate — the whole point of a debug tool.
+ * Convex URL, missing dashboard API URL, not paired, config file path) without
+ * first getting past the password gate — the whole point of a debug tool.
  *
  * Defaults to open when something essential is missing, collapsed otherwise.
  */
@@ -24,8 +24,7 @@ export function DiagnosticsPanel() {
 
   if (!diag) return null;
 
-  const healthy =
-    diag.hasConvexUrl && diag.hasBootstrapKey && diag.hasClerkPublishableKey;
+  const healthy = diag.hasConvexUrl && diag.hasApiUrl;
 
   return (
     <details className="diag" open={!healthy}>
@@ -37,24 +36,14 @@ export function DiagnosticsPanel() {
             <td>{diag.convexUrl || t("diag.notSet")}</td>
           </tr>
           <tr>
+            <th>{t("diag.apiUrl")}</th>
+            <td>{diag.apiUrl || t("diag.notSet")}</td>
+          </tr>
+          <tr>
             <th>{t("diag.configFile")}</th>
             <td>
               {diag.configFile} —{" "}
               {diag.configPresent ? t("diag.present") : t("diag.missing")}
-            </td>
-          </tr>
-          <tr>
-            <th>{t("diag.bootstrapKey")}</th>
-            <td>
-              {diag.hasBootstrapKey ? t("diag.present") : t("diag.missing")}
-            </td>
-          </tr>
-          <tr>
-            <th>{t("diag.clerkKey")}</th>
-            <td>
-              {diag.hasClerkPublishableKey
-                ? t("diag.present")
-                : t("diag.missing")}
             </td>
           </tr>
           <tr>

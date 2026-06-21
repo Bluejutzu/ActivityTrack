@@ -7,7 +7,7 @@ import {
   type ActivitySample,
 } from "@activitytrack/shared";
 import { z } from "zod";
-import { verifyPassword, generateDeviceKey, hashDeviceKey } from "./crypto";
+import { verifyPassword } from "./crypto";
 import { DEBUG_PASSWORD_SETTING_KEY } from "./settings";
 import {
   bearerToken,
@@ -15,7 +15,6 @@ import {
   badRequest,
   jsonResponse,
   readJson,
-  bootstrapKeyValid,
 } from "./httpHelpers";
 
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -51,10 +50,11 @@ async function logBackendEvent(
 }
 
 /**
- * Authenticate a request by its per-device key (issued at enrollment): hash the
- * Bearer token and look it up. Returns the device row, or null when the header
- * is absent or the key is unknown/disabled. Shared by the device-keyed
- * endpoints (/ingest, /agent/event, and the device branch of verify-password).
+ * Authenticate a request by its per-device token (issued at approval, owned by
+ * the convex-api-tokens component). Returns the device, or null when the header
+ * is absent or the token is invalid / expired / revoked / belongs to a disabled
+ * device. Shared by the device-keyed endpoints (/ingest, /agent/event,
+ * /agent/verify-password).
  */
 async function authenticateDevice(
   ctx: ActionCtx,
@@ -62,8 +62,7 @@ async function authenticateDevice(
 ): Promise<{ deviceId: string } | null> {
   const token = bearerToken(request);
   if (!token) return null;
-  const keyHash = await hashDeviceKey(token);
-  return await ctx.runQuery(internal.devices.lookupDeviceByKeyHash, { keyHash });
+  return await ctx.runMutation(internal.deviceAuth.validateInternal, { token });
 }
 
 /**
@@ -148,69 +147,10 @@ const registerSchema = z.object({
   agentVersion: z.string().min(1).max(50),
 });
 
-/**
- * POST /agent/register — one-time device enrollment.
- * Authenticated by the shared bootstrap key (constant-time compared). Validates
- * the one-time enrollment code, issues a device-specific key, registers the
- * device.
- */
-http.route({
-  path: "/agent/register",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    // Like /ingest, don't log the unauthenticated path (wrong/absent bootstrap
-    // key) — it's the same write-amplification vector. enroll.code_invalid below
-    // IS logged: reaching it requires a valid bootstrap key, so it's a real
-    // signal (someone with a build using a bad/expired code).
-    if (!bootstrapKeyValid(request)) return unauthorized();
-
-    const body = await readJson(request);
-    if (body === undefined) return badRequest();
-
-    const parsed = registerSchema.safeParse(body);
-    if (!parsed.success) return badRequest();
-
-    const { enrollmentCode, deviceId, hostname, windowsUser, agentVersion } =
-      parsed.data;
-
-    const validation = await ctx.runQuery(
-      internal.devices.validateEnrollmentCode,
-      { code: enrollmentCode },
-    );
-    if (!validation.valid) {
-      const reasons: Record<string, string> = {
-        not_found: "enrollment code not found",
-        used: "enrollment code already used",
-        expired: "enrollment code has expired",
-      };
-      await logBackendEvent(ctx, {
-        severity: "warning",
-        code: "enroll.code_invalid",
-        message: `Enrollment rejected for "${hostname}": ${reasons[validation.reason] ?? "invalid code"}.`,
-        deviceId,
-        hostname,
-        context: `code=${enrollmentCode} reason=${validation.reason}`,
-      });
-      return new Response(reasons[validation.reason] ?? "invalid code", {
-        status: 404,
-      });
-    }
-
-    const rawKey = generateDeviceKey();
-    const keyHash = await hashDeviceKey(rawKey);
-
-    await ctx.runMutation(internal.devices.completeRegistration, {
-      slotId: validation.slotId,
-      deviceId,
-      hostname,
-      windowsUser,
-      agentVersion,
-      keyHash,
-    });
-
-    return jsonResponse(200, { deviceKey: rawKey });
-  }),
-});
+// NOTE: device enrollment (register) and approval polling (claim) moved to the
+// Elysia API layer — POST /api/agent/register and /api/agent/poll — which call
+// `devices.requestEnrollment` / `devices.claimToken`. The agent's only Convex
+// httpActions are the device-token-authenticated ones below.
 
 const agentEventSchema = z.object({
   severity: z.enum(["info", "warning", "error", "critical"]),
@@ -251,22 +191,15 @@ http.route({
 
 /**
  * POST /agent/verify-password — tray-app debug login.
- * Authenticated by either the device-specific key or the bootstrap key (to
- * support local dev before enrollment). Verifies the candidate against the hash
- * IT set in the dashboard; the hash never leaves the server.
+ * Authenticated by the device token (the device must be paired). Verifies the
+ * candidate against the hash IT set in the dashboard; the hash never leaves the
+ * server.
  */
 http.route({
   path: "/agent/verify-password",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    if (!bearerToken(request)) return unauthorized();
-
-    // Accept the bootstrap key (dev, pre-enrollment) or a real device key.
-    let authorized = bootstrapKeyValid(request);
-    if (!authorized) {
-      authorized = (await authenticateDevice(ctx, request)) !== null;
-    }
-    if (!authorized) return unauthorized();
+    if ((await authenticateDevice(ctx, request)) === null) return unauthorized();
 
     const body = (await readJson(request)) as { password?: unknown } | undefined;
     if (!body || typeof body.password !== "string") return badRequest();

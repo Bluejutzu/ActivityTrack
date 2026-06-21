@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use crate::model::{ActivitySample, Outcome};
+use crate::model::{ActivitySample, ClaimOutcome, Outcome};
 
-/// POST a batch of samples to /ingest using the device-specific key.
+/// POST a batch of samples to Convex /ingest using the per-device token.
 pub fn send_batch(
     convex_url: &str,
     device_key: &str,
@@ -35,9 +35,9 @@ pub fn send_batch(
     }
 }
 
-/// Report a local operational event to /agent/event using the device key, so
-/// the dashboard's System Health page can show it centrally. Best-effort: the
-/// caller ignores the result.
+/// Report a local operational event to Convex /agent/event using the device
+/// token, so the dashboard's System Health page can show it centrally.
+/// Best-effort: the caller ignores the result.
 pub fn report_event(
     convex_url: &str,
     device_key: &str,
@@ -73,41 +73,41 @@ pub fn report_event(
     }
 }
 
-/// Register this device using a one-time enrollment code. Returns the
-/// device-specific key to store and use for future /ingest calls.
-pub fn register_device(
-    convex_url: &str,
-    bootstrap_key: &str,
-    enrollment_code: &str,
+/// Announce this device to the dashboard (POST {api_url}/api/agent/register).
+/// Unauthenticated — the agent presents only its deviceId and a one-time pairing
+/// nonce, landing in the pending queue. Idempotent; returns the server-reported
+/// status string (e.g. "pending" / "active" / "disabled").
+pub fn register(
+    api_url: &str,
     device_id: &str,
     hostname: &str,
     windows_user: &str,
     agent_version: &str,
+    claim_nonce: &str,
 ) -> Result<String, String> {
-    let url = format!("{}/agent/register", convex_url.trim_end_matches('/'));
+    if api_url.is_empty() {
+        return Err("api url not configured".into());
+    }
+    let url = format!("{}/api/agent/register", api_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(20))
         .build();
 
     let resp = agent
         .post(&url)
-        .set("authorization", &format!("Bearer {}", bootstrap_key))
         .set("content-type", "application/json")
         .send_json(json!({
-            "enrollmentCode": enrollment_code,
             "deviceId": device_id,
             "hostname": hostname,
             "windowsUser": windows_user,
             "agentVersion": agent_version,
+            "claimNonce": claim_nonce,
         }));
 
     match resp {
         Ok(r) => {
             let body: serde_json::Value = r.into_json().map_err(|e| e.to_string())?;
-            body["deviceKey"]
-                .as_str()
-                .map(|k| k.to_string())
-                .ok_or_else(|| "No deviceKey in response".into())
+            Ok(body["status"].as_str().unwrap_or("pending").to_string())
         }
         Err(ureq::Error::Status(code, r)) => {
             let msg = r.into_string().unwrap_or_default();
@@ -117,25 +117,58 @@ pub fn register_device(
     }
 }
 
-/// Verify the debug-login password via the keyed /agent/verify-password
-/// endpoint. Uses device key if enrolled, falls back to bootstrap key for dev.
+/// Poll for approval (POST {api_url}/api/agent/poll). On the first poll after an
+/// admin approves, the response carries the freshly minted device token — the
+/// agent's only chance to capture it. See `ClaimOutcome`.
+pub fn claim(api_url: &str, device_id: &str, claim_nonce: &str) -> Result<ClaimOutcome, String> {
+    if api_url.is_empty() {
+        return Err("api url not configured".into());
+    }
+    let url = format!("{}/api/agent/poll", api_url.trim_end_matches('/'));
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(20))
+        .build();
+
+    let resp = agent
+        .post(&url)
+        .set("content-type", "application/json")
+        .send_json(json!({ "deviceId": device_id, "claimNonce": claim_nonce }));
+
+    match resp {
+        Ok(r) => {
+            let body: serde_json::Value = r.into_json().map_err(|e| e.to_string())?;
+            match body["status"].as_str().unwrap_or("") {
+                "active" => match body["token"].as_str() {
+                    Some(token) if !token.is_empty() => Ok(ClaimOutcome::Active(token.to_string())),
+                    _ => Ok(ClaimOutcome::AlreadyClaimed),
+                },
+                "pending" => Ok(ClaimOutcome::Pending),
+                "disabled" => Ok(ClaimOutcome::Disabled),
+                "denied" => Ok(ClaimOutcome::Denied),
+                "unknown" => Ok(ClaimOutcome::Unknown),
+                other => Err(format!("unexpected poll status: {other}")),
+            }
+        }
+        Err(ureq::Error::Status(code, r)) => {
+            let msg = r.into_string().unwrap_or_default();
+            Err(format!("HTTP {code}: {msg}"))
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Verify the debug-login password via the device-token-authenticated
+/// /agent/verify-password endpoint (the device must already be paired).
 ///
-/// Returns a structured `Outcome` instead of a flat string so each distinct
-/// failure stays distinct (and debuggable):
+/// Returns a structured `Outcome` so each distinct failure stays debuggable:
 /// - `ok`              — password correct
 /// - `wrong`          — 401, wrong password
 /// - `unset`          — 503, no password set in the dashboard yet
-/// - `not_configured` — missing Convex URL or missing credentials (never even
-///                       attempts the request; the old code reported these as
-///                       "network", which is what made this undebuggable)
+/// - `not_configured` — missing Convex URL or no device token (never attempts
+///                       the request)
 /// - `server`         — reached the server but it returned an unexpected status
 /// - `network`        — transport failure (DNS, refused, TLS, timeout)
-pub fn verify_password(
-    convex_url: &str,
-    device_key: Option<&str>,
-    bootstrap_key: &str,
-    password: &str,
-) -> Outcome {
+pub fn verify_password(convex_url: &str, device_key: Option<&str>, password: &str) -> Outcome {
     if convex_url.is_empty() {
         return Outcome::with(
             "not_configured",
@@ -143,15 +176,13 @@ pub fn verify_password(
              ACTIVITYTRACK_CONVEX_URL environment variable).",
         );
     }
-    let auth_key = device_key.unwrap_or(bootstrap_key);
-    if auth_key.is_empty() {
+    let Some(device_key) = device_key.filter(|k| !k.is_empty()) else {
         return Outcome::with(
             "not_configured",
-            "No credentials available: this device is not enrolled and no \
-             bootstrap key is set (config.json \"ingestKey\" or the \
-             ACTIVITYTRACK_INGEST_KEY environment variable).",
+            "This device is not paired yet — no device token to authenticate \
+             the password check.",
         );
-    }
+    };
 
     let url = format!("{}/agent/verify-password", convex_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
@@ -160,7 +191,7 @@ pub fn verify_password(
 
     let response = agent
         .post(&url)
-        .set("authorization", &format!("Bearer {}", auth_key))
+        .set("authorization", &format!("Bearer {}", device_key))
         .set("content-type", "application/json")
         .send_json(json!({ "password": password }));
 
