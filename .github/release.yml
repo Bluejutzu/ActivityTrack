@@ -1,0 +1,26 @@
+# Controls GitHub's auto-generated release notes (used by the "Generate release
+# notes" step in .github/workflows/release.yml). Each merged PR is grouped by its
+# labels; the "*" catch-all keeps unlabeled PRs from being dropped.
+changelog:
+  exclude:
+    authors:
+      - github-actions
+      - dependabot
+  categories:
+    - title: 🚀 Features
+      labels:
+        - enhancement
+        - feature
+    - title: 🐛 Fixes
+      labels:
+        - bug
+        - fix
+    - title: 🧹 Maintenance
+      labels:
+        - chore
+        - refactor
+        - documentation
+        - dependencies
+    - title: Other Changes
+      labels:
+        - "*"

@@ -83,21 +83,30 @@ jobs:
           $nshLines -join "`r`n" | Out-File -Encoding UTF8 -FilePath 'apps/desktop/src-tauri/bundle/nsis/installer.nsh'
 
       # Generate changelog from commits in apps/desktop since the previous tag.
-      - name: Generate changelog
-        id: changelog
+      # Build the release body with GitHub's native notes generator (the same
+      # output as the "Generate release notes" button). Each merged PR becomes
+      # "* <title> by @author in #123" with working PR links, plus a New
+      # Contributors section and a Full Changelog compare link — none of which
+      # the old `git log` text (plain %h hashes) rendered as links. Range is the
+      # previous v* tag → this tag; categorization/exclusions come from
+      # .github/release.yml.
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || echo "")
+          ARGS=(-f tag_name="${{ github.ref_name }}")
           if [ -n "$PREVIOUS_TAG" ]; then
-            CHANGES=$(git log --pretty=format:"- %h %s" "$PREVIOUS_TAG"..HEAD -- apps/desktop)
-          else
-            CHANGES=$(git log --pretty=format:"- %h %s" -- apps/desktop)
+            ARGS+=(-f previous_tag_name="$PREVIOUS_TAG")
           fi
-          # Linkify PR references (#123)
-          CHANGES=$(echo "$CHANGES" | sed 's/#\([0-9]\+\)/#\1/g' | sed 's/\s#\([0-9]\+\)/\n              (#\1)/g')
+          BODY=$(gh api --method POST \
+            "repos/${{ github.repository }}/releases/generate-notes" \
+            "${ARGS[@]}" --jq .body)
           {
-            echo "changes<<EOF"
-            echo "$CHANGES"
-            echo "EOF"
+            echo "body<<__RELEASE_NOTES_EOF__"
+            echo "$BODY"
+            echo "__RELEASE_NOTES_EOF__"
           } >> "$GITHUB_OUTPUT"
         shell: bash
 
@@ -115,7 +124,7 @@ jobs:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: "ActivityTrack ${{ github.ref_name }}"
-          releaseBody: ${{ steps.changelog.outputs.changes }}
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
