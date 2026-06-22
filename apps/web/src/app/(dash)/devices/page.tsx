@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import { Trash2 } from "lucide-react";
+import type { GenericId } from "convex/values";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatRelativeTime, roleAtLeast, type Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InfoTip } from "@/components/InfoTip";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,9 +48,30 @@ export default function DevicesPage() {
   const approve = useMutationWithToast(api.devices.approve);
   const disable = useMutationWithToast(api.devices.disable);
   const link = useMutationWithToast(api.devices.link);
+  const removeDevice = useMutationWithToast(api.devices.remove);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  // Per-row pending guard: while a device's mutation is in flight we disable its
+  // action buttons so a double-click can't fire two requests.
+  const [busyId, setBusyId] = useState<GenericId<"devices"> | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GenericId<"devices"> | null>(
+    null,
+  );
+
+  // Wrap a row mutation so its buttons show a disabled/pending state while it
+  // runs; useMutationWithToast already swallows errors and toasts them.
+  async function runWithBusy(
+    id: GenericId<"devices">,
+    fn: () => Promise<unknown>,
+  ) {
+    setBusyId(id);
+    try {
+      await fn();
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const role = (me?.role ?? "viewer") as Role;
   const isAdmin = roleAtLeast(role, "it_admin");
@@ -87,6 +111,7 @@ export default function DevicesPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               placeholder={t("devices.filter.search")}
+              aria-label={t("devices.filter.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-48"
@@ -107,7 +132,7 @@ export default function DevicesPage() {
           </div>
         </div>
         <Card>
-          <Table>
+          <Table aria-label={t("devices.slots.heading.devices")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("devices.host")}</TableHead>
@@ -127,7 +152,9 @@ export default function DevicesPage() {
                     colSpan={6}
                     className="py-8 text-center text-sm text-muted"
                   >
-                    {t("overview.empty")}
+                    {devices.length === 0
+                      ? t("devices.empty")
+                      : t("devices.noMatches")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -194,16 +221,19 @@ export default function DevicesPage() {
                     {(isAdmin || isManager) && (
                       <TableCell>
                         {isAdmin && (
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2">
                             {d.status !== "active" && (
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 className="text-ok"
+                                disabled={busyId === d._id}
                                 onClick={() =>
-                                  void approve(
-                                    { deviceId: d._id },
-                                    { success: t("devices.approved") },
+                                  void runWithBusy(d._id, () =>
+                                    approve(
+                                      { deviceId: d._id },
+                                      { success: t("devices.approved") },
+                                    ),
                                   )
                                 }
                               >
@@ -215,16 +245,29 @@ export default function DevicesPage() {
                                 variant="secondary"
                                 size="sm"
                                 className="text-danger"
+                                disabled={busyId === d._id}
                                 onClick={() =>
-                                  void disable(
-                                    { deviceId: d._id },
-                                    { success: t("devices.disabled") },
+                                  void runWithBusy(d._id, () =>
+                                    disable(
+                                      { deviceId: d._id },
+                                      { success: t("devices.disabled") },
+                                    ),
                                   )
                                 }
                               >
                                 {t("devices.disable")}
                               </Button>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={busyId === d._id}
+                              onClick={() => setDeleteTarget(d._id)}
+                              className="text-danger hover:bg-danger/10 hover:text-danger"
+                              aria-label={t("devices.delete")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         )}
                       </TableCell>
@@ -236,6 +279,23 @@ export default function DevicesPage() {
           </Table>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        heading={t("devices.confirmDelete")}
+        body={t("devices.confirmDeleteBody")}
+        confirmLabel={t("devices.delete")}
+        onConfirm={async () => {
+          const id = deleteTarget;
+          setDeleteTarget(null);
+          if (id) {
+            await runWithBusy(id, () =>
+              removeDevice({ deviceId: id }, { success: t("devices.deleted") }),
+            );
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   );
 }

@@ -215,7 +215,7 @@ export default function ReportsPage() {
 
       {/* Per-device totals table */}
       <Card>
-        <Table>
+        <Table aria-label={t("reports.title")}>
           <TableHeader>
             <TableRow>
               <TableHead>{t("reports.col.person")}</TableHead>

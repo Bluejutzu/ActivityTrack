@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { FAQ_SECTIONS } from "@/lib/faq";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * In-app Help / FAQ. Common errors and "how do I…" questions in plain language,
@@ -19,9 +20,9 @@ export default function HelpPage() {
 
   const sections = FAQ_SECTIONS.map((s) => ({
     id: s.id,
-    entries: s.entries.filter((id) => {
+    entries: s.entries.filter((e) => {
       if (!needle) return true;
-      return `${t(`faq.q.${id}`)} ${t(`faq.a.${id}`)}`
+      return `${t(`faq.q.${e.id}`)} ${t(`faq.a.${e.id}`)}`
         .toLowerCase()
         .includes(needle);
     }),
@@ -59,15 +60,23 @@ export default function HelpPage() {
               {t(`faq.section.${s.id}`)}
             </h3>
             <div className="space-y-2">
-              {s.entries.map((id) => (
-                <Card key={id} className="overflow-hidden">
+              {s.entries.map((e) => (
+                <Card key={e.id} className="overflow-hidden">
                   <details className="group">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium text-fg transition-colors hover:bg-panel-2">
-                      {t(`faq.q.${id}`)}
-                      <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
+                      <span className="flex items-center gap-2.5">
+                        {t(`faq.q.${e.id}`)}
+                        <Badge variant="muted" className="shrink-0 font-normal">
+                          {t(`faq.scope.${e.scope}`)}
+                        </Badge>
+                      </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180"
+                      />
                     </summary>
                     <div className="whitespace-pre-line px-4 pb-4 text-sm leading-relaxed text-muted">
-                      {t(`faq.a.${id}`)}
+                      {t(`faq.a.${e.id}`)}
                     </div>
                   </details>
                 </Card>

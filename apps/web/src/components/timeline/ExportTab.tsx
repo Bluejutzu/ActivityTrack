@@ -5,6 +5,7 @@ import { useConvex } from "convex/react";
 import { Download } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/lib/useToast";
 import { downloadFile, toCsv, toJson } from "@/lib/export";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export function ExportTab({
   today: string;
 }) {
   const { t } = useI18n();
+  const toast = useToast();
   const convex = useConvex();
   const [exportStart, setExportStart] = useState(startDay);
   const [exportEnd, setExportEnd] = useState(today);
@@ -62,6 +64,12 @@ export function ExportTab({
         ]);
         downloadFile(`${base}.csv`, "text/csv;charset=utf-8", csv);
       }
+      toast(t("timeline.export.done"), "ok");
+    } catch (err) {
+      // The query can fail (network/permissions); surface it instead of leaving
+      // the user staring at a button that silently did nothing.
+      toast(t("timeline.export.failed"), "danger");
+      console.error("[export failed]", err);
     } finally {
       setExporting(false);
     }

@@ -57,6 +57,7 @@ export const en: Dict = {
   "devices.actions": "Actions",
   "devices.approve": "Approve",
   "devices.disable": "Disable",
+  "devices.delete": "Delete",
   "devices.link": "Link",
   "devices.none": "—",
   "status.pending": "Pending",
@@ -189,7 +190,8 @@ export const en: Dict = {
   "reports.col.active": "Active",
   "reports.col.idle": "Idle",
   "reports.col.total": "Total",
-  "reports.empty": "No data for this period.",
+  "reports.empty":
+    "No data for this period. Try a wider time frame or a different device.",
   "reports.trend.heading": "Weekly trend",
   "reports.trend.sub": "Active and idle hours per week.",
   "timeline.export.heading": "Export data",
@@ -199,6 +201,8 @@ export const en: Dict = {
   "timeline.export.to": "To",
   "timeline.export.csv": "Download CSV",
   "timeline.export.json": "Download JSON",
+  "timeline.export.done": "Export downloaded.",
+  "timeline.export.failed": "Export failed. Please try again.",
   "timeline.online": "Online",
   "timeline.offline": "Offline",
 
@@ -206,6 +210,9 @@ export const en: Dict = {
   "common.active": "Active",
   "common.idle": "Idle",
   "common.forbidden": "You do not have permission to view this.",
+  "common.copy": "Copy",
+  "common.copied": "Copied!",
+  "common.copyFailed": "Couldn't copy to clipboard.",
   "footer.privacy":
     "Privacy: ActivityTrack records activity timing only (active/idle) on company-owned devices — no screenshots, no keystrokes. Staff are informed.",
 
@@ -234,12 +241,18 @@ export const en: Dict = {
   "devices.slots.heading.devices": "All Devices",
   "devices.filter.search": "Search …",
   "devices.filter.all": "All statuses",
+  "devices.empty": "No devices yet. Approve one once its tracker enrolls.",
+  "devices.noMatches": "No devices match these filters.",
+  "devices.confirmDelete": "Permanently delete this device?",
+  "devices.confirmDeleteBody":
+    "This removes the device and revokes its token. It will have to re-enroll from scratch. To pause it reversibly, use Disable instead.",
 
   "users.roleUpdated": "Role updated.",
   "people.updated": "Saved.",
   "people.deleted": "Person deleted.",
   "devices.approved": "Device approved.",
   "devices.disabled": "Device disabled.",
+  "devices.deleted": "Device deleted.",
   "devices.linked": "Person linked.",
   "devices.slotRevoked": "Code revoked.",
 
@@ -372,6 +385,10 @@ export const en: Dict = {
   "faq.section.tracker": "The desktop tracker",
   "faq.section.integrations": "Integrations",
   "faq.section.general": "General",
+
+  "faq.scope.desktop": "Desktop tracker",
+  "faq.scope.dashboard": "Dashboard",
+  "faq.scope.both": "Both",
 
   "faq.q.signin_denied": "Someone can't sign in to the dashboard",
   "faq.a.signin_denied":

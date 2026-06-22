@@ -79,6 +79,24 @@ export const disable = mutation({
   },
 });
 
+/**
+ * Permanently delete a device. IT-only. Revokes its token first
+ * (`apiTokens.invalidateAll`, while we still hold `device.deviceId`) so any
+ * agent still polling starts getting 401s, then removes the row. Unlike
+ * `disable` this is irreversible: a deleted device must re-enroll from scratch.
+ */
+export const remove = mutation({
+  args: { deviceId: v.id("devices") },
+  handler: async (ctx, { deviceId }) => {
+    const actor = await requireAdmin(ctx);
+    const device = await ctx.db.get(deviceId);
+    if (!device) throw appError("notFound.device", "Device not found");
+    await apiTokens.invalidateAll(ctx, { namespace: device.deviceId });
+    await ctx.db.delete(deviceId);
+    await writeAudit(ctx, actor._id, "device.remove", device.hostname);
+  },
+});
+
 /** Link a device to a coworker (or pass null to unlink). Manager+. */
 export const link = mutation({
   args: {

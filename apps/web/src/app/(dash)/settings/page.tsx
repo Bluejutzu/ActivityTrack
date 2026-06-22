@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
+import { useTabParam } from "@/lib/useTabParam";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfigPanel } from "@/components/admin/ConfigPanel";
 import { SystemPanel } from "@/components/admin/SystemPanel";
@@ -14,6 +15,7 @@ import { AuditPanel } from "@/components/admin/AuditPanel";
  */
 export default function SettingsPage() {
   const { t } = useI18n();
+  const [tab, setTab] = useTabParam("config");
   return (
     <section className="space-y-5">
       <div>
@@ -23,7 +25,7 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-muted">{t("settings.subtitle")}</p>
       </div>
 
-      <Tabs defaultValue="config">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="config">{t("settings.tabs.config")}</TabsTrigger>
           <TabsTrigger value="system">{t("settings.tabs.system")}</TabsTrigger>
