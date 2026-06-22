@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, Trash2 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { roleAtLeast, type Role } from "@/lib/format";
 import type { GenericId } from "convex/values";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
+import { useToast } from "@/lib/useToast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,21 +39,47 @@ function EditableId({
   placeholder: string;
   onSave: (value: string) => void;
 }) {
+  const { t } = useI18n();
+  const toast = useToast();
   const [value, setValue] = useState(initial);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast(t("common.copied"), "ok");
+    } catch {
+      toast(t("common.copyFailed"), "danger");
+    }
+  }
+
   return (
-    <Input
-      value={value}
-      disabled={disabled}
-      placeholder={placeholder}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        if (value !== initial) onSave(value);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-      }}
-      className="h-8 min-w-[7rem] font-mono text-xs"
-    />
+    <div className="flex items-center gap-1">
+      <Input
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => {
+          if (value !== initial) onSave(value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className="h-8 min-w-[7rem] font-mono text-xs"
+      />
+      {value.trim() !== "" && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={copy}
+          aria-label={t("common.copy")}
+          className="h-8 w-8 shrink-0 text-muted hover:text-fg"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -120,7 +147,7 @@ export default function PeoplePage() {
       )}
 
       <Card>
-        <Table>
+        <Table aria-label={t("nav.people")}>
           <TableHeader>
             <TableRow>
               <TableHead>{t("people.name")}</TableHead>

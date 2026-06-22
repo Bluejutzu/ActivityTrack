@@ -58,6 +58,7 @@ export const de: Dict = {
   "devices.actions": "Aktionen",
   "devices.approve": "Genehmigen",
   "devices.disable": "Deaktivieren",
+  "devices.delete": "Löschen",
   "devices.link": "Zuordnen",
   "devices.none": "—",
   "status.pending": "Ausstehend",
@@ -207,6 +208,9 @@ export const de: Dict = {
   "common.active": "Aktiv",
   "common.idle": "Inaktiv",
   "common.forbidden": "Keine Berechtigung für diese Ansicht.",
+  "common.copy": "Kopieren",
+  "common.copied": "Kopiert!",
+  "common.copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
   "footer.privacy":
     "Datenschutz: ActivityTrack erfasst nur Aktivitätszeiten (aktiv/inaktiv) auf firmeneigenen Geräten — keine Screenshots, keine Tastatureingaben. Mitarbeiter sind informiert.",
 
@@ -236,12 +240,19 @@ export const de: Dict = {
   "devices.slots.heading.devices": "Alle Geräte",
   "devices.filter.search": "Suche …",
   "devices.filter.all": "Alle Status",
+  "devices.empty":
+    "Noch keine Geräte. Genehmigen Sie eines, sobald sich sein Tracker registriert.",
+  "devices.noMatches": "Keine Geräte entsprechen diesen Filtern.",
+  "devices.confirmDelete": "Dieses Gerät endgültig löschen?",
+  "devices.confirmDeleteBody":
+    "Dadurch wird das Gerät entfernt und sein Token widerrufen. Es muss sich komplett neu registrieren. Zum reversiblen Pausieren verwenden Sie stattdessen „Deaktivieren“.",
 
   "users.roleUpdated": "Rolle aktualisiert.",
   "people.updated": "Gespeichert.",
   "people.deleted": "Mitarbeiter gelöscht.",
   "devices.approved": "Gerät genehmigt.",
   "devices.disabled": "Gerät deaktiviert.",
+  "devices.deleted": "Gerät gelöscht.",
   "devices.linked": "Mitarbeiter zugeordnet.",
   "devices.slotRevoked": "Code widerrufen.",
 
@@ -384,6 +395,10 @@ export const de: Dict = {
   "faq.section.tracker": "Der Desktop-Tracker",
   "faq.section.integrations": "Integrationen",
   "faq.section.general": "Allgemein",
+
+  "faq.scope.desktop": "Desktop-Tracker",
+  "faq.scope.dashboard": "Dashboard",
+  "faq.scope.both": "Beides",
 
   "faq.q.signin_denied": "Jemand kann sich nicht am Dashboard anmelden",
   "faq.a.signin_denied":
