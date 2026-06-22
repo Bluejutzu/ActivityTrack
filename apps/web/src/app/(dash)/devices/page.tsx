@@ -111,6 +111,7 @@ export default function DevicesPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               placeholder={t("devices.filter.search")}
+              aria-label={t("devices.filter.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-48"

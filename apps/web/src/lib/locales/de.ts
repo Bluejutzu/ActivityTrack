@@ -191,7 +191,8 @@ export const de: Dict = {
   "reports.col.active": "Aktiv",
   "reports.col.idle": "Inaktiv",
   "reports.col.total": "Gesamt",
-  "reports.empty": "Keine Daten für diesen Zeitraum.",
+  "reports.empty":
+    "Keine Daten für diesen Zeitraum. Wählen Sie einen größeren Zeitraum oder ein anderes Gerät.",
   "reports.trend.heading": "Wöchentlicher Verlauf",
   "reports.trend.sub": "Aktiv- und Inaktivstunden je Woche.",
   "timeline.export.heading": "Daten exportieren",
@@ -201,6 +202,8 @@ export const de: Dict = {
   "timeline.export.to": "Bis",
   "timeline.export.csv": "CSV herunterladen",
   "timeline.export.json": "JSON herunterladen",
+  "timeline.export.done": "Export heruntergeladen.",
+  "timeline.export.failed": "Export fehlgeschlagen. Bitte erneut versuchen.",
   "timeline.online": "Online",
   "timeline.offline": "Offline",
 

@@ -13,6 +13,7 @@ import { useToast } from "@/lib/useToast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -137,7 +138,11 @@ export default function PeoplePage() {
                 placeholder={t("people.email")}
                 className="sm:flex-1"
               />
-              <Button type="submit" className="sm:w-auto">
+              <Button
+                type="submit"
+                disabled={!name.trim()}
+                className="sm:w-auto"
+              >
                 <Plus className="h-4 w-4" />
                 {t("people.add")}
               </Button>
@@ -214,13 +219,13 @@ export default function PeoplePage() {
                   />
                 </TableCell>
                 <TableCell>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={p.active}
                     disabled={!canEdit}
-                    onChange={(e) => {
+                    aria-label={t("people.active")}
+                    onCheckedChange={(checked) => {
                       void update(
-                        { personId: p._id, active: e.target.checked },
+                        { personId: p._id, active: checked === true },
                         { success: t("people.updated") },
                       );
                     }}

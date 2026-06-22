@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, Coffee, Radio } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import type { EmployeeState } from "@activitytrack/shared";
 import { useI18n } from "@/lib/i18n";
+import { useTabParam } from "@/lib/useTabParam";
 import {
   formatDuration,
   formatRelativeTime,
@@ -76,6 +77,7 @@ export default function TimelinePage({
   params: { deviceId: string };
 }) {
   const { t, lang } = useI18n();
+  const [tab, setTab] = useTabParam("charts");
   const deviceId = decodeURIComponent(params.deviceId);
 
   const samples = useQuery(api.stats.recentSamples, { deviceId, limit: 1000 });
@@ -253,7 +255,7 @@ export default function TimelinePage({
         </Card>
       )}
 
-      <Tabs defaultValue="charts">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="charts">{t("timeline.tabs.charts")}</TabsTrigger>
           <TabsTrigger value="day">{t("timeline.tabs.day")}</TabsTrigger>

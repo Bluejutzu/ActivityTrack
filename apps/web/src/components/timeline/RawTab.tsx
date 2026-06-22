@@ -29,7 +29,7 @@ export function RawTab({ samples }: { samples: RawSample[] }) {
   }
   return (
     <Card>
-      <Table>
+      <Table aria-label={t("timeline.tabs.raw")}>
         <TableHeader>
           <TableRow>
             <TableHead>{t("timeline.time")}</TableHead>
