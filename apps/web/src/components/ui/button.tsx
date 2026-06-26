@@ -17,10 +17,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Brand blurple gradient — the one primary action on a screen.
-        // `default` and `primary` are aliases (back-compat + the new naming).
-        default: "btn-primary font-semibold",
-        primary: "btn-primary font-semibold",
+        // Primary action: an inverted neutral button — white-on-dark in the dark
+        // theme, dark-on-cream in light (the Claude/Vercel "white primary"). Blue
+        // stays reserved for highlights/links, not filled buttons. `default` and
+        // `primary` are aliases (back-compat + the new naming).
+        default:
+          "bg-fg text-bg font-semibold shadow-soft hover:bg-fg/90 hover:shadow-card",
+        primary:
+          "bg-fg text-bg font-semibold shadow-soft hover:bg-fg/90 hover:shadow-card",
         secondary:
           "border border-border bg-bg-2 text-fg hover:bg-panel-2 hover:border-border",
         ghost: "text-muted hover:bg-panel-2 hover:text-fg",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Clock, Moon, Users } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, todayLocalDay } from "@/lib/format";
@@ -13,6 +13,7 @@ import {
   weeklyTrend,
   type DailyStat,
 } from "@/lib/activity";
+import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -113,11 +114,20 @@ export default function ReportsPage() {
     "custom",
   ];
 
+  // Range totals across the currently filtered devices.
+  const totals = useMemo(
+    () => ({
+      active: rows.reduce((s, d) => s + d.totals.activeSeconds, 0),
+      idle: rows.reduce((s, d) => s + d.totals.idleSeconds, 0),
+      devices: rows.length,
+    }),
+    [rows],
+  );
+
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       <div>
-        <p className="kicker mb-1.5">// Reporting</p>
-        <h1 className="font-display text-2xl font-semibold tracking-tightest text-fg">
+        <h1 className="text-2xl font-bold tracking-tight text-fg">
           {t("reports.title")}
         </h1>
         <p className="mt-1 text-sm text-muted">{t("reports.subtitle")}</p>
@@ -190,6 +200,30 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
         </label>
+      </div>
+
+      {/* Range totals */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard
+          label={t("reports.col.active")}
+          value={
+            report === undefined ? "—" : formatDuration(totals.active, lang)
+          }
+          tone="ok"
+          icon={<Clock className="h-4 w-4" />}
+        />
+        <StatCard
+          label={t("reports.col.idle")}
+          value={report === undefined ? "—" : formatDuration(totals.idle, lang)}
+          tone="warn"
+          icon={<Moon className="h-4 w-4" />}
+        />
+        <StatCard
+          label={t("reports.filter")}
+          value={report === undefined ? "—" : totals.devices}
+          tone="fg"
+          icon={<Users className="h-4 w-4" />}
+        />
       </div>
 
       {/* Weekly trend chart */}

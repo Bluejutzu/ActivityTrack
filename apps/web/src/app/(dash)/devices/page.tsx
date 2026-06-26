@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { Trash2 } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  Clock3,
+  MonitorSmartphone,
+  Trash2,
+} from "lucide-react";
 import type { GenericId } from "convex/values";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
@@ -11,6 +17,7 @@ import { formatRelativeTime, formatTime, roleAtLeast, type Role } from "@/lib/fo
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InfoTip } from "@/components/InfoTip";
+import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -96,12 +103,50 @@ export default function DevicesPage() {
     });
   }, [devices, statusFilter, search]);
 
+  const counts = useMemo(() => {
+    const list = devices ?? [];
+    return {
+      total: list.length,
+      active: list.filter((d) => d.status === "active").length,
+      pending: list.filter((d) => d.status === "pending").length,
+      disabled: list.filter((d) => d.status === "disabled").length,
+    };
+  }, [devices]);
+
   if (devices === undefined || people === undefined) {
     return <p className="text-muted">{t("common.loading")}</p>;
   }
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-6">
+      {/* ── Fleet status summary ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label={t("devices.all")}
+          value={counts.total}
+          tone="fg"
+          icon={<MonitorSmartphone className="h-4 w-4" />}
+        />
+        <StatCard
+          label={t("status.active")}
+          value={counts.active}
+          tone="ok"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+        />
+        <StatCard
+          label={t("status.pending")}
+          value={counts.pending}
+          tone="warn"
+          icon={<Clock3 className="h-4 w-4" />}
+        />
+        <StatCard
+          label={t("status.disabled")}
+          value={counts.disabled}
+          tone="muted"
+          icon={<Ban className="h-4 w-4" />}
+        />
+      </div>
+
       {/* ── Devices table ── */}
       <div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">

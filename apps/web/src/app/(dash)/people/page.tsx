@@ -114,10 +114,10 @@ export default function PeoplePage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       {canEdit && (
         <Card className="animate-fade-up">
-          <CardContent className="p-3">
+          <CardContent className="p-3 sm:p-4">
             <form
               onSubmit={onAdd}
               className="flex flex-col gap-2 sm:flex-row sm:items-center"

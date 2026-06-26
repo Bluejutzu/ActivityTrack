@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/StatCard";
 import { StateBadge, SourceSignals } from "@/components/state/StateBits";
 import { CopyButton } from "@/components/CopyButton";
 import { ChartsTab } from "@/components/timeline/ChartsTab";
@@ -35,54 +36,6 @@ import { ExportTab } from "@/components/timeline/ExportTab";
 import { DayDetailTab } from "@/components/timeline/DayDetailTab";
 
 const TREND_DAYS = 14;
-
-function KpiCard({
-  icon,
-  label,
-  value,
-  tone = "fg",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  tone?: "fg" | "ok" | "warn" | "accent";
-}) {
-  const toneClass = {
-    fg: "text-fg",
-    ok: "text-ok",
-    warn: "text-warn",
-    accent: "text-accent",
-  }[tone];
-  // The icon tile picks up the figure's tone so the KPI reads at a glance.
-  const tileClass = {
-    fg: "bg-panel-2 text-muted ring-border",
-    ok: "bg-ok/12 text-ok ring-ok/25",
-    warn: "bg-warn/12 text-warn ring-warn/25",
-    accent: "bg-accent/12 text-accent ring-accent/25",
-  }[tone];
-  return (
-    <Card className="animate-fade-up transition-shadow duration-200 hover:shadow-card-hover">
-      {/* Stat-card layout: label + icon pinned to the top, the figure pinned to
-          the bottom as the focal point, so content spans the full card height
-          instead of clinging to the top. */}
-      <CardContent className="flex min-h-[7.5rem] flex-col justify-between gap-4 p-5">
-        <div className="flex items-start justify-between gap-2">
-          <p className="kicker truncate pt-0.5">{label}</p>
-          <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset ${tileClass}`}
-          >
-            {icon}
-          </span>
-        </div>
-        <div
-          className={`truncate font-display text-3xl font-bold leading-none tabular-nums tracking-tightest ${toneClass}`}
-        >
-          {value}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function TimelinePage({
   params,
@@ -178,7 +131,7 @@ export default function TimelinePage({
   const fileLabel = device?.personName ?? device?.hostname ?? deviceId;
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       <Link
         href="/"
         className="group inline-flex items-center gap-1 text-sm text-accent"
@@ -188,10 +141,7 @@ export default function TimelinePage({
       </Link>
 
       <div>
-        <p className="kicker mb-1.5">Device telemetry</p>
-        <h1 className="font-display text-2xl font-bold tracking-tightest text-fg">
-          {title}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-fg">{title}</h1>
         <div className="mt-1 flex items-center gap-1">
           <span className="truncate font-mono text-xs text-muted">
             {deviceId}
@@ -202,19 +152,19 @@ export default function TimelinePage({
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
+        <StatCard
           icon={<Clock className="h-4 w-4" />}
           label={t("timeline.kpi.activeToday")}
           tone="ok"
           value={formatDuration(todayStats?.activeSeconds ?? 0, lang)}
         />
-        <KpiCard
+        <StatCard
           icon={<Coffee className="h-4 w-4" />}
           label={t("timeline.kpi.idleToday")}
           tone="warn"
           value={formatDuration(todayStats?.idleSeconds ?? 0, lang)}
         />
-        <KpiCard
+        <StatCard
           icon={<Radio className="h-4 w-4" />}
           label={t("timeline.kpi.status")}
           value={
@@ -223,10 +173,11 @@ export default function TimelinePage({
             </Badge>
           }
         />
-        <KpiCard
+        <StatCard
           icon={<Clock className="h-4 w-4" />}
           label={t("timeline.kpi.lastSeen")}
           value={device ? formatRelativeTime(device.lastSeen, lang) : "—"}
+          valueClassName="text-xl"
         />
       </div>
 

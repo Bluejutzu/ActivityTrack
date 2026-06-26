@@ -106,19 +106,12 @@ function NavLinks({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color] duration-150",
+              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-[background-color,color] duration-150",
               active
-                ? "bg-panel text-fg shadow-soft"
-                : "text-muted hover:bg-panel/60 hover:text-fg",
+                ? "bg-panel-2 text-fg"
+                : "text-muted hover:bg-panel-2/60 hover:text-fg",
             )}
           >
-            {/* Left highlight bar on the active route. */}
-            <span
-              className={cn(
-                "absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-accent transition-opacity duration-200",
-                active ? "opacity-100" : "opacity-0",
-              )}
-            />
             <Icon
               className={cn(
                 "h-[18px] w-[18px] shrink-0 transition-colors",
