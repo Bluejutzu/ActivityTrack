@@ -9,10 +9,10 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // A lifted, chunky-rounded surface. The hairline inset highlight makes it
-      // read as raised above the content plane (especially in dark mode) rather
-      // than painted on; the soft card shadow gives gentle elevation.
-      "rounded-xl border border-border bg-panel shadow-card",
+      // A lifted surface. The hairline inset highlight (baked into shadow-card)
+      // makes it read as raised above the content plane rather than painted on;
+      // crisp 2xl radius and a restrained shadow keep the geometry calm.
+      "rounded-2xl border border-border bg-panel shadow-card",
       className,
     )}
     {...props}

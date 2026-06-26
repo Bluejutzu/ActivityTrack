@@ -3,85 +3,95 @@
 @tailwind utilities;
 
 /* ───────────────────────────────────────────────────────────────────────────
-   "Aurora" — a focused, modern operations dashboard
-   Layered surfaces with real depth (Discord-style: a dark rail, a lighter
-   content plane, and cards that lift above it), chunky rounded corners, bold
-   section headers, and a blurple-leaning brand blue. Chrome (nav, top bar,
-   labels) stays quiet; the data — numbers, status, charts — is what pops.
+   ActivityTrack — "Canvas" design system
+   A warm, editorial operations dashboard. Beige-grey neutrals (the Claude /
+   Anthropic palette), white as the primary surface, a single calm blue as the
+   highlight, and a clear traffic-light status set (green = working, amber =
+   idle, red = problem). Big serif display headings carry character; the data —
+   numbers, status, charts — stays crisp and quiet around them. Glass/blur is a
+   garnish, used only on the header, the mobile nav, and one or two hero cards.
 
-   Light (`:root`) and dark (`.dark`) share the same token names. Colours are
-   stored as space-separated RGB channels so Tailwind utilities — including
-   `/20`-style alpha — recolour automatically when `.dark` is toggled on <html>.
+   Light (`:root`) and dark (`.dark`) share the SAME token names. Colours are
+   stored as space-separated RGB channels so every Tailwind utility — including
+   `/20`-style alpha — recolours automatically when `.dark` is toggled on <html>.
+   Dark is the hero; light is derived to match.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
+  /* Body face is wired by next/font in layout.tsx; these are the fallbacks. */
   --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-sans);
+  --font-display: ui-serif, Georgia, serif;
   /* Numerals share the body face; tabular figures do the aligning. */
   --font-mono: var(--font-sans);
 
-  /* ── Light surfaces (bg = page, bg-2 = rail/top bar, panel = card) ─────── */
-  --c-bg: 244 245 248;
-  --c-bg-2: 255 255 255;
-  --c-panel: 255 255 255;
-  --c-panel-2: 240 242 246;
-  --c-border: 226 230 237;
-  --c-border-soft: 236 239 243;
-  --c-muted: 96 105 120;
-  --c-fg: 23 28 36;
-  /* ── Brand + status ─────────────────────────────────────────────────── */
-  --c-accent: 56 99 244; /* blurple-leaning blue */
-  --c-accent-2: 79 70 229; /* indigo companion for gradients/active */
-  --c-ok: 22 163 116;
-  --c-warn: 197 116 12;
-  --c-danger: 220 75 71;
-  --c-info: 14 146 201;
+  /* ── Light surfaces — warm cream (bg = page, bg-2 = rail/bar, panel = card) */
+  --c-bg: 244 242 236;
+  --c-bg-2: 251 250 246;
+  --c-panel: 255 255 254;
+  --c-panel-2: 243 240 232;
+  --c-border: 227 221 210;
+  --c-border-soft: 237 232 223;
+  --c-muted: 109 102 91;
+  --c-fg: 37 34 30;
+  /* ── Highlight (the one blue) + a near-blue companion for rare gradients ── */
+  --c-accent: 43 96 232;
+  --c-accent-2: 67 110 235;
+  /* ── Status (traffic light) ─────────────────────────────────────────────── */
+  --c-ok: 22 158 110;
+  --c-warn: 190 112 12;
+  --c-danger: 211 76 70;
+  --c-info: 14 142 196;
+  /* ── Glass base + text-on-accent ────────────────────────────────────────── */
+  --c-glass: 251 250 246;
+  --c-accent-fg: 255 255 255;
 
-  /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ──────── */
-  --chart-active: #12a373;
-  --chart-idle: #d08a16;
-  --chart-accent: #3863f4;
-  --chart-accent-2: #4f46e5;
-  --chart-info: #0e92c9;
-  --chart-grid: #e6eaf1;
-  --chart-axis: #606978;
-  --chart-panel: #ffffff;
-  --chart-fg: #171c24;
-  --chart-cursor: rgba(56, 99, 244, 0.08);
-  --chart-tooltip-shadow: 0 8px 24px -10px rgba(16, 24, 40, 0.22);
+  /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ────────── */
+  --chart-active: #129e6e;
+  --chart-idle: #be700c;
+  --chart-accent: #2b60e8;
+  --chart-accent-2: #436ee5;
+  --chart-info: #0e8ec4;
+  --chart-grid: #e4ded3;
+  --chart-axis: #6d665b;
+  --chart-panel: #fffffe;
+  --chart-fg: #25221e;
+  --chart-cursor: rgba(43, 96, 232, 0.07);
+  --chart-tooltip-shadow: 0 10px 30px -12px rgba(40, 33, 22, 0.22);
 
   color-scheme: light;
 }
 
 .dark {
-  /* ── Dark surfaces — layered, cool slate with a faint blue undertone ──── */
-  --c-bg: 22 24 29; /* app backdrop / sidebar rail (darkest) */
-  --c-bg-2: 30 32 38; /* top bar + rail surface */
-  --c-panel: 38 41 49; /* cards — lifted, lighter than the rail */
-  --c-panel-2: 48 52 61; /* raised within cards / hover */
-  --c-border: 52 56 66;
-  --c-border-soft: 42 46 55;
-  --c-muted: 150 158 172;
-  --c-fg: 233 236 242;
-  /* ── Brand + status — same hues, lifted for contrast on dark ─────────── */
-  --c-accent: 110 132 255; /* blurple */
-  --c-accent-2: 139 134 255; /* indigo-violet companion */
-  --c-ok: 49 199 144;
+  /* ── Dark surfaces — warm charcoal with a faint clay undertone ──────────── */
+  --c-bg: 23 22 20; /* app backdrop / rail (darkest, warm) */
+  --c-bg-2: 28 27 24; /* top bar + rail surface (glass base) */
+  --c-panel: 34 32 29; /* cards — lifted, warmer than the rail */
+  --c-panel-2: 45 42 38; /* raised within cards / hover */
+  --c-border: 53 50 45;
+  --c-border-soft: 39 37 33;
+  --c-muted: 165 158 147;
+  --c-fg: 240 238 232; /* warm white — the primary */
+  /* ── Highlight — same calm blue, lifted for contrast on warm dark ──────── */
+  --c-accent: 96 150 248;
+  --c-accent-2: 123 167 250;
+  --c-ok: 52 199 144;
   --c-warn: 228 156 66;
-  --c-danger: 242 102 97;
-  --c-info: 58 178 223;
+  --c-danger: 240 110 100;
+  --c-info: 88 162 232;
+  --c-glass: 28 27 24;
+  --c-accent-fg: 255 255 255;
 
-  --chart-active: #31c790;
+  --chart-active: #34c790;
   --chart-idle: #e49c42;
-  --chart-accent: #6e84ff;
-  --chart-accent-2: #8b86ff;
-  --chart-info: #3ab2df;
-  --chart-grid: #343846;
-  --chart-axis: #969eac;
-  --chart-panel: #262931;
-  --chart-fg: #e9ecf2;
-  --chart-cursor: rgba(110, 132, 255, 0.14);
-  --chart-tooltip-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.75);
+  --chart-accent: #6096f8;
+  --chart-accent-2: #7ba7fa;
+  --chart-info: #58a2e8;
+  --chart-grid: #353229;
+  --chart-axis: #a59e93;
+  --chart-panel: #22201d;
+  --chart-fg: #f0eee8;
+  --chart-cursor: rgba(96, 150, 248, 0.14);
+  --chart-tooltip-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
 }
@@ -105,7 +115,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Keyboard focus ring — brand blue; pointer interactions stay ring-free. */
+/* Keyboard focus ring — the highlight blue; pointer interactions stay clean. */
 *:focus-visible {
   outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
@@ -117,11 +127,11 @@ body {
 }
 
 ::selection {
-  background: rgb(var(--c-accent) / 0.22);
+  background: rgb(var(--c-accent) / 0.2);
   color: rgb(var(--c-fg));
 }
 
-/* Styled checkbox in brand blue */
+/* Styled checkbox in the highlight blue */
 input[type="checkbox"] {
   accent-color: rgb(var(--c-accent));
   width: 1rem;
@@ -138,13 +148,13 @@ input[type="checkbox"] {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--c-muted) / 0.32);
+  background: rgb(var(--c-muted) / 0.3);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--c-muted) / 0.5);
+  background: rgb(var(--c-muted) / 0.48);
   background-clip: padding-box;
 }
 
@@ -153,29 +163,57 @@ input[type="checkbox"] {
 /* A near-invisible neutral grid for large empty surfaces — texture, not noise. */
 .signal-grid {
   background-image:
-    linear-gradient(to right, rgb(var(--c-fg) / 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(var(--c-fg) / 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgb(var(--c-fg) / 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--c-fg) / 0.03) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
 /* Small section label — clean caps, quiet. Chrome, not data. */
 .kicker {
   font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgb(var(--c-muted));
 }
 
-/* Bold, "thick" section/card heading — the data layer announces itself. */
+/* Editorial section / hero heading — the serif display face carries character. */
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: rgb(var(--c-fg));
+}
+
+/* Bold, tight section heading in the body face (for data-dense headers). */
 .h-section {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgb(var(--c-fg));
 }
 
-/* The blurple → indigo brand gradient, reused on primary actions, the brand
-   mark, active nav and KPI accents. One source of truth for the sheen. */
+/* Glass surface — translucent base + blur, hairline edge. Garnish only:
+   the header, the mobile nav, and one or two hero cards. */
+.glass {
+  background-color: rgb(var(--c-glass) / 0.72);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  border: 1px solid rgb(var(--c-border) / 0.6);
+}
+
+/* A stronger glass for a single hero card — a touch more blur + lift. */
+.glass-strong {
+  background-color: rgb(var(--c-glass) / 0.62);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgb(var(--c-border) / 0.7);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+    0 18px 50px -24px rgb(0 0 0 / 0.45);
+}
+
+/* The blue → near-blue highlight gradient. Used sparingly: brand mark, the one
+   primary action, active nav, hero accents. One source of truth for the sheen. */
 .brand-gradient {
   background-image: linear-gradient(
     135deg,
@@ -196,25 +234,25 @@ input[type="checkbox"] {
   color: transparent;
 }
 
-/* The primary button surface: blurple → indigo gradient with a hairline top
-   highlight and a blue lift on hover. Used by the Button `primary`/`default`
-   variants so the one bold action on a screen carries the brand. */
+/* The primary button surface: the highlight blue with a hairline top highlight
+   and a soft blue lift on hover. Used by the Button `primary`/`default`
+   variants so the one bold action on a screen carries the highlight. */
 .btn-primary {
-  color: #fff;
+  color: rgb(var(--c-accent-fg));
   background-image: linear-gradient(
     135deg,
     rgb(var(--c-accent)),
     rgb(var(--c-accent-2))
   );
   box-shadow:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.14),
-    0 1px 2px rgb(8 12 20 / 0.24);
+    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
+    0 1px 2px rgb(8 12 20 / 0.22);
 }
 .btn-primary:hover {
-  filter: brightness(1.07);
+  filter: brightness(1.06);
   box-shadow:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.14),
-    0 8px 24px -8px rgb(var(--c-accent) / 0.55);
+    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
+    0 8px 22px -8px rgb(var(--c-accent) / 0.5);
 }
 
 /* A lifted surface: card-like depth with a hairline top highlight so panels
@@ -278,7 +316,9 @@ input[type="checkbox"] {
   }
 }
 
-/* Respect reduced-motion — single override, no exceptions needed */
+/* Motion convention: entrances ease-out ≤260ms (fade-up/scale-in/rise),
+   repositioning ease-in-out, hover ~150ms, press scale(0.97). Transform &
+   opacity only. Everything below is overridden under reduced-motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

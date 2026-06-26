@@ -46,6 +46,7 @@ export const de: Dict = {
   "overview.unassigned": "Nicht zugewiesen",
   "overview.lastSeen": "Zuletzt gesehen",
   "overview.total": "Geräte gesamt",
+  "overview.ofTotal": "von {total} Geräten",
 
   "devices.heading": "Geräte",
   "devices.pending": "Wartet auf Genehmigung",
@@ -385,6 +386,7 @@ export const de: Dict = {
 
   // Hilfe / FAQ, Status-Tooltips, Einrichtungs-Checkliste, Schutzabfragen.
   "nav.help": "Hilfe",
+  "nav.more": "Mehr",
 
   "help.title": "Hilfe & FAQ",
   "help.subtitle":

@@ -18,20 +18,20 @@ export const CLERK_VARS: Record<
   }
 > = {
   light: {
-    colorBackground: "#ffffff",
-    colorInputBackground: "#ffffff",
-    colorText: "#1b2027",
-    colorTextSecondary: "#5b6573",
-    colorInputText: "#1b2027",
-    colorPrimary: "#2e6cf6",
+    colorBackground: "#fffffe",
+    colorInputBackground: "#fffffe",
+    colorText: "#25221e",
+    colorTextSecondary: "#6d665b",
+    colorInputText: "#25221e",
+    colorPrimary: "#2b60e8",
   },
   dark: {
-    colorBackground: "#161c24",
-    colorInputBackground: "#1e252f",
-    colorText: "#e6eaf0",
-    colorTextSecondary: "#8e9aa9",
-    colorInputText: "#e6eaf0",
-    colorPrimary: "#588eff",
+    colorBackground: "#22201d",
+    colorInputBackground: "#2d2a26",
+    colorText: "#f0eee8",
+    colorTextSecondary: "#a59e93",
+    colorInputText: "#f0eee8",
+    colorPrimary: "#6096f8",
   },
 };
 

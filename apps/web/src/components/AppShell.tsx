@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Menu,
   MonitorSmartphone,
+  MoreHorizontal,
   Settings,
   Users,
   type LucideIcon,
@@ -37,29 +38,38 @@ interface NavItem {
   labelKey: string;
   minRole: Role;
   icon: LucideIcon;
+  /** Shown in the mobile bottom tab bar (the primary destinations). */
+  primary?: boolean;
 }
 
-// Trimmed to four clear destinations. The former Live-Status folds into the
-// Overview/timeline; Health, Users and Audit are sub-tabs inside Settings.
 const NAV: NavItem[] = [
   {
     href: "/",
     labelKey: "nav.overview",
     minRole: "viewer",
     icon: LayoutDashboard,
+    primary: true,
   },
   {
     href: "/devices",
     labelKey: "nav.devices",
     minRole: "viewer",
     icon: MonitorSmartphone,
+    primary: true,
   },
-  { href: "/people", labelKey: "nav.people", minRole: "viewer", icon: Users },
+  {
+    href: "/people",
+    labelKey: "nav.people",
+    minRole: "viewer",
+    icon: Users,
+    primary: true,
+  },
   {
     href: "/reports",
     labelKey: "nav.reports",
     minRole: "viewer",
     icon: CalendarRange,
+    primary: true,
   },
   {
     href: "/settings",
@@ -69,6 +79,10 @@ const NAV: NavItem[] = [
   },
   { href: "/help", labelKey: "nav.help", minRole: "viewer", icon: HelpCircle },
 ];
+
+function isActive(href: string, pathname: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
 
 function NavLinks({
   items,
@@ -83,8 +97,7 @@ function NavLinks({
   return (
     <nav className="flex flex-col gap-1">
       {items.map((n) => {
-        const active =
-          n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+        const active = isActive(n.href, pathname);
         const Icon = n.icon;
         return (
           <Link
@@ -93,18 +106,16 @@ function NavLinks({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              // Chunky rounded nav pill. Active fills with a soft brand tint and
-              // a left indicator; idle stays quiet until hover.
               "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color] duration-150",
               active
-                ? "bg-accent/12 text-fg"
-                : "text-muted hover:bg-panel-2 hover:text-fg",
+                ? "bg-panel text-fg shadow-soft"
+                : "text-muted hover:bg-panel/60 hover:text-fg",
             )}
           >
-            {/* Left indicator bar on the active route (Discord-style). */}
+            {/* Left highlight bar on the active route. */}
             <span
               className={cn(
-                "absolute left-0 top-1/2 h-5 w-1 -translate-x-1 -translate-y-1/2 rounded-r-full bg-brand-gradient transition-opacity duration-200",
+                "absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-accent transition-opacity duration-200",
                 active ? "opacity-100" : "opacity-0",
               )}
             />
@@ -126,11 +137,11 @@ function Brand() {
   const { t } = useI18n();
   return (
     <Link href="/" className="group flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow transition-transform duration-150 group-hover:scale-105">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-gradient text-accent-fg shadow-glow transition-transform duration-150 group-hover:scale-105">
         <Activity className="h-[18px] w-[18px]" />
       </span>
       <span className="flex min-w-0 flex-col leading-none">
-        <span className="truncate text-[15px] font-bold tracking-tightest text-fg">
+        <span className="truncate font-display text-[17px] font-medium tracking-tight text-fg">
           {t("app.name")}
         </span>
         <span className="mt-1 truncate text-[11px] text-muted">
@@ -141,13 +152,61 @@ function Brand() {
   );
 }
 
+/** The mobile bottom tab bar — thumb-reachable, glass, safe-area aware. */
+function BottomNav({
+  items,
+  pathname,
+  onMore,
+}: {
+  items: NavItem[];
+  pathname: string;
+  onMore: () => void;
+}) {
+  const { t } = useI18n();
+  const primary = items.filter((n) => n.primary).slice(0, 4);
+  return (
+    <nav
+      className="glass fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t lg:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      aria-label={t("nav.overview")}
+    >
+      {primary.map((n) => {
+        const active = isActive(n.href, pathname);
+        const Icon = n.icon;
+        return (
+          <Link
+            key={n.href}
+            href={n.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
+              active ? "text-accent" : "text-muted",
+            )}
+          >
+            <Icon className="h-[22px] w-[22px]" />
+            <span className="max-w-full truncate px-1">{t(n.labelKey)}</span>
+          </Link>
+        );
+      })}
+      <button
+        type="button"
+        onClick={onMore}
+        className="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium text-muted transition-colors hover:text-fg"
+      >
+        <MoreHorizontal className="h-[22px] w-[22px]" />
+        <span>{t("nav.more")}</span>
+      </button>
+    </nav>
+  );
+}
+
 /** Full-screen placeholder shown while the user row is being provisioned. */
 function BootstrapSkeleton() {
   return (
     <div className="min-h-screen">
-      <div className="h-14 border-b border-border bg-panel/60 animate-pulse" />
+      <div className="glass h-14 border-b" />
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-8">
-        <div className="h-7 w-40 rounded-md bg-border/40" />
+        <div className="h-7 w-40 rounded-md bg-panel-2/60" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <SkeletonCard key={i} />
@@ -176,17 +235,45 @@ function AuthErrorPanel({
     (errorCode && ERROR_CODE_MESSAGES[errorCode]) ?? "auth.error.body";
   return (
     <div className="grid min-h-screen place-items-center p-4">
-      <div className="max-w-md rounded-xl border border-danger/30 bg-danger/5 p-8 text-center shadow-soft animate-fade-up">
+      <div className="max-w-md rounded-2xl border border-danger/30 bg-danger/5 p-8 text-center shadow-soft animate-fade-up">
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border border-danger/30 bg-danger/10 text-2xl">
           ⚠
         </div>
-        <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
+        <h2 className="font-display text-xl font-medium tracking-tight text-fg">
           {t("auth.error.title")}
         </h2>
         <p className="mt-2 text-sm text-muted">{t(bodyKey)}</p>
         <Button className="mt-5" onClick={onRetry}>
           {t("auth.error.retry")}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function UserCard({
+  email,
+  role,
+  theme,
+}: {
+  email: string | undefined;
+  role: Role;
+  theme: "light" | "dark";
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-panel/70 p-2.5">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium text-fg">{email}</p>
+        <Badge variant="outline" className="mt-1.5">
+          {t(`role.${role}`)}
+        </Badge>
+      </div>
+      <div className="shrink-0">
+        <UserButton
+          afterSignOutUrl="/"
+          appearance={{ variables: CLERK_VARS[theme] }}
+        />
       </div>
     </div>
   );
@@ -199,12 +286,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme } = useTheme();
 
-  // Provision (and access-gate) the Convex user row once authenticated.
   const { status, errorCode, retry } = useStoreUser();
 
-  // Gate: never render the role-aware shell until the user row is provisioned
-  // AND loaded. A provisioning failure (e.g. not on the access allowlist)
-  // surfaces a specific message instead of silently rendering an empty app.
   if (status === "error") {
     return <AuthErrorPanel onRetry={retry} errorCode={errorCode} />;
   }
@@ -214,41 +297,25 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const role = me.role as Role;
   const items = NAV.filter((n) => roleAtLeast(role, n.minRole));
-  const current = NAV.find((n) =>
-    n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
-  );
+  const current = NAV.find((n) => isActive(n.href, pathname));
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
-      {/* Desktop sidebar — the dark rail. Cards in the content plane lift above it. */}
+      {/* Desktop sidebar — the warm rail. Cards in the content plane lift above it. */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-bg-2 p-3.5 lg:flex">
         <div className="px-1.5 pb-7 pt-1.5">
           <Brand />
         </div>
         <NavLinks items={items} pathname={pathname} />
         <div className="mt-auto pt-4">
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-panel/60 p-2.5">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-fg">{me.email}</p>
-              <Badge variant="outline" className="mt-1.5">
-                {t(`role.${role}`)}
-              </Badge>
-            </div>
-            <div className="shrink-0">
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{ variables: CLERK_VARS[theme] }}
-              />
-            </div>
-          </div>
+          <UserCard email={me.email} role={role} theme={theme} />
         </div>
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-col">
-        {/* Top bar — quiet chrome. min-w-0 + truncate keep it from squishing or
+        {/* Top bar — quiet glass chrome. min-w-0 + truncate keep it from
             overflowing on small screens; controls never shrink. */}
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-bg-2/80 px-3 py-2.5 backdrop-blur-md sm:gap-3 sm:px-6">
-          {/* Mobile nav trigger */}
+        <header className="glass sticky top-0 z-30 flex items-center gap-2 border-b px-3 py-2.5 sm:gap-3 sm:px-6">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0 lg:hidden">
@@ -267,11 +334,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 pathname={pathname}
                 onNavigate={() => setMobileOpen(false)}
               />
+              <div className="mt-6 border-t border-border pt-4">
+                <UserCard email={me.email} role={role} theme={theme} />
+              </div>
             </SheetContent>
           </Sheet>
 
           <div className="flex min-w-0 flex-1 flex-col leading-none">
-            <h1 className="truncate text-base font-bold tracking-tightest text-fg">
+            <h1 className="truncate font-display text-lg font-medium tracking-tight text-fg">
               {current ? t(current.labelKey) : t("app.name")}
             </h1>
           </div>
@@ -288,15 +358,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        {/* pb-24 on mobile leaves room above the bottom tab bar. */}
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:py-8 lg:pb-8">
           <PageTransition>{children}</PageTransition>
         </main>
 
-        <footer className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-8 text-xs text-muted sm:px-6">
+        <footer className="mx-auto hidden w-full max-w-6xl items-center gap-2 px-4 py-8 text-xs text-muted sm:px-6 lg:flex">
           <span className="h-1 w-1 rounded-full bg-accent/60" />
           {t("footer.privacy")}
         </footer>
       </div>
+
+      <BottomNav
+        items={items}
+        pathname={pathname}
+        onMore={() => setMobileOpen(true)}
+      />
     </div>
   );
 }

@@ -45,6 +45,7 @@ export const en: Dict = {
   "overview.unassigned": "Unassigned",
   "overview.lastSeen": "Last seen",
   "overview.total": "Devices total",
+  "overview.ofTotal": "of {total} devices",
 
   "devices.heading": "Devices",
   "devices.pending": "Pending approval",
@@ -373,6 +374,7 @@ export const en: Dict = {
 
   // Help / FAQ, status tooltips, setup checklist, guardrail confirms.
   "nav.help": "Help",
+  "nav.more": "More",
 
   "help.title": "Help & FAQ",
   "help.subtitle": "Common questions and fixes — search or browse by topic.",

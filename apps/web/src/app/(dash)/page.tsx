@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
-import { ChevronRight } from "lucide-react";
+import {
+  Activity,
+  ChevronRight,
+  MonitorSmartphone,
+  Moon,
+  PowerOff,
+} from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDuration, formatRelativeTime } from "@/lib/format";
@@ -11,13 +17,14 @@ import { isWorkingState, type StateName } from "@/lib/activity";
 import type { EmployeeState } from "@activitytrack/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatCard } from "@/components/StatCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { QueryState } from "@/components/QueryState";
 import { SetupChecklist } from "@/components/SetupChecklist";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { HealthBanner, StateBadge } from "@/components/state/StateBits";
 
-/** Compact mono read-out of the fleet's current state. */
+/** The four headline figures for the whole fleet. */
 function FleetSummary({
   rows,
 }: {
@@ -25,43 +32,42 @@ function FleetSummary({
 }) {
   const { t } = useI18n();
   // "Working" follows the fused state (a person on BREAK/ABSENT isn't working,
-  // even if their PC is still on), falling back to the raw active flag when no
-  // fused state exists yet. Keeps the count in step with the per-card badges.
+  // even if their PC is on), falling back to the raw active flag when no fused
+  // state exists yet — keeps the count in step with the per-card badges.
   const isWorking = (d: { active: boolean; finalState: string | null }) =>
     isWorkingState(d.finalState as StateName | null, d.active);
   const working = rows.filter((d) => d.online && isWorking(d)).length;
   const idle = rows.filter((d) => d.online && !isWorking(d)).length;
   const offline = rows.filter((d) => !d.online).length;
 
-  const stats: { label: string; value: number; tone: string; live?: boolean }[] = [
-    { label: t("overview.working"), value: working, tone: "text-ok", live: working > 0 },
-    { label: t("overview.idleNow"), value: idle, tone: "text-warn" },
-    { label: t("overview.offline"), value: offline, tone: "text-muted" },
-    { label: t("overview.total"), value: rows.length, tone: "text-fg" },
-  ];
-
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-card sm:grid-cols-4">
-      {stats.map((s) => (
-        <div
-          key={s.label}
-          className="flex flex-col justify-center gap-1.5 bg-panel px-4 py-5 transition-colors duration-150 hover:bg-panel-2"
-        >
-          {/* Number-first: the count is the focal point, the label supports it. */}
-          <span
-            className={cn(
-              "font-display text-[2rem] font-bold leading-none tabular-nums tracking-tightest",
-              s.tone,
-            )}
-          >
-            {s.value}
-          </span>
-          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            {s.live && <span className="signal-dot !h-1.5 !w-1.5" />}
-            {s.label}
-          </span>
-        </div>
-      ))}
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatCard
+        label={t("overview.working")}
+        value={working}
+        tone="ok"
+        live={working > 0}
+        icon={<Activity className="h-4 w-4" />}
+        hint={t("overview.ofTotal", { total: String(rows.length) })}
+      />
+      <StatCard
+        label={t("overview.idleNow")}
+        value={idle}
+        tone="warn"
+        icon={<Moon className="h-4 w-4" />}
+      />
+      <StatCard
+        label={t("overview.offline")}
+        value={offline}
+        tone="muted"
+        icon={<PowerOff className="h-4 w-4" />}
+      />
+      <StatCard
+        label={t("overview.total")}
+        value={rows.length}
+        tone="fg"
+        icon={<MonitorSmartphone className="h-4 w-4" />}
+      />
     </div>
   );
 }
@@ -71,109 +77,125 @@ export default function OverviewPage() {
   const team = useQuery(api.stats.teamOverview);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <SetupChecklist />
       <QueryState
-      data={team}
-      loading={
-        <div className="space-y-5">
-          <div className="h-[88px] animate-pulse rounded-xl border border-border bg-panel/60" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+        data={team}
+        loading={
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[7.5rem] animate-pulse rounded-2xl border border-border bg-panel/60"
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
           </div>
-        </div>
-      }
-      empty={
-        <Card className="signal-grid">
-          <CardContent className="py-16 text-center text-muted">
-            {t("overview.empty")}
-          </CardContent>
-        </Card>
-      }
-    >
-      {(rows) => (
-        <div className="space-y-5">
-          <HealthBanner />
-          <FleetSummary rows={rows} />
-          <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((d, index) => {
-              // Prefer the fused state (on call / break / absent / …) when we
-              // have it and the device is online; fall back to the basic
-              // working/idle/offline read otherwise.
-              const offline = !d.online;
-              const basic = offline ? "offline" : d.active ? "working" : "idle";
-              const basicVariant =
-                basic === "working" ? "ok" : basic === "idle" ? "warn" : "muted";
-              const basicLabel =
-                basic === "working"
-                  ? t("overview.working")
-                  : basic === "idle"
-                    ? t("overview.idleNow")
-                    : t("overview.offline");
-              const showFused = !offline && d.finalState != null;
-              return (
-                <StaggerItem key={d.deviceId} index={index}>
-                  <Link
-                    href={`/timeline/${encodeURIComponent(d.deviceId)}`}
-                    className="group block h-full"
-                  >
-                    <Card className="relative h-full overflow-hidden transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-accent/50 group-hover:shadow-glow">
-                      {/* signal line that ignites along the top edge on hover */}
-                      <span className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-signal-line transition-transform duration-300 group-hover:scale-x-100" />
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-medium text-fg">
-                            {d.personName ?? d.hostname}
-                          </span>
-                          {showFused ? (
-                            <StateBadge state={d.finalState as EmployeeState} />
-                          ) : (
-                            <Badge
-                              variant={basicVariant}
-                              className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
-                            >
-                              {basic === "working" && (
-                                <span className="signal-dot !h-1.5 !w-1.5" />
-                              )}
-                              {basicLabel}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="mt-1 truncate text-sm text-muted">
-                          {d.personName ? d.hostname : t("overview.unassigned")} ·{" "}
-                          {d.windowsUser}
-                        </p>
-                        <p className="mt-4 font-display text-2xl font-bold tabular-nums tracking-tightest text-fg">
-                          {formatDuration(d.todayActiveSeconds, lang)}
-                          <span className="ml-2 font-sans text-xs font-normal text-muted">
-                            {t("overview.todayActive")}
-                          </span>
-                        </p>
-                        <div className="mt-2 flex items-center justify-between border-t border-border-soft pt-2.5">
-                          <p className="font-mono text-[11px] text-muted">
-                            {t("overview.lastSeen")}{" "}
-                            <span className="text-fg/80">
-                              {formatRelativeTime(d.lastSeen, lang)}
+        }
+        empty={
+          <Card className="signal-grid">
+            <CardContent className="py-16 text-center text-muted">
+              {t("overview.empty")}
+            </CardContent>
+          </Card>
+        }
+      >
+        {(rows) => (
+          <div className="space-y-6">
+            <HealthBanner />
+            <FleetSummary rows={rows} />
+            <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {rows.map((d, index) => {
+                const offline = !d.online;
+                const basic = offline
+                  ? "offline"
+                  : d.active
+                    ? "working"
+                    : "idle";
+                const basicVariant =
+                  basic === "working"
+                    ? "ok"
+                    : basic === "idle"
+                      ? "warn"
+                      : "muted";
+                const basicLabel =
+                  basic === "working"
+                    ? t("overview.working")
+                    : basic === "idle"
+                      ? t("overview.idleNow")
+                      : t("overview.offline");
+                const showFused = !offline && d.finalState != null;
+                return (
+                  <StaggerItem key={d.deviceId} index={index}>
+                    <Link
+                      href={`/timeline/${encodeURIComponent(d.deviceId)}`}
+                      className="group block h-full"
+                    >
+                      <Card className="relative h-full overflow-hidden transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-accent/40 group-hover:shadow-card-hover">
+                        {/* signal line that ignites along the top edge on hover */}
+                        <span className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-signal-line transition-transform duration-300 group-hover:scale-x-100" />
+                        <CardContent className="p-5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate font-medium text-fg">
+                              {d.personName ?? d.hostname}
+                            </span>
+                            {showFused ? (
+                              <StateBadge
+                                state={d.finalState as EmployeeState}
+                              />
+                            ) : (
+                              <Badge
+                                variant={basicVariant}
+                                className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
+                              >
+                                {basic === "working" && (
+                                  <span className="signal-dot !h-1.5 !w-1.5" />
+                                )}
+                                {basicLabel}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-sm text-muted">
+                            {d.personName
+                              ? d.hostname
+                              : t("overview.unassigned")}{" "}
+                            · {d.windowsUser}
+                          </p>
+                          <p className="mt-5 text-3xl font-semibold tabular-nums tracking-tight text-fg">
+                            {formatDuration(d.todayActiveSeconds, lang)}
+                            <span className="ml-2 text-xs font-normal text-muted">
+                              {t("overview.todayActive")}
                             </span>
                           </p>
-                          <ChevronRight
-                            className={cn(
-                              "h-4 w-4 text-muted transition-transform duration-150",
-                              "group-hover:translate-x-0.5 group-hover:text-accent",
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </StaggerItem>
-              );
-            })}
-          </Stagger>
-        </div>
-      )}
+                          <div className="mt-3 flex items-center justify-between border-t border-border-soft pt-3">
+                            <p className="text-[11px] text-muted">
+                              {t("overview.lastSeen")}{" "}
+                              <span className="font-medium text-fg/80">
+                                {formatRelativeTime(d.lastSeen, lang)}
+                              </span>
+                            </p>
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 text-muted transition-transform duration-150",
+                                "group-hover:translate-x-0.5 group-hover:text-accent",
+                              )}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </StaggerItem>
+                );
+              })}
+            </Stagger>
+          </div>
+        )}
       </QueryState>
     </div>
   );
