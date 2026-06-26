@@ -148,6 +148,8 @@ export const de: Dict = {
   "timeline.empty": "Keine Stichproben vorhanden.",
   "timeline.kpi.activeToday": "Heute aktiv",
   "timeline.kpi.idleToday": "Heute inaktiv",
+  "timeline.kpi.activeOn": "Aktiv am {date}",
+  "timeline.kpi.idleOn": "Inaktiv am {date}",
   "timeline.kpi.status": "Status",
   "timeline.kpi.lastSeen": "Zuletzt gesehen",
   "timeline.trend.heading": "Aktivität der letzten 14 Tage",
@@ -175,6 +177,10 @@ export const de: Dict = {
   "timeline.day.date": "Tag",
   "timeline.day.empty": "Kein Statusverlauf für diesen Tag.",
   "timeline.day.now": "jetzt",
+  "timeline.day.viewingPast": "Du siehst Daten vom {date} — nicht von heute.",
+  "timeline.day.backToToday": "Zu heute",
+  "timeline.day.noDataToday": "Heute noch keine Aktivität erfasst.",
+  "timeline.day.rewind": "Letzten aktiven Tag ansehen ({date})",
 
   "reports.title": "Wochenberichte",
   "reports.subtitle":
