@@ -137,11 +137,11 @@ function Brand() {
   const { t } = useI18n();
   return (
     <Link href="/" className="group flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-gradient text-accent-fg shadow-glow transition-transform duration-150 group-hover:scale-105">
+      <span className="brand-gradient grid h-9 w-9 place-items-center rounded-xl text-accent-fg shadow-glow transition-transform duration-150 group-hover:scale-105">
         <Activity className="h-[18px] w-[18px]" />
       </span>
       <span className="flex min-w-0 flex-col leading-none">
-        <span className="truncate font-display text-[17px] font-medium tracking-tight text-fg">
+        <span className="truncate text-[16px] font-bold tracking-tight text-fg">
           {t("app.name")}
         </span>
         <span className="mt-1 truncate text-[11px] text-muted">
@@ -341,7 +341,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Sheet>
 
           <div className="flex min-w-0 flex-1 flex-col leading-none">
-            <h1 className="truncate font-display text-lg font-medium tracking-tight text-fg">
+            <h1 className="truncate text-lg font-bold tracking-tight text-fg">
               {current ? t(current.labelKey) : t("app.name")}
             </h1>
           </div>

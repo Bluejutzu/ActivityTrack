@@ -1,29 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Class-strategy dark mode: `.dark` on <html> flips every token below. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ───────────────────────────────────────────────────────────────────────────
-   ActivityTrack — "Canvas" design system
-   A warm, editorial operations dashboard. Beige-grey neutrals (the Claude /
-   Anthropic palette), white as the primary surface, a single calm blue as the
-   highlight, and a clear traffic-light status set (green = working, amber =
-   idle, red = problem). Big serif display headings carry character; the data —
-   numbers, status, charts — stays crisp and quiet around them. Glass/blur is a
-   garnish, used only on the header, the mobile nav, and one or two hero cards.
+   ActivityTrack — "Canvas" design system (Tailwind v4)
+   Warm beige-grey neutrals (the Claude/Anthropic palette), white as the primary
+   surface, a single calm blue as the highlight, and a clear traffic-light status
+   set. One clean sans (Inter) everywhere — big, tight headings carry hierarchy.
+   Glass/blur is a garnish: header, mobile nav, and one or two hero cards only.
 
-   Light (`:root`) and dark (`.dark`) share the SAME token names. Colours are
-   stored as space-separated RGB channels so every Tailwind utility — including
-   `/20`-style alpha — recolours automatically when `.dark` is toggled on <html>.
-   Dark is the hero; light is derived to match.
+   Colours live as space-separated RGB channels in `--c-*` (light in `:root`,
+   dark in `.dark`) and are mapped into Tailwind's `--color-*` theme via
+   `@theme inline`, so every utility — including `/alpha` — flips automatically
+   when `.dark` is toggled. Dark is the hero; light is derived.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Body face is wired by next/font in layout.tsx; these are the fallbacks. */
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-display: ui-serif, Georgia, serif;
-  /* Numerals share the body face; tabular figures do the aligning. */
-  --font-mono: var(--font-sans);
-
   /* ── Light surfaces — warm cream (bg = page, bg-2 = rail/bar, panel = card) */
   --c-bg: 244 242 236;
   --c-bg-2: 251 250 246;
@@ -63,15 +57,14 @@
 
 .dark {
   /* ── Dark surfaces — warm charcoal with a faint clay undertone ──────────── */
-  --c-bg: 23 22 20; /* app backdrop / rail (darkest, warm) */
-  --c-bg-2: 28 27 24; /* top bar + rail surface (glass base) */
-  --c-panel: 34 32 29; /* cards — lifted, warmer than the rail */
-  --c-panel-2: 45 42 38; /* raised within cards / hover */
+  --c-bg: 23 22 20;
+  --c-bg-2: 28 27 24;
+  --c-panel: 34 32 29;
+  --c-panel-2: 45 42 38;
   --c-border: 53 50 45;
   --c-border-soft: 39 37 33;
   --c-muted: 165 158 147;
-  --c-fg: 240 238 232; /* warm white — the primary */
-  /* ── Highlight — same calm blue, lifted for contrast on warm dark ──────── */
+  --c-fg: 240 238 232;
   --c-accent: 96 150 248;
   --c-accent-2: 123 167 250;
   --c-ok: 52 199 144;
@@ -94,6 +87,127 @@
   --chart-tooltip-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
+}
+
+/* ── Theme: map our tokens into Tailwind v4. `inline` so utilities reference
+   the `--c-*` vars directly and therefore flip under `.dark`. ─────────────── */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Surfaces, text, brand, status */
+  --color-bg: rgb(var(--c-bg));
+  --color-bg-2: rgb(var(--c-bg-2));
+  --color-panel: rgb(var(--c-panel));
+  --color-panel-2: rgb(var(--c-panel-2));
+  --color-hover: rgb(var(--c-panel-2));
+  --color-border: rgb(var(--c-border));
+  --color-border-soft: rgb(var(--c-border-soft));
+  --color-muted: rgb(var(--c-muted));
+  --color-fg: rgb(var(--c-fg));
+  --color-accent: rgb(var(--c-accent));
+  --color-accent-2: rgb(var(--c-accent-2));
+  --color-accent-fg: rgb(var(--c-accent-fg));
+  --color-signal: rgb(var(--c-accent));
+  --color-glass: rgb(var(--c-glass));
+  --color-ok: rgb(var(--c-ok));
+  --color-warn: rgb(var(--c-warn));
+  --color-idle: rgb(var(--c-warn));
+  --color-danger: rgb(var(--c-danger));
+  --color-info: rgb(var(--c-info));
+
+  /* shadcn aliases → our tokens (so generated components compile). NOTE: our
+     `accent` is the brand BLUE; shadcn's hover-surface maps to `hover` instead. */
+  --color-background: rgb(var(--c-bg));
+  --color-foreground: rgb(var(--c-fg));
+  --color-card: rgb(var(--c-panel));
+  --color-card-foreground: rgb(var(--c-fg));
+  --color-popover: rgb(var(--c-panel));
+  --color-popover-foreground: rgb(var(--c-fg));
+  --color-primary: rgb(var(--c-accent));
+  --color-primary-foreground: rgb(var(--c-accent-fg));
+  --color-secondary: rgb(var(--c-panel-2));
+  --color-secondary-foreground: rgb(var(--c-fg));
+  --color-muted-foreground: rgb(var(--c-muted));
+  --color-accent-foreground: rgb(var(--c-fg));
+  --color-destructive: rgb(var(--c-danger));
+  --color-destructive-foreground: rgb(var(--c-accent-fg));
+  --color-input: rgb(var(--c-border));
+  --color-ring: rgb(var(--c-accent));
+
+  /* Editorial display sizes (Inter at large sizes, tightened). */
+  --text-display-sm: 1.75rem;
+  --text-display-sm--line-height: 1.1;
+  --text-display-sm--letter-spacing: -0.02em;
+  --text-display-md: 2.25rem;
+  --text-display-md--line-height: 1.05;
+  --text-display-md--letter-spacing: -0.02em;
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 1;
+  --text-display-lg--letter-spacing: -0.025em;
+  --text-display-xl: 3.75rem;
+  --text-display-xl--line-height: 0.98;
+  --text-display-xl--letter-spacing: -0.03em;
+
+  --tracking-tightest: -0.025em;
+  --tracking-tighter: -0.015em;
+
+  /* Crisp geometry — cards land on xl/2xl. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --grid-template-columns-24: repeat(24, minmax(0, 1fr));
+
+  /* Restrained elevation — hairline borders carry most of the weight. */
+  --shadow-soft: 0 1px 2px rgba(28, 22, 14, 0.04), 0 1px 3px rgba(28, 22, 14, 0.05);
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(20, 16, 10, 0.05), 0 6px 16px -12px rgba(20, 16, 10, 0.16);
+  --shadow-card-hover: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(20, 16, 10, 0.07), 0 16px 36px -16px rgba(20, 16, 10, 0.28);
+  --shadow-overlay: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 24px 60px -16px rgba(8, 6, 3, 0.5);
+  --shadow-glow: 0 8px 24px -10px rgba(60, 120, 240, 0.4);
+  --shadow-glow-strong: 0 10px 30px -10px rgba(60, 120, 240, 0.55);
+  --shadow-signal-sm: 0 0 0 1px rgba(60, 120, 240, 0.22);
+  --shadow-hairline: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* Motion — ease-out entrances ≤260ms; transform & opacity only. */
+  --animate-fade-up: fade-up 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-fade-in: fade-in 200ms linear both;
+  --animate-scale-in: scale-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-rise: rise 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+
+/* v4 Preflight sets the default border colour to currentColor; pin it to our
+   token so a bare `border` never paints an unexpected colour. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: rgb(var(--c-border));
+  }
+}
+
+/* Custom background utilities (were `bg-*` in v3; now v4 @utility). */
+@utility brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+}
+@utility signal-line {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--c-accent) / 0.55),
+    transparent
+  );
 }
 
 html,
@@ -121,7 +235,6 @@ body {
   outline-offset: 2px;
   border-radius: 8px;
 }
-
 *:focus:not(:focus-visible) {
   outline: none;
 }
@@ -131,7 +244,6 @@ body {
   color: rgb(var(--c-fg));
 }
 
-/* Styled checkbox in the highlight blue */
 input[type="checkbox"] {
   accent-color: rgb(var(--c-accent));
   width: 1rem;
@@ -139,7 +251,6 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
-/* Thin, light scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -158,9 +269,8 @@ input[type="checkbox"] {
   background-clip: padding-box;
 }
 
-/* ── Reusable helpers ─────────────────────────────────────────────────────── */
+/* ── Reusable helpers (plain classes — no @apply) ─────────────────────────── */
 
-/* A near-invisible neutral grid for large empty surfaces — texture, not noise. */
 .signal-grid {
   background-image:
     linear-gradient(to right, rgb(var(--c-fg) / 0.03) 1px, transparent 1px),
@@ -168,7 +278,6 @@ input[type="checkbox"] {
   background-size: 28px 28px;
 }
 
-/* Small section label — clean caps, quiet. Chrome, not data. */
 .kicker {
   font-size: 0.6875rem;
   font-weight: 600;
@@ -177,23 +286,12 @@ input[type="checkbox"] {
   color: rgb(var(--c-muted));
 }
 
-/* Editorial section / hero heading — the serif display face carries character. */
-.h-display {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: rgb(var(--c-fg));
-}
-
-/* Bold, tight section heading in the body face (for data-dense headers). */
 .h-section {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgb(var(--c-fg));
 }
 
-/* Glass surface — translucent base + blur, hairline edge. Garnish only:
-   the header, the mobile nav, and one or two hero cards. */
 .glass {
   background-color: rgb(var(--c-glass) / 0.72);
   backdrop-filter: blur(12px) saturate(135%);
@@ -201,7 +299,6 @@ input[type="checkbox"] {
   border: 1px solid rgb(var(--c-border) / 0.6);
 }
 
-/* A stronger glass for a single hero card — a touch more blur + lift. */
 .glass-strong {
   background-color: rgb(var(--c-glass) / 0.62);
   backdrop-filter: blur(18px) saturate(150%);
@@ -212,17 +309,6 @@ input[type="checkbox"] {
     0 18px 50px -24px rgb(0 0 0 / 0.45);
 }
 
-/* The blue → near-blue highlight gradient. Used sparingly: brand mark, the one
-   primary action, active nav, hero accents. One source of truth for the sheen. */
-.brand-gradient {
-  background-image: linear-gradient(
-    135deg,
-    rgb(var(--c-accent)),
-    rgb(var(--c-accent-2))
-  );
-}
-
-/* Gradient text for hero figures / brand wordmark. */
 .brand-text {
   background-image: linear-gradient(
     135deg,
@@ -234,9 +320,6 @@ input[type="checkbox"] {
   color: transparent;
 }
 
-/* The primary button surface: the highlight blue with a hairline top highlight
-   and a soft blue lift on hover. Used by the Button `primary`/`default`
-   variants so the one bold action on a screen carries the highlight. */
 .btn-primary {
   color: rgb(var(--c-accent-fg));
   background-image: linear-gradient(
@@ -255,8 +338,6 @@ input[type="checkbox"] {
     0 8px 22px -8px rgb(var(--c-accent) / 0.5);
 }
 
-/* A lifted surface: card-like depth with a hairline top highlight so panels
-   read as raised rather than painted-on. Tuned per theme via tokens. */
 .surface-raised {
   background-color: rgb(var(--c-panel));
   border: 1px solid rgb(var(--c-border));
@@ -265,7 +346,6 @@ input[type="checkbox"] {
     var(--tw-shadow, 0 0 transparent);
 }
 
-/* A live status dot with a soft expanding ring — used for working/online. */
 .signal-dot {
   position: relative;
   display: inline-block;
@@ -283,15 +363,58 @@ input[type="checkbox"] {
   animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-/* Tabular numerals for any metric/figure. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* These two are driven from raw CSS / inline styles (the live dot + the login
-   pulse), so define them here — Tailwind only emits @keyframes for names used
-   via animate-* utilities. */
+/* Keyframes (referenced by the --animate-* theme tokens + raw CSS above). */
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
 @keyframes pulse-dot {
   0%,
   100% {
@@ -303,7 +426,6 @@ input[type="checkbox"] {
     transform: scale(0.85);
   }
 }
-
 @keyframes pulse-ring {
   0% {
     transform: scale(0.7);
@@ -316,9 +438,7 @@ input[type="checkbox"] {
   }
 }
 
-/* Motion convention: entrances ease-out ≤260ms (fade-up/scale-in/rise),
-   repositioning ease-in-out, hover ~150ms, press scale(0.97). Transform &
-   opacity only. Everything below is overridden under reduced-motion. */
+/* Respect reduced-motion — single override. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

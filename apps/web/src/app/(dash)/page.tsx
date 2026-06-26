@@ -48,7 +48,6 @@ function FleetSummary({
         tone="ok"
         live={working > 0}
         icon={<Activity className="h-4 w-4" />}
-        hint={t("overview.ofTotal", { total: String(rows.length) })}
       />
       <StatCard
         label={t("overview.idleNow")}
@@ -139,7 +138,7 @@ export default function OverviewPage() {
                     >
                       <Card className="relative h-full overflow-hidden transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-accent/40 group-hover:shadow-card-hover">
                         {/* signal line that ignites along the top edge on hover */}
-                        <span className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-signal-line transition-transform duration-300 group-hover:scale-x-100" />
+                        <span className="signal-line pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100" />
                         <CardContent className="p-5">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate font-medium text-fg">

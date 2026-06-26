@@ -1,26 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { themeBootScript } from "@/lib/theme";
 
-// Body / UI face: Inter is modern, highly legible, and its tabular figures keep
-// every metric aligned — so all data and chrome stays crisp.
+// One clean, highly legible face for the whole interface. Inter reads as modern
+// and crisp; its tabular figures keep every metric aligned, and large tight
+// sizes carry the heading hierarchy without a separate display/serif face.
+// Exposed as `--font-inter`; the theme maps sans/display/mono onto it.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-// Display face: Fraunces, a warm "old-style" serif, carries the editorial
-// character of the brand on big headings and hero figures. Optical sizing on;
-// only used where the design reaches for character (page H1s, hero numbers).
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal"],
-  variable: "--font-display",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -43,11 +34,7 @@ export default function RootLayout({
 }) {
   // `lang` is updated client-side by the i18n provider; default to German.
   return (
-    <html
-      lang="de"
-      className={`${inter.variable} ${fraunces.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="de" className={inter.variable} suppressHydrationWarning>
       <head>
         {/* Apply the saved/system theme before first paint to avoid a flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

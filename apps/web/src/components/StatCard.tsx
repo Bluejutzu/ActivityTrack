@@ -21,11 +21,10 @@ const TILE: Record<Tone, string> = {
 };
 
 /**
- * A stat / KPI tile. The label + icon are pinned to the top and the figure is
- * pinned to the bottom (justify-between + a min-height), so the content always
- * spans the full card — no top-clinging dead space. The figure is the single
- * focal point; integers read well in the serif display face, durations/relative
- * times read better in tabular sans (pass `valueClassName` to switch).
+ * A compact stat / KPI tile. Content hugs together — label + icon on one row,
+ * the figure directly beneath it, then an optional sub-line — so the card is
+ * only as tall as its content (no min-height, no top/bottom void). Tiles in a
+ * row stay equal height because every tile shares this exact structure.
  */
 export function StatCard({
   label,
@@ -49,20 +48,20 @@ export function StatCard({
   return (
     <Card
       className={cn(
-        "h-full transition-shadow duration-200 hover:shadow-card-hover",
+        "transition-shadow duration-200 hover:shadow-card-hover",
         className,
       )}
     >
-      <CardContent className="flex h-full min-h-[7.5rem] flex-col justify-between gap-4 p-5">
-        <div className="flex items-start justify-between gap-2">
-          <span className="kicker flex items-center gap-1.5 truncate pt-0.5">
+      <CardContent className="flex flex-col gap-2.5 p-5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="kicker flex items-center gap-1.5 truncate">
             {live && <span className="signal-dot !h-1.5 !w-1.5" />}
             {label}
           </span>
           {icon && (
             <span
               className={cn(
-                "grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset",
+                "grid h-8 w-8 shrink-0 place-items-center rounded-lg ring-1 ring-inset",
                 TILE[tone],
               )}
             >
@@ -70,18 +69,16 @@ export function StatCard({
             </span>
           )}
         </div>
-        <div className="min-w-0">
-          <div
-            className={cn(
-              "font-display text-display-sm font-medium leading-none tracking-tight",
-              TONE[tone],
-              valueClassName,
-            )}
-          >
-            {value}
-          </div>
-          {hint && <p className="mt-1.5 truncate text-xs text-muted">{hint}</p>}
+        <div
+          className={cn(
+            "text-3xl font-semibold leading-none tabular-nums tracking-tight",
+            TONE[tone],
+            valueClassName,
+          )}
+        >
+          {value}
         </div>
+        {hint && <p className="truncate text-xs text-muted">{hint}</p>}
       </CardContent>
     </Card>
   );
