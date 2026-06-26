@@ -11,14 +11,14 @@ import { useTabParam } from "@/lib/useTabParam";
 import {
   formatDuration,
   formatRelativeTime,
-  localDay,
   todayLocalDay,
 } from "@/lib/format";
+import { useDayParam } from "@/lib/useDayParam";
 import {
   dailyTrend,
-  hourOfDayActivity,
   hourlyStateBreakdown,
-  intradayTimeline,
+  lastActiveDay,
+  timelineCharts,
   STATE_NAMES,
   type Sample,
   type StateName,
@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StateBadge, SourceSignals } from "@/components/state/StateBits";
+import { DayNav } from "@/components/timeline/DayNav";
 import { ChartsTab } from "@/components/timeline/ChartsTab";
 import { RawTab } from "@/components/timeline/RawTab";
 import { ExportTab } from "@/components/timeline/ExportTab";
@@ -82,6 +83,11 @@ export default function TimelinePage({
 
   const samples = useQuery(api.stats.recentSamples, { deviceId, limit: 1000 });
   const today = todayLocalDay();
+  // The day the charts are scoped to (URL `?day=`; defaults to today). Drives
+  // every per-day view so a stale device never shows old data as "today".
+  const [selectedDay, setSelectedDay] = useDayParam(today);
+  const isToday = selectedDay === today;
+
   const startDay = useMemo(() => {
     const d = new Date(`${today}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() - (TREND_DAYS - 1));
@@ -95,48 +101,59 @@ export default function TimelinePage({
   const team = useQuery(api.stats.teamOverview);
 
   const device = team?.find((d) => d.deviceId === deviceId) ?? null;
-  const todayStats = daily?.find((d) => d.day === today);
+  const dayStats = daily?.find((d) => d.day === selectedDay);
   const employeeId = device?.personEmployeeId ?? null;
 
-  // Fused state for the linked employee + today's state-change history.
+  // Local midnight → next local midnight for the selected day (epoch ms).
+  const { dayStartMs, dayEndMs } = useMemo(() => {
+    const start = new Date(`${selectedDay}T00:00:00`).getTime();
+    return { dayStartMs: start, dayEndMs: start + 86_400_000 };
+  }, [selectedDay]);
+
+  // Fused state for the linked employee + the selected day's state-change
+  // history (open-ended for today so it runs up to "now").
   const liveState = useQuery(
     api.state.get,
     employeeId ? { employeeId } : "skip",
   );
-  const dayStartMs = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, [today]);
   const stateHistory = useQuery(
     api.state.history,
-    employeeId ? { employeeId, since: dayStartMs } : "skip",
+    employeeId
+      ? { employeeId, since: dayStartMs, until: isToday ? undefined : dayEndMs }
+      : "skip",
   );
 
   // Aggregations (memoised; samples can be up to 1000 rows).
-  const { trend, heatmap, intraday, hourlyStates } = useMemo(() => {
+  const { trend, heatmap, intraday, hourlyStates, lastActive } = useMemo(() => {
     const tzOffset = new Date().getTimezoneOffset();
     const s: Sample[] = samples ?? [];
-    const newestDay =
-      s.length > 0 ? localDay(s[0].capturedAt, tzOffset) : today;
-    const sameDay = s.filter(
-      (x) => localDay(x.capturedAt, tzOffset) === newestDay,
-    );
+    const { heatmap, intraday } = timelineCharts(s, selectedDay, tzOffset);
     return {
       trend: dailyTrend(daily ?? [], startDay, today),
-      heatmap: hourOfDayActivity(s, tzOffset),
-      intraday: intradayTimeline(sameDay, 30),
+      heatmap,
+      intraday,
+      lastActive: lastActiveDay(s, tzOffset),
       hourlyStates: hourlyStateBreakdown(
-        // Strip the prior-day row the backend prepends: it has `at < dayStartMs`
-        // and would credit yesterday's state to hours 00-NN today even when no
-        // work had started, making the chart look wrong.
-        (stateHistory ?? []).filter((s) => s.at >= dayStartMs),
+        // For *today* strip the prepended prior-day row (it would credit
+        // yesterday's state to hours 00-NN before work started). For a past day
+        // we keep it so the strip fills from that day's midnight.
+        (stateHistory ?? []).filter((x) => !isToday || x.at >= dayStartMs),
         dayStartMs,
-        Date.now(),
+        isToday ? Date.now() : dayEndMs,
         tzOffset,
       ),
     };
-  }, [samples, daily, startDay, today, stateHistory, dayStartMs]);
+  }, [
+    samples,
+    daily,
+    startDay,
+    today,
+    selectedDay,
+    isToday,
+    stateHistory,
+    dayStartMs,
+    dayEndMs,
+  ]);
 
   // Localised state labels for the hourly chart legend/tooltip.
   const stateLabels = useMemo(
@@ -163,6 +180,14 @@ export default function TimelinePage({
 
   const title = device?.personName ?? device?.hostname ?? deviceId;
   const fileLabel = device?.personName ?? device?.hostname ?? deviceId;
+  // Short label for the selected day, e.g. "26.06." / "06/26" — used on the
+  // per-day KPI labels when the user has rewound to a past day.
+  const shortDate = new Date(`${selectedDay}T00:00:00`).toLocaleDateString(
+    lang,
+    { day: "2-digit", month: "2-digit" },
+  );
+  // Whether the selected day has anything to show (raw samples or a daily row).
+  const hasDataToday = intraday.length > 0 || dayStats != null;
 
   return (
     <section className="space-y-5">
@@ -182,19 +207,28 @@ export default function TimelinePage({
         <p className="mt-1 truncate font-mono text-xs text-muted">{deviceId}</p>
       </div>
 
-      {/* KPI row */}
+      {/* KPI row — active/idle follow the selected day; status/last-seen are
+          the device's live state regardless of which day is being viewed. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           icon={<Clock className="h-4 w-4" />}
-          label={t("timeline.kpi.activeToday")}
+          label={
+            isToday
+              ? t("timeline.kpi.activeToday")
+              : t("timeline.kpi.activeOn", { date: shortDate })
+          }
           tone="ok"
-          value={formatDuration(todayStats?.activeSeconds ?? 0, lang)}
+          value={formatDuration(dayStats?.activeSeconds ?? 0, lang)}
         />
         <KpiCard
           icon={<Coffee className="h-4 w-4" />}
-          label={t("timeline.kpi.idleToday")}
+          label={
+            isToday
+              ? t("timeline.kpi.idleToday")
+              : t("timeline.kpi.idleOn", { date: shortDate })
+          }
           tone="warn"
-          value={formatDuration(todayStats?.idleSeconds ?? 0, lang)}
+          value={formatDuration(dayStats?.idleSeconds ?? 0, lang)}
         />
         <KpiCard
           icon={<Radio className="h-4 w-4" />}
@@ -255,6 +289,17 @@ export default function TimelinePage({
         </Card>
       )}
 
+      {/* Day navigation: a clear banner when viewing a past day, or a "rewind to
+          the last active day" nudge when today has no data yet. */}
+      <DayNav
+        selectedDay={selectedDay}
+        today={today}
+        isToday={isToday}
+        hasDataToday={hasDataToday}
+        lastActive={lastActive}
+        onSelectDay={setSelectedDay}
+      />
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="charts">{t("timeline.tabs.charts")}</TabsTrigger>
@@ -276,7 +321,12 @@ export default function TimelinePage({
         </TabsContent>
 
         <TabsContent value="day">
-          <DayDetailTab employeeId={employeeId} today={today} />
+          <DayDetailTab
+            employeeId={employeeId}
+            today={today}
+            day={selectedDay}
+            onSelectDay={setSelectedDay}
+          />
         </TabsContent>
 
         <TabsContent value="raw">

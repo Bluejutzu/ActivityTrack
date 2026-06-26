@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
@@ -32,12 +32,16 @@ function hhmm(ms: number): string {
 export function DayDetailTab({
   employeeId,
   today,
+  day,
+  onSelectDay,
 }: {
   employeeId: string | null;
   today: string;
+  /** Selected day (YYYY-MM-DD), shared with the rest of the timeline via `?day=`. */
+  day: string;
+  onSelectDay: (day: string) => void;
 }) {
   const { t } = useI18n();
-  const [day, setDay] = useState(today);
 
   // Local midnight → next midnight for the selected day.
   const dayStart = useMemo(() => new Date(`${day}T00:00:00`).getTime(), [day]);
@@ -85,7 +89,7 @@ export function DayDetailTab({
               type="date"
               value={day}
               max={today}
-              onChange={(e) => setDay(e.target.value || today)}
+              onChange={(e) => onSelectDay(e.target.value || today)}
               className="w-40"
             />
           </label>

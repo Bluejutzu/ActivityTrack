@@ -4,6 +4,8 @@
  * page can show patterns (trends, time-of-day) instead of a flat list.
  */
 
+import { localDay } from "./format";
+
 export interface Sample {
   capturedAt: number;
   active: boolean;
@@ -47,7 +49,9 @@ export function dailyTrend(
 
 /**
  * 24 buckets (one per local hour) giving the share of samples that were active.
- * Powers the "when is this person usually active" heatmap strip.
+ * Powers the "activity by time of day" heatmap strip. Callers pass a single
+ * day's samples so the strip is today-scoped (not a multi-day blend, which would
+ * light hours later than "now" and read like future data).
  * `tzOffsetMinutes` is the browser's timezone offset (from Date.prototype.getTimezoneOffset).
  */
 export function hourOfDayActivity(
@@ -152,10 +156,16 @@ export function hourlyStateBreakdown(
     const state = samples[i].state;
     let cur = segStart;
     while (cur < segEnd) {
-      const d = new Date(cur - tzOffsetMinutes * 60_000);
-      const hour = d.getUTCHours();
-      d.setUTCMinutes(0, 0, 0);
-      const hourEnd = d.getTime() + 3_600_000;
+      // `shifted` is the instant expressed as "fake UTC" local time, so its
+      // UTC hour IS the local hour. The next local-hour boundary is computed in
+      // that shifted frame, then converted *back to real epoch* before we clamp
+      // or measure — mixing the two frames was crediting a whole multi-hour span
+      // to its start hour instead of splitting it.
+      const shifted = cur - tzOffsetMinutes * 60_000;
+      const hour = new Date(shifted).getUTCHours();
+      const nextHourShifted =
+        Math.floor(shifted / 3_600_000) * 3_600_000 + 3_600_000;
+      const hourEnd = nextHourShifted + tzOffsetMinutes * 60_000;
       const chunkEnd = Math.min(hourEnd, segEnd);
       buckets[hour][state] += (chunkEnd - cur) / 60_000;
       cur = chunkEnd;
@@ -197,6 +207,43 @@ export function intradayTimeline(
       }),
       activePct: Math.round((v.active / v.total) * 100),
     }));
+}
+
+/**
+ * The two sample-based charts (hour heatmap + intraday) for one specific local
+ * `day` (YYYY-MM-DD). Scopes to *that* day only — so a stale device shows an
+ * empty chart for today rather than silently rendering its last active day's
+ * data under a "today" label. Pure, so the scoping is covered by tests.
+ */
+export function timelineCharts(
+  samples: Sample[],
+  day: string,
+  tzOffsetMinutes = 0,
+): {
+  heatmap: ReturnType<typeof hourOfDayActivity>;
+  intraday: ReturnType<typeof intradayTimeline>;
+} {
+  const inDay = samples.filter(
+    (s) => localDay(s.capturedAt, tzOffsetMinutes) === day,
+  );
+  return {
+    heatmap: hourOfDayActivity(inDay, tzOffsetMinutes),
+    intraday: intradayTimeline(inDay, 30),
+  };
+}
+
+/**
+ * Newest local day that actually has a sample, or `null` when there are none.
+ * `samples` are descending by `capturedAt` (as `recentSamples` returns), so the
+ * first row is the newest. Powers the "rewind to last active day" affordance.
+ */
+export function lastActiveDay(
+  samples: Sample[],
+  tzOffsetMinutes = 0,
+): string | null {
+  return samples.length > 0
+    ? localDay(samples[0].capturedAt, tzOffsetMinutes)
+    : null;
 }
 
 // ── Day-in-detail (minute-level) ───────────────────────────────────────────

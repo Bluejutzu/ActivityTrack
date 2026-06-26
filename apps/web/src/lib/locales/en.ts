@@ -147,6 +147,8 @@ export const en: Dict = {
   "timeline.empty": "No samples available.",
   "timeline.kpi.activeToday": "Active today",
   "timeline.kpi.idleToday": "Idle today",
+  "timeline.kpi.activeOn": "Active {date}",
+  "timeline.kpi.idleOn": "Idle {date}",
   "timeline.kpi.status": "Status",
   "timeline.kpi.lastSeen": "Last seen",
   "timeline.trend.heading": "Last 14 days",
@@ -155,7 +157,7 @@ export const en: Dict = {
   "timeline.intraday.sub": "Share of active samples over time.",
   "timeline.intraday.series": "Active %",
   "timeline.heatmap.heading": "Activity by time of day",
-  "timeline.heatmap.sub": "When this person is typically active.",
+  "timeline.heatmap.sub": "When this person was active today.",
   "timeline.hourly.heading": "State by hour (today)",
   "timeline.hourly.sub":
     "Minutes per hour by state — idle, on a call, break, wrap-up.",
@@ -174,6 +176,10 @@ export const en: Dict = {
   "timeline.day.date": "Day",
   "timeline.day.empty": "No state history for this day.",
   "timeline.day.now": "now",
+  "timeline.day.viewingPast": "You're viewing data for {date} — not today.",
+  "timeline.day.backToToday": "Back to today",
+  "timeline.day.noDataToday": "No activity recorded today yet.",
+  "timeline.day.rewind": "View last active day ({date})",
 
   "reports.title": "Weekly reports",
   "reports.subtitle":
