@@ -5,12 +5,13 @@ import { Providers } from "./providers";
 import { themeBootScript } from "@/lib/theme";
 
 // One clean, highly legible face for the whole interface. Inter reads as modern
-// and friendly without the "instrument panel" feel of a display + mono pairing,
-// and its tabular figures keep every metric aligned.
+// and crisp; its tabular figures keep every metric aligned, and large tight
+// sizes carry the heading hierarchy without a separate display/serif face.
+// Exposed as `--font-inter`; the theme maps sans/display/mono onto it.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -21,8 +22,8 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F8FA" },
-    { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
+    { media: "(prefers-color-scheme: light)", color: "#F4F2EC" },
+    { media: "(prefers-color-scheme: dark)", color: "#171614" },
   ],
 };
 

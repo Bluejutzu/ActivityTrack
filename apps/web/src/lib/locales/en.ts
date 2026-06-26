@@ -45,12 +45,14 @@ export const en: Dict = {
   "overview.unassigned": "Unassigned",
   "overview.lastSeen": "Last seen",
   "overview.total": "Devices total",
+  "overview.ofTotal": "of {total} devices",
 
   "devices.heading": "Devices",
   "devices.pending": "Pending approval",
   "devices.all": "All devices",
   "devices.host": "Computer",
   "devices.user": "User",
+  "devices.formerUsers": "formerly:",
   "devices.status": "Status",
   "devices.person": "Person",
   "devices.lastSeen": "Last seen",
@@ -219,6 +221,8 @@ export const en: Dict = {
   "common.copy": "Copy",
   "common.copied": "Copied!",
   "common.copyFailed": "Couldn't copy to clipboard.",
+  "common.search": "Search …",
+  "common.noResults": "No matches.",
   "footer.privacy":
     "Privacy: ActivityTrack records activity timing only (active/idle) on company-owned devices — no screenshots, no keystrokes. Staff are informed.",
 
@@ -376,6 +380,7 @@ export const en: Dict = {
 
   // Help / FAQ, status tooltips, setup checklist, guardrail confirms.
   "nav.help": "Help",
+  "nav.more": "More",
 
   "help.title": "Help & FAQ",
   "help.subtitle": "Common questions and fixes — search or browse by topic.",

@@ -57,6 +57,7 @@ export function HourlyStateChart({
             name={labels[state]}
             stackId="s"
             fill={STATE_COLOR[state]}
+            maxBarSize={22}
             radius={i === STATE_NAMES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
           />
         ))}

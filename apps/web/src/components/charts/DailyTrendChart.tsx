@@ -53,13 +53,15 @@ export function DailyTrendChart({
           name={activeLabel}
           stackId="a"
           fill={CHART.active}
-          radius={[0, 0, 0, 0]}
+          maxBarSize={28}
+          radius={[0, 0, 4, 4]}
         />
         <Bar
           dataKey="idleHours"
           name={idleLabel}
           stackId="a"
           fill={CHART.idle}
+          maxBarSize={28}
           radius={[4, 4, 0, 0]}
         />
       </BarChart>

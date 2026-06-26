@@ -83,7 +83,7 @@ export function ExportTab({
         </CardTitle>
         <p className="text-sm text-muted">{t("timeline.export.sub")}</p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-0 sm:pt-0">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-muted">
             {t("timeline.export.from")}

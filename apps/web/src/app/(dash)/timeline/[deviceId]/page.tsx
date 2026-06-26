@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/StatCard";
 import { StateBadge, SourceSignals } from "@/components/state/StateBits";
 import { DayNav } from "@/components/timeline/DayNav";
 import { ChartsTab } from "@/components/timeline/ChartsTab";
@@ -35,42 +36,6 @@ import { ExportTab } from "@/components/timeline/ExportTab";
 import { DayDetailTab } from "@/components/timeline/DayDetailTab";
 
 const TREND_DAYS = 14;
-
-function KpiCard({
-  icon,
-  label,
-  value,
-  tone = "fg",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  tone?: "fg" | "ok" | "warn" | "accent";
-}) {
-  const toneClass = {
-    fg: "text-fg",
-    ok: "text-ok",
-    warn: "text-warn",
-    accent: "text-accent",
-  }[tone];
-  return (
-    <Card className="animate-fade-up">
-      <CardContent className="flex items-center gap-3 p-4">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-panel-2 text-muted">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="kicker truncate">{label}</p>
-          <p
-            className={`mt-1 truncate font-display text-xl font-semibold tabular-nums ${toneClass}`}
-          >
-            {value}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function TimelinePage({
   params,
@@ -190,7 +155,7 @@ export default function TimelinePage({
   const hasDataToday = intraday.length > 0 || dayStats != null;
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       <Link
         href="/"
         className="group inline-flex items-center gap-1 text-sm text-accent"
@@ -200,17 +165,14 @@ export default function TimelinePage({
       </Link>
 
       <div>
-        <p className="kicker mb-1.5">// Device telemetry</p>
-        <h1 className="font-display text-2xl font-semibold tracking-tightest text-fg">
-          {title}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-fg">{title}</h1>
         <p className="mt-1 truncate font-mono text-xs text-muted">{deviceId}</p>
       </div>
 
       {/* KPI row — active/idle follow the selected day; status/last-seen are
           the device's live state regardless of which day is being viewed. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
+        <StatCard
           icon={<Clock className="h-4 w-4" />}
           label={
             isToday
@@ -220,7 +182,7 @@ export default function TimelinePage({
           tone="ok"
           value={formatDuration(dayStats?.activeSeconds ?? 0, lang)}
         />
-        <KpiCard
+        <StatCard
           icon={<Coffee className="h-4 w-4" />}
           label={
             isToday
@@ -230,7 +192,7 @@ export default function TimelinePage({
           tone="warn"
           value={formatDuration(dayStats?.idleSeconds ?? 0, lang)}
         />
-        <KpiCard
+        <StatCard
           icon={<Radio className="h-4 w-4" />}
           label={t("timeline.kpi.status")}
           value={
@@ -239,10 +201,11 @@ export default function TimelinePage({
             </Badge>
           }
         />
-        <KpiCard
+        <StatCard
           icon={<Clock className="h-4 w-4" />}
           label={t("timeline.kpi.lastSeen")}
           value={device ? formatRelativeTime(device.lastSeen, lang) : "—"}
+          valueClassName="text-xl"
         />
       </div>
 
@@ -253,7 +216,7 @@ export default function TimelinePage({
             <CardTitle className="text-base">{t("timeline.state.heading")}</CardTitle>
             {liveState && <StateBadge state={liveState.finalState as EmployeeState} />}
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 sm:pt-0">
             {liveState === undefined ? (
               <Skeleton className="h-20 w-full" />
             ) : liveState === null ? (

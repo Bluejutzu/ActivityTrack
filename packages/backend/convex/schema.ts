@@ -50,6 +50,12 @@ export default defineSchema({
     deviceId: v.string(), // the UUID minted by the agent (ProgramData)
     hostname: v.string(),
     lastWindowsUser: v.string(),
+    // Previous account usernames seen on this device, oldest-first, capped to the
+    // last 10. Appended on ingest when `lastWindowsUser` changes so the dashboard
+    // can show who used the machine before. Optional for pre-existing rows.
+    userHistory: v.optional(
+      v.array(v.object({ user: v.string(), changedAt: v.number() })),
+    ),
     status: v.union(
       v.literal("pending"),
       v.literal("active"),

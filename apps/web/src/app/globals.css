@@ -1,84 +1,214 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Class-strategy dark mode: `.dark` on <html> flips every token below. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ───────────────────────────────────────────────────────────────────────────
-   "Daylight" — a calm, friendly operations dashboard
-   A soft off-white base, clean Inter type, and plenty of breathing room. No
-   grain, no glow, no graph paper — just quiet surfaces with one brand blue and
-   plain traffic-light status colours.
+   ActivityTrack — "Canvas" design system (Tailwind v4)
+   Warm beige-grey neutrals (the Claude/Anthropic palette), white as the primary
+   surface, a single calm blue as the highlight, and a clear traffic-light status
+   set. One clean sans (Inter) everywhere — big, tight headings carry hierarchy.
+   Glass/blur is a garnish: header, mobile nav, and one or two hero cards only.
 
-   Light (`:root`) and dark (`.dark`) share the same token names. Colours are
-   stored as space-separated RGB channels so Tailwind utilities — including
-   `/20`-style alpha — recolour automatically when `.dark` is toggled on <html>.
+   Colours live as space-separated RGB channels in `--c-*` (light in `:root`,
+   dark in `.dark`) and are mapped into Tailwind's `--color-*` theme via
+   `@theme inline`, so every utility — including `/alpha` — flips automatically
+   when `.dark` is toggled. Dark is the hero; light is derived.
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-sans);
-  /* Numerals share the body face; tabular figures do the aligning. */
-  --font-mono: var(--font-sans);
+  /* ── Light surfaces — warm cream (bg = page, bg-2 = rail/bar, panel = card) */
+  --c-bg: 244 242 236;
+  --c-bg-2: 251 250 246;
+  --c-panel: 255 255 254;
+  --c-panel-2: 243 240 232;
+  --c-border: 227 221 210;
+  --c-border-soft: 237 232 223;
+  --c-muted: 109 102 91;
+  --c-fg: 37 34 30;
+  /* ── Highlight (the one blue) + a near-blue companion for rare gradients ── */
+  --c-accent: 43 96 232;
+  --c-accent-2: 67 110 235;
+  /* ── Status (traffic light) ─────────────────────────────────────────────── */
+  --c-ok: 22 158 110;
+  --c-warn: 190 112 12;
+  --c-danger: 211 76 70;
+  --c-info: 14 142 196;
+  /* ── Glass base + text-on-accent ────────────────────────────────────────── */
+  --c-glass: 251 250 246;
+  --c-accent-fg: 255 255 255;
 
-  /* ── Light surfaces ─────────────────────────────────────────────────── */
-  --c-bg: 247 248 250;
-  --c-bg-2: 255 255 255;
-  --c-panel: 255 255 255;
-  --c-panel-2: 241 243 246;
-  --c-border: 228 232 238;
-  --c-border-soft: 238 241 244;
-  --c-muted: 91 101 115;
-  --c-fg: 27 32 39;
-  /* ── Brand + status ─────────────────────────────────────────────────── */
-  --c-accent: 46 108 246;
-  --c-ok: 16 163 114;
-  --c-warn: 194 116 12;
-  --c-danger: 220 75 71;
-  --c-info: 14 146 201;
-
-  /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ──────── */
-  --chart-active: #10a372;
-  --chart-idle: #c2740c;
-  --chart-accent: #2e6cf6;
-  --chart-info: #0e92c9;
-  --chart-grid: #e4e8ee;
-  --chart-axis: #5b6573;
-  --chart-panel: #ffffff;
-  --chart-fg: #1b2027;
-  --chart-cursor: rgba(46, 108, 246, 0.08);
-  --chart-tooltip-shadow: 0 6px 16px -8px rgba(16, 24, 40, 0.18);
+  /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ────────── */
+  --chart-active: #129e6e;
+  --chart-idle: #be700c;
+  --chart-accent: #2b60e8;
+  --chart-accent-2: #436ee5;
+  --chart-info: #0e8ec4;
+  --chart-grid: #e4ded3;
+  --chart-axis: #6d665b;
+  --chart-panel: #fffffe;
+  --chart-fg: #25221e;
+  --chart-cursor: rgba(43, 96, 232, 0.07);
+  --chart-tooltip-shadow: 0 10px 30px -12px rgba(40, 33, 22, 0.22);
 
   color-scheme: light;
 }
 
 .dark {
-  /* ── Dark surfaces — a calm slate, not the old "Signal" command deck ──── */
-  --c-bg: 14 17 22;
-  --c-bg-2: 21 26 33;
-  --c-panel: 22 28 36;
-  --c-panel-2: 30 37 47;
-  --c-border: 42 51 63;
-  --c-border-soft: 33 41 51;
-  --c-muted: 142 154 169;
-  --c-fg: 230 234 240;
-  /* ── Brand + status — same hues, lifted for contrast on dark ─────────── */
-  --c-accent: 88 142 255;
-  --c-ok: 45 192 138;
-  --c-warn: 224 150 60;
-  --c-danger: 240 99 94;
-  --c-info: 56 174 219;
+  /* ── Dark surfaces — warm charcoal with a faint clay undertone ──────────── */
+  --c-bg: 23 22 20;
+  --c-bg-2: 28 27 24;
+  --c-panel: 34 32 29;
+  --c-panel-2: 45 42 38;
+  --c-border: 53 50 45;
+  --c-border-soft: 39 37 33;
+  --c-muted: 165 158 147;
+  --c-fg: 240 238 232;
+  --c-accent: 96 150 248;
+  --c-accent-2: 123 167 250;
+  --c-ok: 52 199 144;
+  --c-warn: 228 156 66;
+  --c-danger: 240 110 100;
+  --c-info: 88 162 232;
+  --c-glass: 28 27 24;
+  --c-accent-fg: 255 255 255;
 
-  --chart-active: #2dc08a;
-  --chart-idle: #e0963c;
-  --chart-accent: #588eff;
-  --chart-info: #38aedb;
-  --chart-grid: #2a333f;
-  --chart-axis: #8e9aa9;
-  --chart-panel: #161c24;
-  --chart-fg: #e6eaf0;
-  --chart-cursor: rgba(88, 142, 255, 0.12);
-  --chart-tooltip-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --chart-active: #34c790;
+  --chart-idle: #e49c42;
+  --chart-accent: #6096f8;
+  --chart-accent-2: #7ba7fa;
+  --chart-info: #58a2e8;
+  --chart-grid: #353229;
+  --chart-axis: #a59e93;
+  --chart-panel: #22201d;
+  --chart-fg: #f0eee8;
+  --chart-cursor: rgba(96, 150, 248, 0.14);
+  --chart-tooltip-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
+}
+
+/* ── Theme: map our tokens into Tailwind v4. `inline` so utilities reference
+   the `--c-*` vars directly and therefore flip under `.dark`. ─────────────── */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Surfaces, text, brand, status */
+  --color-bg: rgb(var(--c-bg));
+  --color-bg-2: rgb(var(--c-bg-2));
+  --color-panel: rgb(var(--c-panel));
+  --color-panel-2: rgb(var(--c-panel-2));
+  --color-hover: rgb(var(--c-panel-2));
+  --color-border: rgb(var(--c-border));
+  --color-border-soft: rgb(var(--c-border-soft));
+  --color-muted: rgb(var(--c-muted));
+  --color-fg: rgb(var(--c-fg));
+  --color-accent: rgb(var(--c-accent));
+  --color-accent-2: rgb(var(--c-accent-2));
+  --color-accent-fg: rgb(var(--c-accent-fg));
+  --color-signal: rgb(var(--c-accent));
+  --color-glass: rgb(var(--c-glass));
+  --color-ok: rgb(var(--c-ok));
+  --color-warn: rgb(var(--c-warn));
+  --color-idle: rgb(var(--c-warn));
+  --color-danger: rgb(var(--c-danger));
+  --color-info: rgb(var(--c-info));
+
+  /* shadcn aliases → our tokens (so generated components compile). NOTE: our
+     `accent` is the brand BLUE; shadcn's hover-surface maps to `hover` instead. */
+  --color-background: rgb(var(--c-bg));
+  --color-foreground: rgb(var(--c-fg));
+  --color-card: rgb(var(--c-panel));
+  --color-card-foreground: rgb(var(--c-fg));
+  --color-popover: rgb(var(--c-panel));
+  --color-popover-foreground: rgb(var(--c-fg));
+  --color-primary: rgb(var(--c-accent));
+  --color-primary-foreground: rgb(var(--c-accent-fg));
+  --color-secondary: rgb(var(--c-panel-2));
+  --color-secondary-foreground: rgb(var(--c-fg));
+  --color-muted-foreground: rgb(var(--c-muted));
+  --color-accent-foreground: rgb(var(--c-fg));
+  --color-destructive: rgb(var(--c-danger));
+  --color-destructive-foreground: rgb(var(--c-accent-fg));
+  --color-input: rgb(var(--c-border));
+  --color-ring: rgb(var(--c-accent));
+
+  /* Editorial display sizes (Inter at large sizes, tightened). */
+  --text-display-sm: 1.75rem;
+  --text-display-sm--line-height: 1.1;
+  --text-display-sm--letter-spacing: -0.02em;
+  --text-display-md: 2.25rem;
+  --text-display-md--line-height: 1.05;
+  --text-display-md--letter-spacing: -0.02em;
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 1;
+  --text-display-lg--letter-spacing: -0.025em;
+  --text-display-xl: 3.75rem;
+  --text-display-xl--line-height: 0.98;
+  --text-display-xl--letter-spacing: -0.03em;
+
+  --tracking-tightest: -0.025em;
+  --tracking-tighter: -0.015em;
+
+  /* Crisp geometry — cards land on xl/2xl. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --grid-template-columns-24: repeat(24, minmax(0, 1fr));
+
+  /* Flat & quiet (Claude Code style) — the hairline border does the work; the
+     shadow is barely there, just enough to lift a card a hair off the canvas. */
+  --shadow-soft: 0 1px 2px rgba(28, 22, 14, 0.04);
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.03), 0 1px 2px rgba(20, 16, 10, 0.035);
+  --shadow-card-hover: inset 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 2px 10px -4px rgba(20, 16, 10, 0.1);
+  --shadow-overlay: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 24px 60px -16px rgba(8, 6, 3, 0.5);
+  --shadow-glow: 0 8px 24px -10px rgba(60, 120, 240, 0.4);
+  --shadow-glow-strong: 0 10px 30px -10px rgba(60, 120, 240, 0.55);
+  --shadow-signal-sm: 0 0 0 1px rgba(60, 120, 240, 0.22);
+  --shadow-hairline: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* Motion — ease-out entrances ≤260ms; transform & opacity only. */
+  --animate-fade-up: fade-up 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-fade-in: fade-in 200ms linear both;
+  --animate-scale-in: scale-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-rise: rise 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+
+/* v4 Preflight sets the default border colour to currentColor; pin it to our
+   token so a bare `border` never paints an unexpected colour. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: rgb(var(--c-border));
+  }
+}
+
+/* Custom background utilities (were `bg-*` in v3; now v4 @utility). */
+@utility brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+}
+@utility signal-line {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--c-accent) / 0.55),
+    transparent
+  );
 }
 
 html,
@@ -100,23 +230,21 @@ body {
   overflow-x: hidden;
 }
 
-/* Keyboard focus ring — brand blue; pointer interactions stay ring-free. */
+/* Keyboard focus ring — the highlight blue; pointer interactions stay clean. */
 *:focus-visible {
   outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
-
 *:focus:not(:focus-visible) {
   outline: none;
 }
 
 ::selection {
-  background: rgb(var(--c-accent) / 0.18);
+  background: rgb(var(--c-accent) / 0.2);
   color: rgb(var(--c-fg));
 }
 
-/* Styled checkbox in brand blue */
 input[type="checkbox"] {
   accent-color: rgb(var(--c-accent));
   width: 1rem;
@@ -124,7 +252,6 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
-/* Thin, light scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -133,36 +260,93 @@ input[type="checkbox"] {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--c-muted) / 0.35);
-  border-radius: 6px;
+  background: rgb(var(--c-muted) / 0.3);
+  border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--c-muted) / 0.5);
+  background: rgb(var(--c-muted) / 0.48);
   background-clip: padding-box;
 }
 
-/* ── Reusable helpers ─────────────────────────────────────────────────────── */
+/* ── Reusable helpers (plain classes — no @apply) ─────────────────────────── */
 
-/* A near-invisible neutral grid for large empty surfaces — texture, not noise. */
 .signal-grid {
   background-image:
-    linear-gradient(to right, rgb(var(--c-fg) / 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(var(--c-fg) / 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgb(var(--c-fg) / 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--c-fg) / 0.03) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
-/* Small section label — clean caps, no monospace. */
 .kicker {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgb(var(--c-muted));
 }
 
-/* A live status dot with a soft expanding ring — used for working/online. */
+.h-section {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--c-fg));
+}
+
+.glass {
+  background-color: rgb(var(--c-glass) / 0.72);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  border: 1px solid rgb(var(--c-border) / 0.6);
+}
+
+.glass-strong {
+  background-color: rgb(var(--c-glass) / 0.62);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgb(var(--c-border) / 0.7);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+    0 18px 50px -24px rgb(0 0 0 / 0.45);
+}
+
+.brand-text {
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-primary {
+  color: rgb(var(--c-accent-fg));
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
+    0 1px 2px rgb(8 12 20 / 0.22);
+}
+.btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.16),
+    0 8px 22px -8px rgb(var(--c-accent) / 0.5);
+}
+
+.surface-raised {
+  background-color: rgb(var(--c-panel));
+  border: 1px solid rgb(var(--c-border));
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.04) inset,
+    var(--tw-shadow, 0 0 transparent);
+}
+
 .signal-dot {
   position: relative;
   display: inline-block;
@@ -180,15 +364,58 @@ input[type="checkbox"] {
   animation: pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-/* Tabular numerals for any metric/figure. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* These two are driven from raw CSS / inline styles (the live dot + the login
-   pulse), so define them here — Tailwind only emits @keyframes for names used
-   via animate-* utilities. */
+/* Keyframes (referenced by the --animate-* theme tokens + raw CSS above). */
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
 @keyframes pulse-dot {
   0%,
   100% {
@@ -200,7 +427,6 @@ input[type="checkbox"] {
     transform: scale(0.85);
   }
 }
-
 @keyframes pulse-ring {
   0% {
     transform: scale(0.7);
@@ -213,7 +439,7 @@ input[type="checkbox"] {
   }
 }
 
-/* Respect reduced-motion — single override, no exceptions needed */
+/* Respect reduced-motion — single override. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -17,9 +17,9 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const [tab, setTab] = useTabParam("config");
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       <div>
-        <h2 className="font-display text-lg font-semibold tracking-tightest text-fg">
+        <h2 className="text-lg font-bold tracking-tight text-fg">
           {t("settings.heading")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("settings.subtitle")}</p>

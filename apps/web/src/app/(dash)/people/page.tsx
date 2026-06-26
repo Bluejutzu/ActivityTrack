@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { Copy, Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
 import { roleAtLeast, type Role } from "@/lib/format";
 import type { GenericId } from "convex/values";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CopyButton } from "@/components/CopyButton";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
-import { useToast } from "@/lib/useToast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,20 +41,12 @@ function EditableId({
   onSave: (value: string) => void;
 }) {
   const { t } = useI18n();
-  const toast = useToast();
   const [value, setValue] = useState(initial);
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast(t("common.copied"), "ok");
-    } catch {
-      toast(t("common.copyFailed"), "danger");
-    }
-  }
-
   return (
-    <div className="flex items-center gap-1">
+    // gap + shrink-0 copy button keep the field and the action from colliding,
+    // even in the narrow integration-id columns on mobile.
+    <div className="flex w-full min-w-[8rem] items-center gap-1.5">
       <Input
         value={value}
         disabled={disabled}
@@ -66,19 +58,10 @@ function EditableId({
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
-        className="h-8 min-w-[7rem] font-mono text-xs"
+        className="h-8 flex-1 font-mono text-xs"
       />
       {value.trim() !== "" && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={copy}
-          aria-label={t("common.copy")}
-          className="h-8 w-8 shrink-0 text-muted hover:text-fg"
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
+        <CopyButton value={value} label={`${t("common.copy")} · ${placeholder}`} />
       )}
     </div>
   );
@@ -94,11 +77,24 @@ export default function PeoplePage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<GenericId<"people"> | null>(
     null,
   );
 
   const canEdit = roleAtLeast((me?.role ?? "viewer") as Role, "manager");
+
+  // Client-side roster filter — name / email / any integration id. Cheap, and
+  // keeps the table usable as the headcount grows past the first handful.
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || !people) return people ?? [];
+    return people.filter((p) =>
+      [p.name, p.email, p.employeeId, p.genesysUserId, p.clockodoUserId]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [people, query]);
 
   if (people === undefined) {
     return <Skeleton className="h-64 w-full" />;
@@ -118,10 +114,10 @@ export default function PeoplePage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-6">
       {canEdit && (
         <Card className="animate-fade-up">
-          <CardContent className="p-3">
+          <CardContent className="p-3 sm:p-4">
             <form
               onSubmit={onAdd}
               className="flex flex-col gap-2 sm:flex-row sm:items-center"
@@ -152,6 +148,20 @@ export default function PeoplePage() {
       )}
 
       <Card>
+        {people.length > 0 && (
+          <div className="border-b border-border-soft p-3">
+            <div className="relative max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("common.search")}
+                aria-label={t("common.search")}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        )}
         <Table aria-label={t("nav.people")}>
           <TableHeader>
             <TableRow>
@@ -175,7 +185,17 @@ export default function PeoplePage() {
                 </TableCell>
               </TableRow>
             )}
-            {people.map((p) => (
+            {people.length > 0 && filtered.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={canEdit ? 7 : 6}
+                  className="py-10 text-center text-sm text-muted"
+                >
+                  {t("common.noResults")}
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered.map((p) => (
               <TableRow key={p._id}>
                 <TableCell className="text-fg">{p.name}</TableCell>
                 <TableCell className="text-muted">{p.email ?? "—"}</TableCell>

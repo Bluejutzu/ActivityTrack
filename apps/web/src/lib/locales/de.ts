@@ -46,12 +46,14 @@ export const de: Dict = {
   "overview.unassigned": "Nicht zugewiesen",
   "overview.lastSeen": "Zuletzt gesehen",
   "overview.total": "Geräte gesamt",
+  "overview.ofTotal": "von {total} Geräten",
 
   "devices.heading": "Geräte",
   "devices.pending": "Wartet auf Genehmigung",
   "devices.all": "Alle Geräte",
   "devices.host": "Computer",
   "devices.user": "Benutzer",
+  "devices.formerUsers": "früher:",
   "devices.status": "Status",
   "devices.person": "Mitarbeiter",
   "devices.lastSeen": "Zuletzt gesehen",
@@ -220,6 +222,8 @@ export const de: Dict = {
   "common.copy": "Kopieren",
   "common.copied": "Kopiert!",
   "common.copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
+  "common.search": "Suchen …",
+  "common.noResults": "Keine Treffer.",
   "footer.privacy":
     "Datenschutz: ActivityTrack erfasst nur Aktivitätszeiten (aktiv/inaktiv) auf firmeneigenen Geräten — keine Screenshots, keine Tastatureingaben. Mitarbeiter sind informiert.",
 
@@ -388,6 +392,7 @@ export const de: Dict = {
 
   // Hilfe / FAQ, Status-Tooltips, Einrichtungs-Checkliste, Schutzabfragen.
   "nav.help": "Hilfe",
+  "nav.more": "Mehr",
 
   "help.title": "Hilfe & FAQ",
   "help.subtitle":

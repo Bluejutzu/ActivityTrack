@@ -142,9 +142,21 @@ export const recordSamples = internalMutation({
       // Upsert the device row from the newest sample we saw.
       const newest = deviceSamples[deviceSamples.length - 1]!;
       if (device) {
+        // When the account username changes, retain the previous name (oldest-first,
+        // capped to the last 10) so the dashboard can show who used the machine before.
+        const userChanged =
+          !!device.lastWindowsUser &&
+          newest.windowsUser !== device.lastWindowsUser;
+        const userHistory = userChanged
+          ? [
+              ...(device.userHistory ?? []),
+              { user: device.lastWindowsUser, changedAt: receivedAt },
+            ].slice(-10)
+          : device.userHistory;
         await ctx.db.patch(device._id, {
           hostname: newest.hostname,
           lastWindowsUser: newest.windowsUser,
+          ...(userChanged ? { userHistory } : {}),
           lastSeen: Math.max(device.lastSeen, newest.capturedAt),
           agentVersion: newest.agentVersion,
           // A previously-pending device stays pending until an admin approves.
