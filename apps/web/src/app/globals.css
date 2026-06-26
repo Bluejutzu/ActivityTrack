@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 /* ───────────────────────────────────────────────────────────────────────────
-   "Daylight" — a calm, friendly operations dashboard
-   A soft off-white base, clean Inter type, and plenty of breathing room. No
-   grain, no glow, no graph paper — just quiet surfaces with one brand blue and
-   plain traffic-light status colours.
+   "Aurora" — a focused, modern operations dashboard
+   Layered surfaces with real depth (Discord-style: a dark rail, a lighter
+   content plane, and cards that lift above it), chunky rounded corners, bold
+   section headers, and a blurple-leaning brand blue. Chrome (nav, top bar,
+   labels) stays quiet; the data — numbers, status, charts — is what pops.
 
    Light (`:root`) and dark (`.dark`) share the same token names. Colours are
    stored as space-separated RGB channels so Tailwind utilities — including
@@ -19,64 +20,68 @@
   /* Numerals share the body face; tabular figures do the aligning. */
   --font-mono: var(--font-sans);
 
-  /* ── Light surfaces ─────────────────────────────────────────────────── */
-  --c-bg: 247 248 250;
+  /* ── Light surfaces (bg = page, bg-2 = rail/top bar, panel = card) ─────── */
+  --c-bg: 244 245 248;
   --c-bg-2: 255 255 255;
   --c-panel: 255 255 255;
-  --c-panel-2: 241 243 246;
-  --c-border: 228 232 238;
-  --c-border-soft: 238 241 244;
-  --c-muted: 91 101 115;
-  --c-fg: 27 32 39;
+  --c-panel-2: 240 242 246;
+  --c-border: 226 230 237;
+  --c-border-soft: 236 239 243;
+  --c-muted: 96 105 120;
+  --c-fg: 23 28 36;
   /* ── Brand + status ─────────────────────────────────────────────────── */
-  --c-accent: 46 108 246;
-  --c-ok: 16 163 114;
-  --c-warn: 194 116 12;
+  --c-accent: 56 99 244; /* blurple-leaning blue */
+  --c-accent-2: 79 70 229; /* indigo companion for gradients/active */
+  --c-ok: 22 163 116;
+  --c-warn: 197 116 12;
   --c-danger: 220 75 71;
   --c-info: 14 146 201;
 
   /* ── Chart tokens (consumed as plain colours in charts/theme.ts) ──────── */
-  --chart-active: #10a372;
-  --chart-idle: #c2740c;
-  --chart-accent: #2e6cf6;
+  --chart-active: #12a373;
+  --chart-idle: #d08a16;
+  --chart-accent: #3863f4;
+  --chart-accent-2: #4f46e5;
   --chart-info: #0e92c9;
-  --chart-grid: #e4e8ee;
-  --chart-axis: #5b6573;
+  --chart-grid: #e6eaf1;
+  --chart-axis: #606978;
   --chart-panel: #ffffff;
-  --chart-fg: #1b2027;
-  --chart-cursor: rgba(46, 108, 246, 0.08);
-  --chart-tooltip-shadow: 0 6px 16px -8px rgba(16, 24, 40, 0.18);
+  --chart-fg: #171c24;
+  --chart-cursor: rgba(56, 99, 244, 0.08);
+  --chart-tooltip-shadow: 0 8px 24px -10px rgba(16, 24, 40, 0.22);
 
   color-scheme: light;
 }
 
 .dark {
-  /* ── Dark surfaces — a calm slate, not the old "Signal" command deck ──── */
-  --c-bg: 14 17 22;
-  --c-bg-2: 21 26 33;
-  --c-panel: 22 28 36;
-  --c-panel-2: 30 37 47;
-  --c-border: 42 51 63;
-  --c-border-soft: 33 41 51;
-  --c-muted: 142 154 169;
-  --c-fg: 230 234 240;
+  /* ── Dark surfaces — layered, cool slate with a faint blue undertone ──── */
+  --c-bg: 22 24 29; /* app backdrop / sidebar rail (darkest) */
+  --c-bg-2: 30 32 38; /* top bar + rail surface */
+  --c-panel: 38 41 49; /* cards — lifted, lighter than the rail */
+  --c-panel-2: 48 52 61; /* raised within cards / hover */
+  --c-border: 52 56 66;
+  --c-border-soft: 42 46 55;
+  --c-muted: 150 158 172;
+  --c-fg: 233 236 242;
   /* ── Brand + status — same hues, lifted for contrast on dark ─────────── */
-  --c-accent: 88 142 255;
-  --c-ok: 45 192 138;
-  --c-warn: 224 150 60;
-  --c-danger: 240 99 94;
-  --c-info: 56 174 219;
+  --c-accent: 110 132 255; /* blurple */
+  --c-accent-2: 139 134 255; /* indigo-violet companion */
+  --c-ok: 49 199 144;
+  --c-warn: 228 156 66;
+  --c-danger: 242 102 97;
+  --c-info: 58 178 223;
 
-  --chart-active: #2dc08a;
-  --chart-idle: #e0963c;
-  --chart-accent: #588eff;
-  --chart-info: #38aedb;
-  --chart-grid: #2a333f;
-  --chart-axis: #8e9aa9;
-  --chart-panel: #161c24;
-  --chart-fg: #e6eaf0;
-  --chart-cursor: rgba(88, 142, 255, 0.12);
-  --chart-tooltip-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --chart-active: #31c790;
+  --chart-idle: #e49c42;
+  --chart-accent: #6e84ff;
+  --chart-accent-2: #8b86ff;
+  --chart-info: #3ab2df;
+  --chart-grid: #343846;
+  --chart-axis: #969eac;
+  --chart-panel: #262931;
+  --chart-fg: #e9ecf2;
+  --chart-cursor: rgba(110, 132, 255, 0.14);
+  --chart-tooltip-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.75);
 
   color-scheme: dark;
 }
@@ -104,7 +109,7 @@ body {
 *:focus-visible {
   outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 *:focus:not(:focus-visible) {
@@ -112,7 +117,7 @@ body {
 }
 
 ::selection {
-  background: rgb(var(--c-accent) / 0.18);
+  background: rgb(var(--c-accent) / 0.22);
   color: rgb(var(--c-fg));
 }
 
@@ -133,8 +138,8 @@ input[type="checkbox"] {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--c-muted) / 0.35);
-  border-radius: 6px;
+  background: rgb(var(--c-muted) / 0.32);
+  border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
@@ -153,13 +158,73 @@ input[type="checkbox"] {
   background-size: 28px 28px;
 }
 
-/* Small section label — clean caps, no monospace. */
+/* Small section label — clean caps, quiet. Chrome, not data. */
 .kicker {
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgb(var(--c-muted));
+}
+
+/* Bold, "thick" section/card heading — the data layer announces itself. */
+.h-section {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--c-fg));
+}
+
+/* The blurple → indigo brand gradient, reused on primary actions, the brand
+   mark, active nav and KPI accents. One source of truth for the sheen. */
+.brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+}
+
+/* Gradient text for hero figures / brand wordmark. */
+.brand-text {
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The primary button surface: blurple → indigo gradient with a hairline top
+   highlight and a blue lift on hover. Used by the Button `primary`/`default`
+   variants so the one bold action on a screen carries the brand. */
+.btn-primary {
+  color: #fff;
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--c-accent)),
+    rgb(var(--c-accent-2))
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+    0 1px 2px rgb(8 12 20 / 0.24);
+}
+.btn-primary:hover {
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+    0 8px 24px -8px rgb(var(--c-accent) / 0.55);
+}
+
+/* A lifted surface: card-like depth with a hairline top highlight so panels
+   read as raised rather than painted-on. Tuned per theme via tokens. */
+.surface-raised {
+  background-color: rgb(var(--c-panel));
+  border: 1px solid rgb(var(--c-border));
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.04) inset,
+    var(--tw-shadow, 0 0 transparent);
 }
 
 /* A live status dot with a soft expanding ring — used for working/online. */

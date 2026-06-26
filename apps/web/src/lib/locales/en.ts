@@ -213,6 +213,8 @@ export const en: Dict = {
   "common.copy": "Copy",
   "common.copied": "Copied!",
   "common.copyFailed": "Couldn't copy to clipboard.",
+  "common.search": "Search …",
+  "common.noResults": "No matches.",
   "footer.privacy":
     "Privacy: ActivityTrack records activity timing only (active/idle) on company-owned devices — no screenshots, no keystrokes. Staff are informed.",
 

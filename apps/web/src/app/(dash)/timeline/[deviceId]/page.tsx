@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StateBadge, SourceSignals } from "@/components/state/StateBits";
+import { CopyButton } from "@/components/CopyButton";
 import { ChartsTab } from "@/components/timeline/ChartsTab";
 import { RawTab } from "@/components/timeline/RawTab";
 import { ExportTab } from "@/components/timeline/ExportTab";
@@ -52,16 +53,25 @@ function KpiCard({
     warn: "text-warn",
     accent: "text-accent",
   }[tone];
+  // The icon tile picks up the figure's tone so the KPI reads at a glance.
+  const tileClass = {
+    fg: "bg-panel-2 text-muted ring-border",
+    ok: "bg-ok/12 text-ok ring-ok/25",
+    warn: "bg-warn/12 text-warn ring-warn/25",
+    accent: "bg-accent/12 text-accent ring-accent/25",
+  }[tone];
   return (
-    <Card className="animate-fade-up">
+    <Card className="animate-fade-up transition-shadow duration-200 hover:shadow-card-hover">
       <CardContent className="flex items-center gap-3 p-4">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-panel-2 text-muted">
+        <span
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ring-inset ${tileClass}`}
+        >
           {icon}
         </span>
         <div className="min-w-0">
           <p className="kicker truncate">{label}</p>
           <p
-            className={`mt-1 truncate font-display text-xl font-semibold tabular-nums ${toneClass}`}
+            className={`mt-1 truncate font-display text-2xl font-bold tabular-nums ${toneClass}`}
           >
             {value}
           </p>
@@ -175,11 +185,16 @@ export default function TimelinePage({
       </Link>
 
       <div>
-        <p className="kicker mb-1.5">// Device telemetry</p>
-        <h1 className="font-display text-2xl font-semibold tracking-tightest text-fg">
+        <p className="kicker mb-1.5">Device telemetry</p>
+        <h1 className="font-display text-2xl font-bold tracking-tightest text-fg">
           {title}
         </h1>
-        <p className="mt-1 truncate font-mono text-xs text-muted">{deviceId}</p>
+        <div className="mt-1 flex items-center gap-1">
+          <span className="truncate font-mono text-xs text-muted">
+            {deviceId}
+          </span>
+          <CopyButton value={deviceId} label={t("common.copy")} />
+        </div>
       </div>
 
       {/* KPI row */}

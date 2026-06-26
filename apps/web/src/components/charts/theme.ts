@@ -29,12 +29,14 @@ export const tooltipStyle = {
   contentStyle: {
     background: "var(--chart-panel)",
     border: "1px solid var(--chart-grid)",
-    borderRadius: "0.5rem",
+    borderRadius: "0.75rem",
+    padding: "8px 12px",
     color: "var(--chart-fg)",
     fontSize: "0.75rem",
     fontFamily: "var(--font-sans)",
     boxShadow: "var(--chart-tooltip-shadow)",
   },
-  labelStyle: { color: "var(--chart-axis)" },
-  cursor: { fill: "var(--chart-cursor)" },
+  labelStyle: { color: "var(--chart-axis)", fontWeight: 600, marginBottom: 2 },
+  itemStyle: { padding: "1px 0" },
+  cursor: { fill: "var(--chart-cursor)", radius: 6 },
 } as const;

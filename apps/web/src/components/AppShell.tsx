@@ -81,7 +81,7 @@ function NavLinks({
 }) {
   const { t } = useI18n();
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-col gap-1">
       {items.map((n) => {
         const active =
           n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
@@ -91,23 +91,26 @@ function NavLinks({
             key={n.href}
             href={n.href}
             onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
+              // Chunky rounded nav pill. Active fills with a soft brand tint and
+              // a left indicator; idle stays quiet until hover.
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color] duration-150",
               active
-                ? "bg-accent/10 text-accent"
+                ? "bg-accent/12 text-fg"
                 : "text-muted hover:bg-panel-2 hover:text-fg",
             )}
           >
-            {/* Signal indicator bar on the active route. */}
+            {/* Left indicator bar on the active route (Discord-style). */}
             <span
               className={cn(
-                "absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent transition-all duration-200",
+                "absolute left-0 top-1/2 h-5 w-1 -translate-x-1 -translate-y-1/2 rounded-r-full bg-brand-gradient transition-opacity duration-200",
                 active ? "opacity-100" : "opacity-0",
               )}
             />
             <Icon
               className={cn(
-                "h-4 w-4 shrink-0 transition-colors",
+                "h-[18px] w-[18px] shrink-0 transition-colors",
                 active ? "text-accent" : "text-muted group-hover:text-fg",
               )}
             />
@@ -123,14 +126,16 @@ function Brand() {
   const { t } = useI18n();
   return (
     <Link href="/" className="group flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-white shadow-sm">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow transition-transform duration-150 group-hover:scale-105">
         <Activity className="h-[18px] w-[18px]" />
       </span>
-      <span className="flex flex-col leading-none">
-        <span className="text-[15px] font-semibold tracking-tightest text-fg">
+      <span className="flex min-w-0 flex-col leading-none">
+        <span className="truncate text-[15px] font-bold tracking-tightest text-fg">
           {t("app.name")}
         </span>
-        <span className="mt-1 text-[11px] text-muted">{t("app.tagline")}</span>
+        <span className="mt-1 truncate text-[11px] text-muted">
+          {t("app.tagline")}
+        </span>
       </span>
     </Link>
   );
@@ -215,43 +220,46 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-bg-2 p-4 lg:flex">
-        <div className="px-1 pb-7 pt-1">
+      {/* Desktop sidebar — the dark rail. Cards in the content plane lift above it. */}
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-bg-2 p-3.5 lg:flex">
+        <div className="px-1.5 pb-7 pt-1.5">
           <Brand />
         </div>
         <NavLinks items={items} pathname={pathname} />
-        <div className="mt-auto space-y-3 border-t border-border pt-4">
-          <div className="flex items-center justify-between gap-2">
+        <div className="mt-auto pt-4">
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-panel/60 p-2.5">
             <div className="min-w-0">
-              <p className="truncate text-xs text-fg">{me.email}</p>
+              <p className="truncate text-xs font-medium text-fg">{me.email}</p>
               <Badge variant="outline" className="mt-1.5">
                 {t(`role.${role}`)}
               </Badge>
             </div>
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{ variables: CLERK_VARS[theme] }}
-            />
+            <div className="shrink-0">
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{ variables: CLERK_VARS[theme] }}
+              />
+            </div>
           </div>
         </div>
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg-2/85 px-4 py-3 backdrop-blur-md sm:px-6">
+        {/* Top bar — quiet chrome. min-w-0 + truncate keep it from squishing or
+            overflowing on small screens; controls never shrink. */}
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-bg-2/80 px-3 py-2.5 backdrop-blur-md sm:gap-3 sm:px-6">
           {/* Mobile nav trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
+              <Button variant="ghost" size="icon" className="shrink-0 lg:hidden">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="w-72 border-border bg-panel p-4"
+              className="w-[17rem] border-border bg-bg-2 p-3.5"
             >
-              <div className="px-1 pb-6">
+              <div className="px-1.5 pb-6 pt-1">
                 <Brand />
               </div>
               <NavLinks
@@ -262,23 +270,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <div className="flex flex-1 flex-col leading-none">
-            <h1 className="text-base font-semibold tracking-tightest text-fg">
+          <div className="flex min-w-0 flex-1 flex-col leading-none">
+            <h1 className="truncate text-base font-bold tracking-tightest text-fg">
               {current ? t(current.labelKey) : t("app.name")}
             </h1>
           </div>
 
-          <ThemeToggle />
-          <LangSwitcher />
-          <div className="lg:hidden">
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{ variables: CLERK_VARS[theme] }}
-            />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <ThemeToggle />
+            <LangSwitcher />
+            <div className="lg:hidden">
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{ variables: CLERK_VARS[theme] }}
+              />
+            </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6">
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           <PageTransition>{children}</PageTransition>
         </main>
 

@@ -41,14 +41,22 @@ function FleetSummary({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-card sm:grid-cols-4">
       {stats.map((s) => (
-        <div key={s.label} className="flex flex-col gap-1 bg-panel px-4 py-3.5">
+        <div
+          key={s.label}
+          className="flex flex-col gap-1 bg-panel px-4 py-4 transition-colors duration-150 hover:bg-panel-2"
+        >
           <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
             {s.live && <span className="signal-dot !h-1.5 !w-1.5" />}
             {s.label}
           </span>
-          <span className={cn("text-3xl font-semibold tabular-nums", s.tone)}>
+          <span
+            className={cn(
+              "font-display text-3xl font-bold tabular-nums tracking-tightest",
+              s.tone,
+            )}
+          >
             {s.value}
           </span>
         </div>
@@ -136,7 +144,7 @@ export default function OverviewPage() {
                           {d.personName ? d.hostname : t("overview.unassigned")} ·{" "}
                           {d.windowsUser}
                         </p>
-                        <p className="mt-4 font-display text-2xl font-semibold tabular-nums text-fg">
+                        <p className="mt-4 font-display text-2xl font-bold tabular-nums tracking-tightest text-fg">
                           {formatDuration(d.todayActiveSeconds, lang)}
                           <span className="ml-2 font-sans text-xs font-normal text-muted">
                             {t("overview.todayActive")}

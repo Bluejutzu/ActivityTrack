@@ -214,6 +214,8 @@ export const de: Dict = {
   "common.copy": "Kopieren",
   "common.copied": "Kopiert!",
   "common.copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
+  "common.search": "Suchen …",
+  "common.noResults": "Keine Treffer.",
   "footer.privacy":
     "Datenschutz: ActivityTrack erfasst nur Aktivitätszeiten (aktiv/inaktiv) auf firmeneigenen Geräten — keine Screenshots, keine Tastatureingaben. Mitarbeiter sind informiert.",
 

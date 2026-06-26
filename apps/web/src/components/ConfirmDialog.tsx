@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   open: boolean;
@@ -66,7 +67,7 @@ export function ConfirmDialog({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onCancel}
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -76,9 +77,12 @@ export function ConfirmDialog({
           aria-modal="true"
           aria-labelledby={headingId}
           aria-describedby={body ? bodyId : undefined}
-          className="w-full max-w-sm rounded-2xl border border-border bg-panel p-6 shadow-xl animate-scale-in"
+          className="w-full max-w-sm rounded-2xl border border-border bg-panel p-6 shadow-overlay animate-rise"
         >
-          <h2 id={headingId} className="text-base font-semibold">
+          <h2
+            id={headingId}
+            className="font-display text-lg font-bold tracking-tightest text-fg"
+          >
             {heading}
           </h2>
           {body && (
@@ -86,20 +90,13 @@ export function ConfirmDialog({
               {body}
             </p>
           )}
-          <div className="mt-5 flex gap-2 justify-end">
-            <button
-              ref={cancelRef}
-              onClick={onCancel}
-              className="rounded-lg border border-border px-4 py-2 text-sm text-muted transition-colors duration-150 hover:text-fg"
-            >
+          <div className="mt-6 flex justify-end gap-2">
+            <Button ref={cancelRef} variant="secondary" onClick={onCancel}>
               {t("people.cancel")}
-            </button>
-            <button
-              onClick={onConfirm}
-              className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-danger/80"
-            >
+            </Button>
+            <Button variant="danger" onClick={onConfirm}>
               {confirmLabel}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
