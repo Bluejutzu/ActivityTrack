@@ -43,13 +43,41 @@ export function StateBadge({ state }: { state: EmployeeState }) {
   );
 }
 
-/** A single signal chip (source + value), greyed out when unknown. */
-export function Signal({ label, value }: { label: string; value: string | null }) {
+/**
+ * One source row in the live-state card: the source on the left, its current
+ * value on the right as the emphasis. A status dot + colour calls out
+ * active/idle/away; unknown sources stay quiet so the eye skips them.
+ */
+export function Signal({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string | null;
+  tone?: "ok" | "warn" | "neutral";
+}) {
+  const known = value != null && value !== "—";
+  const dotClass = tone === "ok" ? "bg-ok" : tone === "warn" ? "bg-warn" : null;
+  const valueClass = !known
+    ? "text-muted/50"
+    : tone === "ok"
+      ? "text-ok"
+      : tone === "warn"
+        ? "text-warn"
+        : "text-fg";
   return (
-    <div className="flex items-center justify-between gap-2 border-t border-border-soft py-1.5 text-xs first:border-t-0">
-      <span className="font-mono uppercase tracking-wider text-muted">{label}</span>
-      <span className={cn("tabular-nums", value ? "text-fg/80" : "text-muted/50")}>
-        {value ?? "—"}
+    <div className="flex items-center justify-between gap-3 border-t border-border-soft py-2.5 first:border-t-0">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {label}
+      </span>
+      <span className="flex items-center gap-2">
+        {known && dotClass && (
+          <span className={cn("h-2 w-2 rounded-full", dotClass)} />
+        )}
+        <span className={cn("text-sm font-bold tabular-nums", valueClass)}>
+          {value ?? "—"}
+        </span>
       </span>
     </div>
   );
@@ -72,10 +100,21 @@ export function SourceSignals({
   clockodoAbsent: boolean | null;
 }) {
   const { t } = useI18n();
+  const genesys = genesysRoutingStatus ?? genesysPresence;
+  const genesysTone: "ok" | "warn" | "neutral" =
+    genesys === "INTERACTING" || genesys === "AVAILABLE"
+      ? "ok"
+      : genesys === "NOT_RESPONDING" ||
+          genesys === "BUSY" ||
+          genesys === "AWAY" ||
+          genesys === "OFFLINE"
+        ? "warn"
+        : "neutral";
   return (
     <div>
       <Signal
         label={t("state.source.agent")}
+        tone={deviceIdle == null ? "neutral" : deviceIdle ? "warn" : "ok"}
         value={
           deviceIdle == null
             ? null
@@ -86,10 +125,18 @@ export function SourceSignals({
       />
       <Signal
         label={t("state.source.genesys")}
-        value={genesysRoutingStatus ?? genesysPresence}
+        tone={genesysTone}
+        value={genesys}
       />
       <Signal
         label={t("state.source.clockodo")}
+        tone={
+          clockodoAbsent || clockodoBreak
+            ? "warn"
+            : clockodoWorking
+              ? "ok"
+              : "neutral"
+        }
         value={
           clockodoAbsent
             ? t("empstate.ABSENT")

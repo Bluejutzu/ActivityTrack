@@ -45,19 +45,20 @@ function FleetSummary({
       {stats.map((s) => (
         <div
           key={s.label}
-          className="flex flex-col gap-1 bg-panel px-4 py-4 transition-colors duration-150 hover:bg-panel-2"
+          className="flex flex-col justify-center gap-1.5 bg-panel px-4 py-5 transition-colors duration-150 hover:bg-panel-2"
         >
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
-            {s.live && <span className="signal-dot !h-1.5 !w-1.5" />}
-            {s.label}
-          </span>
+          {/* Number-first: the count is the focal point, the label supports it. */}
           <span
             className={cn(
-              "font-display text-3xl font-bold tabular-nums tracking-tightest",
+              "font-display text-[2rem] font-bold leading-none tabular-nums tracking-tightest",
               s.tone,
             )}
           >
             {s.value}
+          </span>
+          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            {s.live && <span className="signal-dot !h-1.5 !w-1.5" />}
+            {s.label}
           </span>
         </div>
       ))}
