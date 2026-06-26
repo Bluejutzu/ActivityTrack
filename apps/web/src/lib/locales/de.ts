@@ -156,7 +156,7 @@ export const de: Dict = {
   "timeline.intraday.sub": "Anteil aktiver Stichproben im Zeitverlauf.",
   "timeline.intraday.series": "Aktiv %",
   "timeline.heatmap.heading": "Aktivität nach Tageszeit",
-  "timeline.heatmap.sub": "Wann diese Person typischerweise aktiv ist.",
+  "timeline.heatmap.sub": "Wann diese Person heute aktiv war.",
   "timeline.hourly.heading": "Status je Stunde (heute)",
   "timeline.hourly.sub":
     "Minuten pro Stunde nach Zustand — inaktiv, im Gespräch, Pause, Nachbearbeitung.",

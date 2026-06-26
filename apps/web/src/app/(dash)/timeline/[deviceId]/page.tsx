@@ -124,7 +124,10 @@ export default function TimelinePage({
     );
     return {
       trend: dailyTrend(daily ?? [], startDay, today),
-      heatmap: hourOfDayActivity(s, tzOffset),
+      // Scope to the newest day so the strip reflects *today* like the charts
+      // around it. Feeding all fetched samples mixed in prior days, which lit
+      // hours later than "now" and made the strip look like future data.
+      heatmap: hourOfDayActivity(sameDay, tzOffset),
       intraday: intradayTimeline(sameDay, 30),
       hourlyStates: hourlyStateBreakdown(
         // Strip the prior-day row the backend prepends: it has `at < dayStartMs`

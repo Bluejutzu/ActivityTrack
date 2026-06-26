@@ -47,7 +47,9 @@ export function dailyTrend(
 
 /**
  * 24 buckets (one per local hour) giving the share of samples that were active.
- * Powers the "when is this person usually active" heatmap strip.
+ * Powers the "activity by time of day" heatmap strip. Callers pass a single
+ * day's samples so the strip is today-scoped (not a multi-day blend, which would
+ * light hours later than "now" and read like future data).
  * `tzOffsetMinutes` is the browser's timezone offset (from Date.prototype.getTimezoneOffset).
  */
 export function hourOfDayActivity(
