@@ -150,6 +150,8 @@ export const de: Dict = {
   "timeline.empty": "Keine Stichproben vorhanden.",
   "timeline.kpi.activeToday": "Heute aktiv",
   "timeline.kpi.idleToday": "Heute inaktiv",
+  "timeline.kpi.activeOn": "Aktiv am {date}",
+  "timeline.kpi.idleOn": "Inaktiv am {date}",
   "timeline.kpi.status": "Status",
   "timeline.kpi.lastSeen": "Zuletzt gesehen",
   "timeline.trend.heading": "Aktivität der letzten 14 Tage",
@@ -158,7 +160,7 @@ export const de: Dict = {
   "timeline.intraday.sub": "Anteil aktiver Stichproben im Zeitverlauf.",
   "timeline.intraday.series": "Aktiv %",
   "timeline.heatmap.heading": "Aktivität nach Tageszeit",
-  "timeline.heatmap.sub": "Wann diese Person typischerweise aktiv ist.",
+  "timeline.heatmap.sub": "Wann diese Person heute aktiv war.",
   "timeline.hourly.heading": "Status je Stunde (heute)",
   "timeline.hourly.sub":
     "Minuten pro Stunde nach Zustand — inaktiv, im Gespräch, Pause, Nachbearbeitung.",
@@ -177,6 +179,10 @@ export const de: Dict = {
   "timeline.day.date": "Tag",
   "timeline.day.empty": "Kein Statusverlauf für diesen Tag.",
   "timeline.day.now": "jetzt",
+  "timeline.day.viewingPast": "Du siehst Daten vom {date} — nicht von heute.",
+  "timeline.day.backToToday": "Zu heute",
+  "timeline.day.noDataToday": "Heute noch keine Aktivität erfasst.",
+  "timeline.day.rewind": "Letzten aktiven Tag ansehen ({date})",
 
   "reports.title": "Wochenberichte",
   "reports.subtitle":
