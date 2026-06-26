@@ -172,7 +172,7 @@ export function ConfigPanel() {
           </div>
           <CardDescription>{t("settings.config.hint")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 sm:pt-0">
           {config === undefined ? (
             <Skeleton className="h-48 w-full" />
           ) : (
@@ -220,7 +220,7 @@ export function ConfigPanel() {
           </div>
           <CardDescription>{t("settings.debugPw.hint")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-0 sm:pt-0">
           <div>
             {isSet === undefined ? (
               <Skeleton className="h-5 w-32" />
@@ -266,7 +266,7 @@ export function ConfigPanel() {
           </div>
           <CardDescription>{t("settings.access.hint")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 sm:pt-0">
           {access === undefined ? (
             <Skeleton className="h-24 w-full" />
           ) : (

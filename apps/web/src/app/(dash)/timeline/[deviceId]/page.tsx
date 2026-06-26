@@ -237,7 +237,7 @@ export default function TimelinePage({
             <CardTitle className="text-base">{t("timeline.state.heading")}</CardTitle>
             {liveState && <StateBadge state={liveState.finalState as EmployeeState} />}
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 sm:pt-0">
             {liveState === undefined ? (
               <Skeleton className="h-20 w-full" />
             ) : liveState === null ? (

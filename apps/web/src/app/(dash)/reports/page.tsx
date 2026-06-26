@@ -200,7 +200,7 @@ export default function ReportsPage() {
           </CardTitle>
           <p className="text-sm text-muted">{t("reports.trend.sub")}</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 sm:pt-0">
           {report === undefined ? (
             <Skeleton className="h-56 w-full" />
           ) : (

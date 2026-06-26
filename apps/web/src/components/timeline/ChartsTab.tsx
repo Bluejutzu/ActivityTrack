@@ -48,7 +48,7 @@ export function ChartsTab({
             </CardTitle>
             <p className="text-sm text-muted">{t("timeline.trend.sub")}</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 sm:pt-0">
             <DailyTrendChart
               data={trend}
               activeLabel={t("common.active")}
@@ -64,7 +64,7 @@ export function ChartsTab({
             </CardTitle>
             <p className="text-sm text-muted">{t("timeline.intraday.sub")}</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 sm:pt-0">
             {intraday.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted">
                 {t("timeline.empty")}
@@ -86,7 +86,7 @@ export function ChartsTab({
           </CardTitle>
           <p className="text-sm text-muted">{t("timeline.heatmap.sub")}</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 sm:pt-0">
           <HourHeatmap data={heatmap} />
         </CardContent>
       </Card>
@@ -99,7 +99,7 @@ export function ChartsTab({
           </CardTitle>
           <p className="text-sm text-muted">{t("timeline.hourly.sub")}</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 sm:pt-0">
           {!employeeId ? (
             <p className="py-8 text-center text-sm text-muted">
               {t("timeline.hourly.unlinked")}

@@ -107,7 +107,7 @@ export function DayDetailTab({
           ))}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0 sm:pt-0">
         {!employeeId ? (
           <p className="py-8 text-center text-sm text-muted">
             {t("timeline.hourly.unlinked")}
