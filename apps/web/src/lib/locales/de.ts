@@ -52,6 +52,7 @@ export const de: Dict = {
   "devices.all": "Alle Geräte",
   "devices.host": "Computer",
   "devices.user": "Benutzer",
+  "devices.formerUsers": "früher:",
   "devices.status": "Status",
   "devices.person": "Mitarbeiter",
   "devices.lastSeen": "Zuletzt gesehen",

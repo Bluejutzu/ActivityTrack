@@ -7,7 +7,7 @@ import { Trash2 } from "lucide-react";
 import type { GenericId } from "convex/values";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
-import { formatRelativeTime, roleAtLeast, type Role } from "@/lib/format";
+import { formatRelativeTime, formatTime, roleAtLeast, type Role } from "@/lib/format";
 import { useMutationWithToast } from "@/lib/useMutationWithToast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InfoTip } from "@/components/InfoTip";
@@ -169,7 +169,23 @@ export default function DevicesPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted">
-                      {d.lastWindowsUser}
+                      <span className="text-fg">{d.lastWindowsUser}</span>
+                      {d.userHistory && d.userHistory.length > 0 && (
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {t("devices.formerUsers")}{" "}
+                          {d.userHistory
+                            .slice()
+                            .reverse()
+                            .map((h, i) => (
+                              <span key={`${h.user}-${h.changedAt}`}>
+                                {i > 0 && ", "}
+                                <span title={formatTime(h.changedAt, lang)}>
+                                  {h.user}
+                                </span>
+                              </span>
+                            ))}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <InfoTip text={t(`help.deviceStatus.${d.status}`)}>

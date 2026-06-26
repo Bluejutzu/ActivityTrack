@@ -51,6 +51,7 @@ export const en: Dict = {
   "devices.all": "All devices",
   "devices.host": "Computer",
   "devices.user": "User",
+  "devices.formerUsers": "formerly:",
   "devices.status": "Status",
   "devices.person": "Person",
   "devices.lastSeen": "Last seen",
