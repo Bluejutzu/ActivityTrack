@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CalendarX2 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@activitytrack/backend/convex/_generated/api";
 import { useI18n } from "@/lib/i18n";
@@ -114,9 +115,12 @@ export function DayDetailTab({
         ) : history === undefined ? (
           <Skeleton className="h-72 w-full" />
         ) : segments.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">
-            {t("timeline.day.empty")}
-          </p>
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-panel-2 text-muted ring-1 ring-inset ring-border">
+              <CalendarX2 className="h-5 w-5" />
+            </span>
+            <p className="text-sm text-muted">{t("timeline.day.empty")}</p>
+          </div>
         ) : (
           <div className="space-y-5">
             {/* ── Horizontal day strip ── */}

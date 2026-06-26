@@ -62,19 +62,22 @@ function KpiCard({
   }[tone];
   return (
     <Card className="animate-fade-up transition-shadow duration-200 hover:shadow-card-hover">
-      <CardContent className="flex items-center gap-3 p-4">
-        <span
-          className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ring-inset ${tileClass}`}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="kicker truncate">{label}</p>
-          <p
-            className={`mt-1 truncate font-display text-2xl font-bold tabular-nums ${toneClass}`}
+      {/* Stat-card layout: label + icon pinned to the top, the figure pinned to
+          the bottom as the focal point, so content spans the full card height
+          instead of clinging to the top. */}
+      <CardContent className="flex min-h-[7.5rem] flex-col justify-between gap-4 p-5">
+        <div className="flex items-start justify-between gap-2">
+          <p className="kicker truncate pt-0.5">{label}</p>
+          <span
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset ${tileClass}`}
           >
-            {value}
-          </p>
+            {icon}
+          </span>
+        </div>
+        <div
+          className={`truncate font-display text-3xl font-bold leading-none tabular-nums tracking-tightest ${toneClass}`}
+        >
+          {value}
         </div>
       </CardContent>
     </Card>
