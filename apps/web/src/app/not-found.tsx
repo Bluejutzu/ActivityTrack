@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 
 const NEW_URL = "https://intern.advantisgroup.de/admin/activity";
 const REDIRECT_DELAY = 10;
 
-export default function DeprecatedLayout(_: { children: ReactNode }) {
+export default function NotFound() {
   const [seconds, setSeconds] = useState(REDIRECT_DELAY);
 
   useEffect(() => {
