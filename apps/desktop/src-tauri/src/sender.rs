@@ -73,7 +73,7 @@ pub fn report_event(
     }
 }
 
-/// Announce this device to the dashboard (POST {api_url}/api/agent/register).
+/// Announce this device to the dashboard (POST {api_url}/agent/register).
 /// Unauthenticated — the agent presents only its deviceId and a one-time pairing
 /// nonce, landing in the pending queue. Idempotent; returns the server-reported
 /// status string (e.g. "pending" / "active" / "disabled").
@@ -88,7 +88,7 @@ pub fn register(
     if api_url.is_empty() {
         return Err("api url not configured".into());
     }
-    let url = format!("{}/api/agent/register", api_url.trim_end_matches('/'));
+    let url = format!("{}/agent/register", api_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(20))
         .build();
@@ -117,14 +117,14 @@ pub fn register(
     }
 }
 
-/// Poll for approval (POST {api_url}/api/agent/poll). On the first poll after an
+/// Poll for approval (POST {api_url}/agent/poll). On the first poll after an
 /// admin approves, the response carries the freshly minted device token — the
 /// agent's only chance to capture it. See `ClaimOutcome`.
 pub fn claim(api_url: &str, device_id: &str, claim_nonce: &str) -> Result<ClaimOutcome, String> {
     if api_url.is_empty() {
         return Err("api url not configured".into());
     }
-    let url = format!("{}/api/agent/poll", api_url.trim_end_matches('/'));
+    let url = format!("{}/agent/poll", api_url.trim_end_matches('/'));
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(20))
         .build();

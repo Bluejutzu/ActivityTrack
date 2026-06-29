@@ -1,15 +1,27 @@
-import { app } from "@/server/api";
+import { NextResponse } from "next/server";
 
-/**
- * Mount the ElysiaJS app into the Next.js App Router. Elysia exposes a standard
- * fetch handler; we delegate every method on the catch-all `/api/*` route to it.
- * (Convex reactive reads do NOT pass through here — they use the Convex client.)
- */
-export const GET = app.handle;
-export const POST = app.handle;
-export const PUT = app.handle;
-export const PATCH = app.handle;
-export const DELETE = app.handle;
+const deprecated = () =>
+  NextResponse.json(
+    {
+      error: "deprecated",
+      message:
+        "This API endpoint has been deprecated and is no longer operational. " +
+        "The ActivityTrack API has moved to https://api.advantisgroup.de",
+      movedTo: "https://api.advantisgroup.de",
+    },
+    {
+      status: 410,
+      headers: {
+        "X-Deprecated": "true",
+        "X-Moved-To": "https://api.advantisgroup.de",
+      },
+    },
+  );
 
-// These endpoints push live signals; never cache.
+export const GET = deprecated;
+export const POST = deprecated;
+export const PUT = deprecated;
+export const PATCH = deprecated;
+export const DELETE = deprecated;
+
 export const dynamic = "force-dynamic";

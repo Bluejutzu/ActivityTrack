@@ -21,9 +21,9 @@ pub struct Config {
     /// device-token-authenticated endpoints: /ingest, /agent/event,
     /// /agent/verify-password.
     pub convex_url: String,
-    /// Dashboard Elysia API origin (the Next.js app). Used for the pairing
-    /// endpoints the device hits without any credential: /api/agent/register and
-    /// /api/agent/poll.
+    /// Dashboard API origin (https://api.advantisgroup.de). Used for the pairing
+    /// endpoints the device hits without any credential: /agent/register and
+    /// /agent/poll.
     pub api_url: String,
     pub poll_interval_ms: u64,
     pub idle_threshold_ms: u64,
