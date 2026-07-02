@@ -52,3 +52,49 @@ pub fn log_file() -> PathBuf {
 pub fn log_file_rotated() -> PathBuf {
     app_dir().join("agent.log.1")
 }
+
+/// Tighten a secret file's ACL to SYSTEM, Administrators, and the account that
+/// wrote it (the caller — resolved via `whoami` so the exact principal string
+/// is always correct for `icacls`, regardless of local/domain account naming).
+/// Applied to `device.key` and `pair.nonce`: by default, files created under
+/// `%ProgramData%\ActivityTrack` inherit that folder's ACL, which grants the
+/// local `Users` group read access — i.e. *any* other locally logged-in
+/// account on the machine could read this device's bearer token or pairing
+/// nonce and reuse/exfiltrate it. `config.json` and `queue.jsonl` hold no
+/// secrets, so they're left with the default (shared) permissions to preserve
+/// this app's existing multi-user-per-machine support.
+///
+/// Trade-off: if a *different* Windows account later runs the tracker on this
+/// same machine, it won't be able to read a device.key written under the
+/// first account — it falls back to re-pairing, which the existing pairing
+/// flow already surfaces as a clear, actionable error
+/// (`tracker.pair_failed` / "already claimed") rather than failing silently.
+/// Best-effort by design, like the rest of this module's file I/O: a failure
+/// here is swallowed, never panics, and never blocks writing the file itself.
+#[cfg(windows)]
+pub fn harden_secret_file(path: &std::path::Path) {
+    use std::process::Command;
+
+    let Ok(who) = Command::new("whoami").output() else {
+        return;
+    };
+    if !who.status.success() {
+        return;
+    }
+    let principal = String::from_utf8_lossy(&who.stdout).trim().to_string();
+    if principal.is_empty() {
+        return;
+    }
+
+    let _ = Command::new("icacls")
+        .arg(path.as_os_str())
+        .arg("/inheritance:r")
+        .arg("/grant:r")
+        .arg("*S-1-5-18:F") // SYSTEM
+        .arg("*S-1-5-32-544:F") // Administrators
+        .arg(format!("{principal}:F"))
+        .output();
+}
+
+#[cfg(not(windows))]
+pub fn harden_secret_file(_path: &std::path::Path) {}

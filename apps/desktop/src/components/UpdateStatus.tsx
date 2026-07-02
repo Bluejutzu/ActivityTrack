@@ -53,12 +53,12 @@ export function UpdateStatus() {
 
   const messages: Record<UpdateState, string> = {
     idle: "",
-    checking: "Checking for updates...",
-    available: `Update available: v${version}`,
-    installing: "Installing update...",
-    installed: "Update installed! Restarting app...",
-    uptodate: "App is up to date",
-    error: `Update failed: ${error}`,
+    checking: t("update.checking"),
+    available: t("update.available", { version }),
+    installing: t("update.installing"),
+    installed: t("update.installed"),
+    uptodate: t("update.uptodate"),
+    error: t("update.error", { error }),
   };
 
   const colors: Record<UpdateState, string> = {

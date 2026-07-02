@@ -54,6 +54,24 @@ and have IT drop a `config.json` into `%ProgramData%\ActivityTrack\` before firs
 run. The NSIS hook only writes the file when it's missing, so a pre-placed config
 is preserved. Choose this if distribution ever widens beyond trusted machines.
 
+## Visibility (tray icon / auto-updates)
+
+The agent runs with **no persistent UI by default** — no tray icon, and
+auto-updates install in NSIS `quiet` mode (no installer window). This is
+intentional for a background monitoring agent whose employees are informed of
+its presence out-of-band; it avoids a constant visual reminder.
+
+- To get the tray icon (Open/Quit menu) back on a specific machine for local
+  debugging, set `"showTrayIcon": true` in that machine's
+  `%ProgramData%\ActivityTrack\config.json` and restart the agent.
+- With the tray icon off, the status/debug window is opened by relaunching
+  `ActivityTrack.exe` — the single-instance guard forwards that into showing
+  (recreating, if it was closed) the window instead of starting a second
+  tracker.
+- Windows may still show a UAC elevation prompt during an auto-update
+  regardless of `installMode`, since this is a per-machine install — that part
+  depends on the machine's UAC policy and can't be suppressed from the app.
+
 ## Autostart
 
 The installer registers a **per-machine** autostart (HKLM `…\CurrentVersion\Run`)

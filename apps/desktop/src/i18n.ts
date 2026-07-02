@@ -95,6 +95,12 @@ const de: Dict = {
   "lang.label": "Sprache",
   "theme.toDark": "Dunkles Design",
   "theme.toLight": "Helles Design",
+  "update.checking": "Suche nach Updates …",
+  "update.available": "Update verfügbar: v{version}",
+  "update.installing": "Update wird installiert …",
+  "update.installed": "Update installiert! App wird neu gestartet …",
+  "update.uptodate": "App ist auf dem neuesten Stand",
+  "update.error": "Update fehlgeschlagen: {error}",
   "units.seconds": "Sek.",
   "units.minutes": "Min.",
   "units.hours": "Std.",
@@ -184,6 +190,12 @@ const en: Dict = {
   "lang.label": "Language",
   "theme.toDark": "Dark mode",
   "theme.toLight": "Light mode",
+  "update.checking": "Checking for updates …",
+  "update.available": "Update available: v{version}",
+  "update.installing": "Installing update …",
+  "update.installed": "Update installed! Restarting app …",
+  "update.uptodate": "App is up to date",
+  "update.error": "Update failed: {error}",
   "units.seconds": "s",
   "units.minutes": "m",
   "units.hours": "h",
@@ -214,6 +226,11 @@ export function setLang(lang: Lang): void {
   document.documentElement.lang = lang;
 }
 
-export function t(key: string): string {
-  return DICTS[current][key] ?? DICTS.en[key] ?? key;
+export function t(key: string, params?: Record<string, string>): string {
+  const template = DICTS[current][key] ?? DICTS.en[key] ?? key;
+  if (!params) return template;
+  return Object.entries(params).reduce(
+    (s, [name, value]) => s.replaceAll(`{${name}}`, value),
+    template,
+  );
 }

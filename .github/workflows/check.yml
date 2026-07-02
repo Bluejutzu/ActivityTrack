@@ -1,0 +1,56 @@
+name: Checks
+
+# Fast feedback on every PR/push: typecheck the desktop frontend and
+# fmt/clippy/test the Rust tracker. Runs on ubuntu-latest — the tracker's
+# Windows-only syscalls (idle detection, timezone) are behind `cfg(windows)`
+# with non-Windows fallbacks, so it builds and unit-tests fine off-Windows;
+# only the actual installer build (release.yml) needs windows-latest.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  desktop-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --filter @activitytrack/desktop...
+
+      - name: Typecheck
+        run: pnpm --filter @activitytrack/desktop typecheck
+
+  desktop-tracker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test
