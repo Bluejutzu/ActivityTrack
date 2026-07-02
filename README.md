@@ -91,7 +91,7 @@ NSIS) on every `v*` tag and attaches it to the GitHub Release.
 installer is pre-configured:
 
 ```bash
-gh secret set ACTIVITYTRACK_CONVEX_URL --body "https://<deployment>.convex.cloud"
+gh secret set ACTIVITYTRACK_CONVEX_URL --body "https://<deployment>.convex.site"
 gh secret set ACTIVITYTRACK_INGEST_KEY --body "<a-long-random-secret>"
 ```
 
