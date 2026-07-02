@@ -21,23 +21,43 @@ fn agent() -> &'static ureq::Agent {
     AGENT.get_or_init(|| ureq::AgentBuilder::new().build())
 }
 
-/// POST a batch of samples to Convex /ingest using the per-device token. Large
-/// batches are split into chunks so no single request body is unbounded; a
-/// chunk failure stops sending further chunks (the caller keeps whatever
-/// wasn't flushed and retries next tick).
-pub fn send_batch(
-    convex_url: &str,
-    device_key: &str,
-    batch: &[ActivitySample],
-) -> Result<(), String> {
+/// Outcome of `send_batch`: `sent` counts samples confirmed persisted
+/// server-side (in whole chunks) before `error` (if any) stopped the run.
+///
+/// A partial send is the expected case once the queue backs up past
+/// `SEND_CHUNK_SIZE` (e.g. after a long outage lets it grow toward
+/// `max_queue_size`): the server throttles same-device ingest calls closer
+/// together than ~3s (see `MIN_INGEST_INTERVAL_MS` in convex/ingest.ts), so
+/// the second and later chunks of one flush routinely 429 even though the
+/// first chunk landed. The caller must still drop the chunks that succeeded
+/// instead of re-sending (and re-throttling on) them every tick forever.
+pub struct SendOutcome {
+    pub sent: usize,
+    pub error: Option<String>,
+}
+
+/// POST a batch of samples to Convex /ingest using the per-device token.
+/// Large batches are split into chunks so no single request body is
+/// unbounded; a chunk failure stops sending further chunks, but chunks that
+/// already succeeded are still reflected in `SendOutcome::sent` so the caller
+/// can drop them from the local queue and make progress instead of retrying
+/// the same throttled batch indefinitely.
+pub fn send_batch(convex_url: &str, device_key: &str, batch: &[ActivitySample]) -> SendOutcome {
     if batch.is_empty() {
-        return Ok(());
+        return SendOutcome {
+            sent: 0,
+            error: None,
+        };
     }
     if convex_url.is_empty() {
-        return Err("not configured".into());
+        return SendOutcome {
+            sent: 0,
+            error: Some("not configured".into()),
+        };
     }
 
     let url = format!("{}/ingest", convex_url.trim_end_matches('/'));
+    let mut sent = 0;
 
     for chunk in batch.chunks(SEND_CHUNK_SIZE) {
         let response = agent()
@@ -48,12 +68,22 @@ pub fn send_batch(
             .send_json(json!({ "samples": chunk }));
 
         match response {
-            Ok(_) => {}
-            Err(ureq::Error::Status(code, _)) => return Err(format!("HTTP {code}")),
-            Err(e) => return Err(e.to_string()),
+            Ok(_) => sent += chunk.len(),
+            Err(ureq::Error::Status(code, _)) => {
+                return SendOutcome {
+                    sent,
+                    error: Some(format!("HTTP {code}")),
+                };
+            }
+            Err(e) => {
+                return SendOutcome {
+                    sent,
+                    error: Some(e.to_string()),
+                };
+            }
         }
     }
-    Ok(())
+    SendOutcome { sent, error: None }
 }
 
 /// Report a local operational event to Convex /agent/event using the device

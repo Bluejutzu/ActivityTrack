@@ -199,14 +199,22 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
         return Ok(false);
     };
 
-    match sender::send_batch(&state.config.convex_url, &device_key, &pending) {
-        Ok(()) => {
-            // Drop the flushed samples; if rewriting the queue fails, surface it
-            // — otherwise they'd be re-sent next flush and double-counted.
-            if let Err(err) = queue.remove_first(pending.len()) {
-                state.push_error("tracker.queue_io", err.clone());
-                state.report_event("error", "tracker.queue_io", &err);
-            }
+    let outcome = sender::send_batch(&state.config.convex_url, &device_key, &pending);
+
+    // Drop whatever chunks landed, even on a partial failure — otherwise a
+    // backlog bigger than one chunk (SEND_CHUNK_SIZE) can never drain: the
+    // server throttles same-tick follow-up chunks (see SendOutcome's doc), so
+    // without this the same already-sent prefix gets resent and re-throttled
+    // forever and the queue sits pinned at max_queue_size.
+    if outcome.sent > 0 {
+        if let Err(err) = queue.remove_first(outcome.sent) {
+            state.push_error("tracker.queue_io", err.clone());
+            state.report_event("error", "tracker.queue_io", &err);
+        }
+    }
+
+    match outcome.error {
+        None => {
             let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
             s.online = true;
             s.last_error = None;
@@ -214,10 +222,18 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
             s.queue_length = queue.len();
             Ok(true)
         }
-        Err(err) => {
+        Some(err) => {
             {
                 let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
-                s.online = false;
+                // A chunk did land this tick even though a later one failed —
+                // reflect that we did reach the server, and record it as the
+                // last successful send instead of leaving it stuck at "never".
+                if outcome.sent > 0 {
+                    s.online = true;
+                    s.last_sent_at = Some(host::now_ms());
+                } else {
+                    s.online = false;
+                }
                 s.queue_length = queue.len();
             }
             // A 401 means the token was revoked/disabled server-side: drop it so
