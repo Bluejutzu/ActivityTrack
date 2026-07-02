@@ -38,6 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Tauri's Linux backend (wry/tao) links against GTK/WebKitGTK even when
+      # only type-checking or unit-testing — these aren't available on the
+      # runner by default. Not needed on Windows (release.yml), which uses
+      # WebView2 instead.
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
