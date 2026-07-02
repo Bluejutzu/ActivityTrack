@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::config::Config;
 use crate::host;
 use crate::model::{AgentStatus, UiError, UiSample, AGENT_VERSION};
-use crate::paths::{app_dir, device_key_file, pair_nonce_file};
+use crate::paths::{app_dir, device_key_file, harden_secret_file, pair_nonce_file};
 use crate::sender;
 
 /// Keep the last N local errors for the debug UI.
@@ -115,6 +115,7 @@ impl AppState {
                 let n = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
                 let _ = std::fs::create_dir_all(app_dir());
                 let _ = std::fs::write(pair_nonce_file(), &n);
+                harden_secret_file(&pair_nonce_file());
                 n
             });
         *self.pair_nonce.lock().unwrap_or_else(|e| e.into_inner()) = Some(nonce.clone());
@@ -149,13 +150,16 @@ impl AppState {
             *k = Some(key.clone());
         }
         let _ = std::fs::create_dir_all(app_dir());
-        if let Err(e) = std::fs::write(device_key_file(), &key) {
-            let msg = format!(
-                "Paired, but the device token could not be saved to disk ({e}); \
-                 re-pairing will be required after restart."
-            );
-            self.push_error("tracker.queue_io", msg.clone());
-            self.report_event("warning", "tracker.queue_io", &msg);
+        match std::fs::write(device_key_file(), &key) {
+            Ok(()) => harden_secret_file(&device_key_file()),
+            Err(e) => {
+                let msg = format!(
+                    "Paired, but the device token could not be saved to disk ({e}); \
+                     re-pairing will be required after restart."
+                );
+                self.push_error("tracker.queue_io", msg.clone());
+                self.report_event("warning", "tracker.queue_io", &msg);
+            }
         }
     }
 

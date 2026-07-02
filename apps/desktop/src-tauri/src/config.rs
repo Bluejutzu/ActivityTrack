@@ -29,6 +29,12 @@ pub struct Config {
     pub idle_threshold_ms: u64,
     pub flush_interval_ms: u64,
     pub max_queue_size: usize,
+    /// Whether to show the tray icon. Defaults to `false` so the agent is
+    /// fully invisible in normal operation (employees are informed of
+    /// monitoring out-of-band; this just avoids a persistent visual reminder).
+    /// IT can set `"showTrayIcon": true` in config.json on a machine to get
+    /// the Open/Quit tray menu back for local debugging.
+    pub show_tray_icon: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -40,6 +46,7 @@ struct FileConfig {
     idle_threshold_ms: Option<u64>,
     flush_interval_ms: Option<u64>,
     max_queue_size: Option<usize>,
+    show_tray_icon: Option<bool>,
 }
 
 impl Default for Config {
@@ -53,6 +60,7 @@ impl Default for Config {
             idle_threshold_ms: 60_000,
             flush_interval_ms: 30_000,
             max_queue_size: 5_000,
+            show_tray_icon: false,
         }
     }
 }
@@ -92,6 +100,9 @@ pub fn load_config() -> Config {
                 }
                 if let Some(v) = file.max_queue_size {
                     cfg.max_queue_size = v;
+                }
+                if let Some(v) = file.show_tray_icon {
+                    cfg.show_tray_icon = v;
                 }
             }
         }

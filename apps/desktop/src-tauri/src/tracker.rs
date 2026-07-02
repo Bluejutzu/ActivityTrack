@@ -12,6 +12,10 @@ use crate::state::AppState;
 // Keep only the most recent N samples in memory for the debug UI table.
 const UI_SAMPLE_HISTORY: usize = 20;
 
+// Cap on how long the pairing retry can back off to, so a long-denied/pending
+// device still checks in at least this often once an admin does act.
+const PAIR_BACKOFF_MAX_SECS: u64 = 300;
+
 /// Spawn the background tracking loop on its own OS thread. It first enrolls (if
 /// needed), then polls idle time, enqueues a sample, and periodically flushes
 /// the on-disk queue to Convex — independent of whether the tray UI is open.
@@ -32,6 +36,11 @@ pub fn start(state: Arc<AppState>) {
         // Consecutive flush failures; we only escalate to the backend once a
         // few in a row confirm it's not a momentary blip (laptop asleep, etc.).
         let mut fail_streak: u32 = 0;
+        // Consecutive pairing attempts that didn't result in a token, so we can
+        // back off exponentially (capped) instead of hammering /agent/register
+        // and /agent/poll every flush tick while a device sits pending/denied.
+        let mut pair_fail_streak: u32 = 0;
+        let mut next_pair_attempt = Instant::now();
 
         // Capture one sample immediately so a freshly-started agent shows up.
         record(&state, &queue);
@@ -52,10 +61,20 @@ pub fn start(state: Arc<AppState>) {
                             }
                         }
                     }
-                } else {
+                } else if Instant::now() >= next_pair_attempt {
                     // Not paired yet (or just got revoked) — keep trying so the
                     // device comes online as soon as an admin approves it.
-                    try_pair(&state);
+                    if try_pair(&state) {
+                        pair_fail_streak = 0;
+                    } else {
+                        pair_fail_streak = pair_fail_streak.saturating_add(1);
+                        let backoff_secs = flush_every
+                            .as_secs()
+                            .max(1)
+                            .saturating_mul(1u64 << pair_fail_streak.min(4))
+                            .min(PAIR_BACKOFF_MAX_SECS);
+                        next_pair_attempt = Instant::now() + Duration::from_secs(backoff_secs);
+                    }
                 }
                 last_flush = Instant::now();
             }
@@ -66,14 +85,16 @@ pub fn start(state: Arc<AppState>) {
 /// Drive the approve-to-pair flow: announce this device, then poll for approval.
 /// Best-effort and idempotent — safe to call repeatedly while waiting for an
 /// admin. Updates the pairing sub-state for the tray UI and, once approved,
-/// stores the device token (which flips `can_send`).
-fn try_pair(state: &AppState) {
+/// stores the device token (which flips `can_send`). Returns whether the
+/// device is paired after this attempt, so the caller can back off retries
+/// while it keeps coming back false (pending/denied/error).
+fn try_pair(state: &AppState) -> bool {
     if state.can_send() {
-        return;
+        return true;
     }
     if !state.config.can_pair() {
         state.set_pairing("unconfigured");
-        return;
+        return false;
     }
     let nonce = state.pairing_nonce();
 
@@ -88,7 +109,7 @@ fn try_pair(state: &AppState) {
     ) {
         state.set_pairing("error");
         state.push_error("tracker.pair_failed", e);
-        return;
+        return false;
     }
 
     match sender::claim(&state.config.api_url, &state.device_id, &nonce) {
@@ -122,6 +143,7 @@ fn try_pair(state: &AppState) {
             state.push_error("tracker.pair_failed", e);
         }
     }
+    state.can_send()
 }
 
 fn build_sample(state: &AppState) -> (ActivitySample, bool, u64) {

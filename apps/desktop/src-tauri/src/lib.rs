@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Emitter, Manager, WindowEvent};
+use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -29,6 +29,7 @@ async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Res
             let version = update.version.to_string();
             let _ = handle.emit("update:available", &version);
 
+            let _ = handle.emit("update:installing", ());
             match update
                 .download_and_install(|_chunk, _total| {}, || {})
                 .await
@@ -57,12 +58,32 @@ async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Res
     Ok(())
 }
 
+/// Show the main window, recreating it first if it was destroyed. Closing the
+/// window now tears down its webview instead of merely hiding it (see the
+/// `run` closure below), so the app has no persistent UI process while unused.
 fn show_main(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-    }
+    let window = match app.get_webview_window("main") {
+        Some(w) => w,
+        None => {
+            let builder = tauri::WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .title("ActivityTrack")
+            .inner_size(560.0, 640.0)
+            .resizable(true)
+            .skip_taskbar(true)
+            .center();
+            match builder.build() {
+                Ok(w) => w,
+                Err(_) => return,
+            }
+        }
+    };
+    let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_focus();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -115,36 +136,45 @@ pub fn run() {
             // (HKCU) autostart plugin here, which would only cover the user who
             // first ran the app and double-register on that machine.
 
-            let open = MenuItem::with_id(app, "open", "Open ActivityTrack", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &quit])?;
+            // Tray icon is opt-in (config.json "showTrayIcon"), off by default:
+            // employees are informed of monitoring out-of-band, so the agent
+            // otherwise runs with zero persistent UI. When hidden, the window is
+            // reopened by relaunching the exe (the single-instance plugin
+            // forwards that into `show_main`, which recreates the destroyed
+            // webview — see `on_window_event` below).
+            if app.state::<Arc<AppState>>().config.show_tray_icon {
+                let open =
+                    MenuItem::with_id(app, "open", "Open ActivityTrack", true, None::<&str>)?;
+                let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+                let menu = Menu::with_items(app, &[&open, &quit])?;
 
-            let icon = app
-                .default_window_icon()
-                .cloned()
-                .expect("bundle icon configured");
+                let icon = app
+                    .default_window_icon()
+                    .cloned()
+                    .expect("bundle icon configured");
 
-            TrayIconBuilder::with_id("main")
-                .icon(icon)
-                .tooltip("ActivityTrack")
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "open" => show_main(app),
-                    "quit" => app.exit(0),
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        show_main(tray.app_handle());
-                    }
-                })
-                .build(app)?;
+                TrayIconBuilder::with_id("main")
+                    .icon(icon)
+                    .tooltip("ActivityTrack")
+                    .menu(&menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "open" => show_main(app),
+                        "quit" => app.exit(0),
+                        _ => {}
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            show_main(tray.app_handle());
+                        }
+                    })
+                    .build(app)?;
+            }
 
             // Check for updates in the background so startup is not delayed.
             // If a newer version is available, the NSIS installer runs passively
@@ -168,12 +198,21 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                let _ = window.hide();
-                api.prevent_close();
+        // No CloseRequested override: closing the window now lets it actually
+        // close (destroying the WebView2 instance) instead of hiding it. The
+        // window is opened rarely (pairing/login/status checks), so there's no
+        // reason to keep a webview process resident for the whole session —
+        // `show_main` recreates the window on demand (tray click, or a second
+        // exe launch caught by the single-instance plugin).
+        .build(tauri::generate_context!())
+        .expect("error while building ActivityTrack")
+        .run(|_app_handle, event| {
+            // Destroying the window now brings the window count to zero, which
+            // by default would exit the whole process. This is a tray-resident
+            // background agent — it must keep running (tracker thread + tray)
+            // with no window open, so intercept the exit and stay alive.
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                api.prevent_exit();
             }
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running ActivityTrack");
+        });
 }

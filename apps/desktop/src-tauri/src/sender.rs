@@ -1,10 +1,30 @@
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use serde_json::json;
 
 use crate::model::{ActivitySample, ClaimOutcome, Outcome};
 
-/// POST a batch of samples to Convex /ingest using the per-device token.
+/// Largest number of samples sent in a single `/ingest` POST. Bounds the
+/// request body if a long outage lets the queue build up to `max_queue_size`
+/// (default 5,000) before the connection recovers.
+const SEND_CHUNK_SIZE: usize = 500;
+
+/// One shared `ureq::Agent` for all outbound calls, instead of building a new
+/// one (and its connection pool) per request — the periodic flush/pair loop
+/// otherwise pays a fresh TLS handshake on every tick. Per-call timeouts are
+/// still applied per-request (see call sites) to keep each endpoint's original
+/// budget.
+static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
+
+fn agent() -> &'static ureq::Agent {
+    AGENT.get_or_init(|| ureq::AgentBuilder::new().build())
+}
+
+/// POST a batch of samples to Convex /ingest using the per-device token. Large
+/// batches are split into chunks so no single request body is unbounded; a
+/// chunk failure stops sending further chunks (the caller keeps whatever
+/// wasn't flushed and retries next tick).
 pub fn send_batch(
     convex_url: &str,
     device_key: &str,
@@ -18,21 +38,22 @@ pub fn send_batch(
     }
 
     let url = format!("{}/ingest", convex_url.trim_end_matches('/'));
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(15))
-        .build();
 
-    let response = agent
-        .post(&url)
-        .set("authorization", &format!("Bearer {}", device_key))
-        .set("content-type", "application/json")
-        .send_json(json!({ "samples": batch }));
+    for chunk in batch.chunks(SEND_CHUNK_SIZE) {
+        let response = agent()
+            .post(&url)
+            .timeout(Duration::from_secs(15))
+            .set("authorization", &format!("Bearer {}", device_key))
+            .set("content-type", "application/json")
+            .send_json(json!({ "samples": chunk }));
 
-    match response {
-        Ok(_) => Ok(()),
-        Err(ureq::Error::Status(code, _)) => Err(format!("HTTP {code}")),
-        Err(e) => Err(e.to_string()),
+        match response {
+            Ok(_) => {}
+            Err(ureq::Error::Status(code, _)) => return Err(format!("HTTP {code}")),
+            Err(e) => return Err(e.to_string()),
+        }
     }
+    Ok(())
 }
 
 /// Report a local operational event to Convex /agent/event using the device
@@ -51,12 +72,10 @@ pub fn report_event(
     }
 
     let url = format!("{}/agent/event", convex_url.trim_end_matches('/'));
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(10))
-        .build();
 
-    let response = agent
+    let response = agent()
         .post(&url)
+        .timeout(Duration::from_secs(10))
         .set("authorization", &format!("Bearer {}", device_key))
         .set("content-type", "application/json")
         .send_json(json!({
@@ -89,12 +108,10 @@ pub fn register(
         return Err("api url not configured".into());
     }
     let url = format!("{}/agent/register", api_url.trim_end_matches('/'));
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(20))
-        .build();
 
-    let resp = agent
+    let resp = agent()
         .post(&url)
+        .timeout(Duration::from_secs(20))
         .set("content-type", "application/json")
         .send_json(json!({
             "deviceId": device_id,
@@ -125,12 +142,10 @@ pub fn claim(api_url: &str, device_id: &str, claim_nonce: &str) -> Result<ClaimO
         return Err("api url not configured".into());
     }
     let url = format!("{}/agent/poll", api_url.trim_end_matches('/'));
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(20))
-        .build();
 
-    let resp = agent
+    let resp = agent()
         .post(&url)
+        .timeout(Duration::from_secs(20))
         .set("content-type", "application/json")
         .send_json(json!({ "deviceId": device_id, "claimNonce": claim_nonce }));
 
@@ -165,7 +180,7 @@ pub fn claim(api_url: &str, device_id: &str, claim_nonce: &str) -> Result<ClaimO
 /// - `wrong`          — 401, wrong password
 /// - `unset`          — 503, no password set in the dashboard yet
 /// - `not_configured` — missing Convex URL or no device token (never attempts
-///                       the request)
+///   the request)
 /// - `server`         — reached the server but it returned an unexpected status
 /// - `network`        — transport failure (DNS, refused, TLS, timeout)
 pub fn verify_password(convex_url: &str, device_key: Option<&str>, password: &str) -> Outcome {
@@ -185,12 +200,10 @@ pub fn verify_password(convex_url: &str, device_key: Option<&str>, password: &st
     };
 
     let url = format!("{}/agent/verify-password", convex_url.trim_end_matches('/'));
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(15))
-        .build();
 
-    let response = agent
+    let response = agent()
         .post(&url)
+        .timeout(Duration::from_secs(15))
         .set("authorization", &format!("Bearer {}", device_key))
         .set("content-type", "application/json")
         .send_json(json!({ "password": password }));

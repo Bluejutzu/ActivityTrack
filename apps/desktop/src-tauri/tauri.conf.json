@@ -54,7 +54,7 @@
         "https://github.com/bluejutzu/activitytrack/releases/latest/download/latest.json"
       ],
       "windows": {
-        "installMode": "passive"
+        "installMode": "quiet"
       }
     }
   }
