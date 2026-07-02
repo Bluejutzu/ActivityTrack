@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "ActivityTrack — lightweight Windows activity monitoring for small teams (headless desktop agent + Convex backend + Next.js admin dashboard).",
-  "packageManager": "pnpm@11.8.0",
+  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=20"
   },
