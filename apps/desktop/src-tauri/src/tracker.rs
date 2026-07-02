@@ -16,6 +16,19 @@ const UI_SAMPLE_HISTORY: usize = 20;
 // device still checks in at least this often once an admin does act.
 const PAIR_BACKOFF_MAX_SECS: u64 = 300;
 
+// Cap on how long the send/flush retry can back off to, mirroring
+// PAIR_BACKOFF_MAX_SECS. Without a cap a persistently-throttled device would
+// never come back to a normal cadence once an operator fixes the cause.
+const SEND_BACKOFF_MAX_SECS: u64 = 300;
+
+/// A failed flush, carrying the server's suggested wait (from `Retry-After`)
+/// when it gave one, so the caller can back off instead of retrying on the
+/// fixed flush cadence regardless of the failure reason.
+struct FlushError {
+    message: String,
+    retry_after_secs: Option<u64>,
+}
+
 /// Spawn the background tracking loop on its own OS thread. It first enrolls (if
 /// needed), then polls idle time, enqueues a sample, and periodically flushes
 /// the on-disk queue to Convex — independent of whether the tray UI is open.
@@ -35,7 +48,10 @@ pub fn start(state: Arc<AppState>) {
         let mut last_flush = Instant::now();
         // Consecutive flush failures; we only escalate to the backend once a
         // few in a row confirm it's not a momentary blip (laptop asleep, etc.).
+        // Also drives send backoff below, so repeated failures (e.g. a
+        // sustained 429) space attempts out instead of hammering every tick.
         let mut fail_streak: u32 = 0;
+        let mut next_send_attempt = Instant::now();
         // Consecutive pairing attempts that didn't result in a token, so we can
         // back off exponentially (capped) instead of hammering /agent/register
         // and /agent/poll every flush tick while a device sits pending/denied.
@@ -51,13 +67,36 @@ pub fn start(state: Arc<AppState>) {
 
             if last_flush.elapsed() >= flush_every {
                 if state.can_send() {
-                    match flush(&state, &queue) {
-                        Ok(_) => fail_streak = 0,
-                        Err(err) => {
-                            fail_streak += 1;
-                            if fail_streak >= 3 {
-                                // Throttled + best-effort inside report_event.
-                                state.report_event("error", "tracker.send_failed", &err);
+                    if Instant::now() >= next_send_attempt {
+                        match flush(&state, &queue) {
+                            Ok(_) => {
+                                fail_streak = 0;
+                                next_send_attempt = Instant::now();
+                            }
+                            Err(err) => {
+                                fail_streak += 1;
+                                if fail_streak >= 3 {
+                                    // Throttled + best-effort inside report_event.
+                                    state.report_event(
+                                        "error",
+                                        "tracker.send_failed",
+                                        &err.message,
+                                    );
+                                }
+                                // Back off: honor the server's Retry-After when it
+                                // gave one (e.g. a 429), otherwise fall back to the
+                                // normal flush cadence, and grow it with repeated
+                                // failures (capped) so a stuck device stops
+                                // hammering an endpoint that keeps rejecting it.
+                                let base = err
+                                    .retry_after_secs
+                                    .unwrap_or(flush_every.as_secs().max(1))
+                                    .max(flush_every.as_secs().max(1));
+                                let backoff_secs = base
+                                    .saturating_mul(1u64 << fail_streak.min(4))
+                                    .min(SEND_BACKOFF_MAX_SECS);
+                                next_send_attempt =
+                                    Instant::now() + Duration::from_secs(backoff_secs);
                             }
                         }
                     }
@@ -186,8 +225,8 @@ fn record(state: &AppState, queue: &SampleQueue) {
 }
 
 /// Flush the queue. Ok(true) = sent a batch, Ok(false) = nothing to do (not
-/// enrolled or empty), Err(msg) = a send was attempted and failed.
-fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
+/// enrolled or empty), Err = a send was attempted and failed.
+fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, FlushError> {
     if !state.can_send() {
         return Ok(false);
     }
@@ -201,11 +240,9 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
 
     let outcome = sender::send_batch(&state.config.convex_url, &device_key, &pending);
 
-    // Drop whatever chunks landed, even on a partial failure — otherwise a
-    // backlog bigger than one chunk (SEND_CHUNK_SIZE) can never drain: the
-    // server throttles same-tick follow-up chunks (see SendOutcome's doc), so
-    // without this the same already-sent prefix gets resent and re-throttled
-    // forever and the queue sits pinned at max_queue_size.
+    // Drop whatever chunks landed, even on a partial failure (e.g. a network
+    // drop mid-flush) — otherwise the same already-sent prefix gets resent on
+    // the next tick and the queue can't make progress.
     if outcome.sent > 0 {
         if let Err(err) = queue.remove_first(outcome.sent) {
             state.push_error("tracker.queue_io", err.clone());
@@ -246,7 +283,10 @@ fn flush(state: &AppState, queue: &SampleQueue) -> Result<bool, String> {
             // Always surface locally (even the first failure); escalation to the
             // backend is gated by the caller's fail streak.
             state.push_error("tracker.send_failed", err.clone());
-            Err(err)
+            Err(FlushError {
+                message: err,
+                retry_after_secs: outcome.retry_after_secs,
+            })
         }
     }
 }

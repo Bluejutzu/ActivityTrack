@@ -23,6 +23,7 @@ export type PairingState =
 
 export interface AgentStatus {
   deviceId: string;
+  processId: number;
   hostname: string;
   windowsUser: string;
   active: boolean;

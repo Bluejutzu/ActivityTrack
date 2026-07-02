@@ -1,4 +1,5 @@
 use std::sync::OnceLock;
+use std::thread;
 use std::time::Duration;
 
 use serde_json::json;
@@ -9,6 +10,12 @@ use crate::model::{ActivitySample, ClaimOutcome, Outcome};
 /// request body if a long outage lets the queue build up to `max_queue_size`
 /// (default 5,000) before the connection recovers.
 const SEND_CHUNK_SIZE: usize = 500;
+
+/// Pause between chunks of the same flush. Must be slightly above
+/// `MIN_INGEST_INTERVAL_MS` in convex/ingest.ts (3s) so a backlog spanning
+/// several chunks doesn't self-throttle its own second-and-later chunks —
+/// see the note on `SendOutcome` below.
+const CHUNK_PACING: Duration = Duration::from_millis(3_200);
 
 /// One shared `ureq::Agent` for all outbound calls, instead of building a new
 /// one (and its connection pool) per request — the periodic flush/pair loop
@@ -24,16 +31,17 @@ fn agent() -> &'static ureq::Agent {
 /// Outcome of `send_batch`: `sent` counts samples confirmed persisted
 /// server-side (in whole chunks) before `error` (if any) stopped the run.
 ///
-/// A partial send is the expected case once the queue backs up past
-/// `SEND_CHUNK_SIZE` (e.g. after a long outage lets it grow toward
-/// `max_queue_size`): the server throttles same-device ingest calls closer
-/// together than ~3s (see `MIN_INGEST_INTERVAL_MS` in convex/ingest.ts), so
-/// the second and later chunks of one flush routinely 429 even though the
-/// first chunk landed. The caller must still drop the chunks that succeeded
-/// instead of re-sending (and re-throttling on) them every tick forever.
+/// A partial send can still happen if a chunk fails mid-flush (network drop,
+/// server error). `CHUNK_PACING` between chunks keeps a multi-chunk backlog
+/// from self-throttling on the server's per-device rate limit (see
+/// `MIN_INGEST_INTERVAL_MS` in convex/ingest.ts). The caller must still drop
+/// whatever chunks did succeed instead of re-sending them every tick forever.
 pub struct SendOutcome {
     pub sent: usize,
     pub error: Option<String>,
+    /// Seconds the server asked us to wait before retrying (from the `Retry-
+    /// After` header on a non-2xx response), when present.
+    pub retry_after_secs: Option<u64>,
 }
 
 /// POST a batch of samples to Convex /ingest using the per-device token.
@@ -47,19 +55,22 @@ pub fn send_batch(convex_url: &str, device_key: &str, batch: &[ActivitySample]) 
         return SendOutcome {
             sent: 0,
             error: None,
+            retry_after_secs: None,
         };
     }
     if convex_url.is_empty() {
         return SendOutcome {
             sent: 0,
             error: Some("not configured".into()),
+            retry_after_secs: None,
         };
     }
 
     let url = format!("{}/ingest", convex_url.trim_end_matches('/'));
     let mut sent = 0;
 
-    for chunk in batch.chunks(SEND_CHUNK_SIZE) {
+    let mut chunks = batch.chunks(SEND_CHUNK_SIZE).peekable();
+    while let Some(chunk) = chunks.next() {
         let response = agent()
             .post(&url)
             .timeout(Duration::from_secs(15))
@@ -68,22 +79,51 @@ pub fn send_batch(convex_url: &str, device_key: &str, batch: &[ActivitySample]) 
             .send_json(json!({ "samples": chunk }));
 
         match response {
-            Ok(_) => sent += chunk.len(),
-            Err(ureq::Error::Status(code, _)) => {
+            Ok(_) => {
+                sent += chunk.len();
+                // Space out chunks of the same flush so a multi-chunk backlog
+                // doesn't immediately trip the server's per-device throttle
+                // on its own follow-up chunk.
+                if chunks.peek().is_some() {
+                    thread::sleep(CHUNK_PACING);
+                }
+            }
+            Err(ureq::Error::Status(code, resp)) => {
+                let retry_after_secs = resp
+                    .header("retry-after")
+                    .and_then(|v| v.trim().parse::<u64>().ok());
+                let body = resp
+                    .into_string()
+                    .unwrap_or_default()
+                    .trim()
+                    .chars()
+                    .take(200)
+                    .collect::<String>();
+                let error = Some(if body.is_empty() {
+                    format!("HTTP {code}")
+                } else {
+                    format!("HTTP {code}: {body}")
+                });
                 return SendOutcome {
                     sent,
-                    error: Some(format!("HTTP {code}")),
+                    error,
+                    retry_after_secs,
                 };
             }
             Err(e) => {
                 return SendOutcome {
                     sent,
                     error: Some(e.to_string()),
+                    retry_after_secs: None,
                 };
             }
         }
     }
-    SendOutcome { sent, error: None }
+    SendOutcome {
+        sent,
+        error: None,
+        retry_after_secs: None,
+    }
 }
 
 /// Report a local operational event to Convex /agent/event using the device

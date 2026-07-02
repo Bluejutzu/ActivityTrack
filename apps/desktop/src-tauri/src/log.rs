@@ -17,6 +17,14 @@ static LOG_LOCK: Mutex<()> = Mutex::new(());
 /// logging must never panic or cascade, so every IO error is swallowed. The
 /// timestamp is epoch-ms (dependency-free); pair it with the dashboard event log
 /// for human-readable context.
+///
+/// Every line carries this process's OS pid. `%ProgramData%` is shared across
+/// every Windows user on the machine (see paths.rs), so more than one tracker
+/// process can end up writing to this same file — e.g. a stray second launch,
+/// or a per-machine autostart on a box with multiple concurrent logon sessions.
+/// The pid lets a technician tell whether a run of "send failed" lines came
+/// from one process or is interleaved from several fighting over the same
+/// device identity (a common cause of a device that never stops getting 429s).
 pub fn write(level: &str, code: &str, message: &str) {
     // Recover from a poisoned lock rather than panic — a logging failure must not
     // take down the agent.
@@ -32,6 +40,7 @@ pub fn write(level: &str, code: &str, message: &str) {
 
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
         let ts = host::now_ms();
-        let _ = writeln!(f, "{ts} [{level}] {code}: {message}");
+        let pid = std::process::id();
+        let _ = writeln!(f, "{ts} [{level}] pid={pid} {code}: {message}");
     }
 }

@@ -89,6 +89,28 @@ export const recordSamples = internalMutation({
         receivedAt - device.lastIngestAt < MIN_INGEST_INTERVAL_MS
       ) {
         throttled = true;
+        // Surface this on the dashboard's System Health page. logEvent dedups
+        // to one open row per (code, deviceId) and just bumps its count, so a
+        // device stuck in a 429 loop can't flood the table — but IT otherwise
+        // has zero visibility that this is happening at all. A single legit
+        // agent (30s flush cadence) should never trip a 3s window, so a
+        // recurring instance of this points at more than one tracker process
+        // reporting under the same device (e.g. multiple concurrent Windows
+        // sessions on one machine sharing the per-machine %ProgramData%
+        // identity — see apps/desktop/src-tauri/src/paths.rs).
+        await logEvent(ctx, {
+          severity: "warning",
+          source: "backend",
+          code: "ingest.rate_limited",
+          message:
+            `Device ${deviceId} ingest throttled: a batch arrived ` +
+            `${receivedAt - device.lastIngestAt}ms after the last accepted ` +
+            `one (minimum ${MIN_INGEST_INTERVAL_MS}ms). If this keeps ` +
+            `recurring, check for more than one tracker process reporting ` +
+            `under this device.`,
+          deviceId,
+          hostname: deviceSamples[0]?.hostname,
+        });
         continue;
       }
 

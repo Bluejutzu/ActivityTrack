@@ -13,6 +13,7 @@ export function KeyValueTable({ status: s }: { status: AgentStatus }) {
     { label: t("status.host"), value: s.hostname },
     { label: t("status.user"), value: s.windowsUser },
     { label: t("status.device"), value: s.deviceId },
+    { label: t("status.processId"), value: String(s.processId) },
     { label: t("status.idleFor"), value: fmtDuration(s.idleMs), id: "kv-idle" },
     { label: t("status.queue"), value: String(s.queueLength), id: "kv-queue" },
     { label: t("status.lastSent"), value: fmtTime(s.lastSentAt), id: "kv-last-sent" },

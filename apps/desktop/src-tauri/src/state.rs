@@ -212,12 +212,20 @@ impl AppState {
             }
             last.insert(code.to_string(), now);
         }
+        // Tag with this process's pid (see log.rs for why): if two tracker
+        // processes are reporting under the same deviceId — e.g. a stray
+        // second launch, or a per-machine autostart on a box with more than
+        // one concurrent Windows session — the dedup'd dashboard row keeps
+        // only the latest message, but an admin comparing the pid across
+        // successive updates (or the count climbing faster than the flush
+        // cadence implies) can tell two senders are fighting over one device.
+        let tagged = format!("[pid {}] {message}", std::process::id());
         let _ = sender::report_event(
             &self.config.convex_url,
             &device_key,
             severity,
             code,
-            message,
+            &tagged,
             &self.hostname,
         );
     }
@@ -227,6 +235,7 @@ impl AppState {
         let s = self.status.lock().unwrap_or_else(|e| e.into_inner());
         AgentStatus {
             device_id: self.device_id.clone(),
+            process_id: std::process::id(),
             hostname: self.hostname.clone(),
             windows_user: self.windows_user.clone(),
             active: s.active,

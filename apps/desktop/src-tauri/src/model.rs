@@ -60,6 +60,12 @@ pub struct UiError {
 #[serde(rename_all = "camelCase")]
 pub struct AgentStatus {
     pub device_id: String,
+    /// This process's OS pid. `%ProgramData%` (device id, key, queue, log) is
+    /// shared across every Windows user on the machine, so more than one
+    /// tracker process can end up running against the same identity — this
+    /// lets a technician tell whether the window they're looking at matches
+    /// the `pid=`/`[pid N]` tag on a given log/dashboard-event line.
+    pub process_id: u32,
     pub hostname: String,
     pub windows_user: String,
     pub active: bool,
