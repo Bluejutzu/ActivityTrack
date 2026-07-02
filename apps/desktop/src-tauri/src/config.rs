@@ -74,55 +74,100 @@ impl Config {
     }
 }
 
-/// Load config from the file in %ProgramData%. Missing files fall back to
-/// env-derived defaults. The device token is loaded separately (see
-/// `load_device_key`) because it's mutable at runtime, not part of Config.
+/// Load config from the file in %ProgramData%, then reconcile it with this
+/// build's baked-in `convexUrl`/`apiUrl` and persist the result.
+///
+/// Precedence for `convex_url`/`api_url`: the `ACTIVITYTRACK_CONVEX_URL`/
+/// `_API_URL` env vars (local dev override) win first; otherwise a non-empty
+/// build-time value (baked in by release CI from the repo secret/var) always
+/// wins over whatever is already in `config.json`; only when neither an env
+/// var nor a build value is present does the file's value apply. This exists
+/// because installs/updates alone can't keep `config.json` in sync: the NSIS
+/// installer only writes it when the file is missing, and neither an
+/// auto-update nor an uninstall touches `%ProgramData%\ActivityTrack` — so
+/// without this, a device that shipped with an old baked URL would keep it
+/// forever even after the CI secret changes and a new version is installed.
+/// All other fields (poll/idle/flush intervals, queue size, tray icon) stay
+/// freely overridable per machine via `config.json`, unaffected by this.
+///
+/// The device token is loaded separately (see `load_device_key`) because it's
+/// mutable at runtime, not part of Config.
 pub fn load_config() -> Config {
     let mut cfg = Config::default();
+    let convex_env_set = std::env::var("ACTIVITYTRACK_CONVEX_URL").is_ok();
+    let api_env_set = std::env::var("ACTIVITYTRACK_API_URL").is_ok();
 
-    match std::fs::read_to_string(config_file()) {
-        Ok(text) => {
-            if let Ok(file) = serde_json::from_str::<FileConfig>(&text) {
-                if let Some(v) = file.convex_url {
-                    cfg.convex_url = v;
-                }
-                if let Some(v) = file.api_url {
-                    cfg.api_url = v;
-                }
-                if let Some(v) = file.poll_interval_ms {
-                    cfg.poll_interval_ms = v;
-                }
-                if let Some(v) = file.idle_threshold_ms {
-                    cfg.idle_threshold_ms = v;
-                }
-                if let Some(v) = file.flush_interval_ms {
-                    cfg.flush_interval_ms = v;
-                }
-                if let Some(v) = file.max_queue_size {
-                    cfg.max_queue_size = v;
-                }
-                if let Some(v) = file.show_tray_icon {
-                    cfg.show_tray_icon = v;
-                }
-            }
-        }
-        Err(_) => {
-            // Config file missing — write a template so the NSIS hook failure
-            // doesn't leave the app unconfigured. Only write if we have baked
-            // values (release builds); dev builds skip this to avoid a noisy
-            // empty file.
-            if !cfg.convex_url.is_empty() || !cfg.api_url.is_empty() {
-                let _ = std::fs::create_dir_all(app_dir());
-                let json = serde_json::json!({
-                    "convexUrl": cfg.convex_url,
-                    "apiUrl": cfg.api_url,
-                });
-                let _ = std::fs::write(config_file(), json.to_string());
-            }
+    let existing_text = std::fs::read_to_string(config_file()).ok();
+    let file: FileConfig = existing_text
+        .as_deref()
+        .and_then(|text| serde_json::from_str(text).ok())
+        .unwrap_or_default();
+
+    // A build-baked (or env-overridden) URL always wins over the file's —
+    // see the precedence note above. Only reachable here when neither is set.
+    if let Some(v) = file.convex_url {
+        if !convex_env_set && BUILD_CONVEX_URL.is_empty() {
+            cfg.convex_url = v;
         }
     }
+    if let Some(v) = file.api_url {
+        if !api_env_set && BUILD_API_URL.is_empty() {
+            cfg.api_url = v;
+        }
+    }
+    if let Some(v) = file.poll_interval_ms {
+        cfg.poll_interval_ms = v;
+    }
+    if let Some(v) = file.idle_threshold_ms {
+        cfg.idle_threshold_ms = v;
+    }
+    if let Some(v) = file.flush_interval_ms {
+        cfg.flush_interval_ms = v;
+    }
+    if let Some(v) = file.max_queue_size {
+        cfg.max_queue_size = v;
+    }
+    if let Some(v) = file.show_tray_icon {
+        cfg.show_tray_icon = v;
+    }
 
+    persist_config(&cfg, existing_text.as_deref());
     cfg
+}
+
+/// Write the resolved config back to disk so `config.json` always reflects
+/// what's actually in effect (and so the URL-resync above survives a restart
+/// without re-deriving it every time). No-ops when nothing would change, and
+/// — matching the previous behavior — never creates the file for a fully
+/// unconfigured dev build (no baked/env/file URLs at all), to avoid a noisy
+/// empty file on every local `pnpm tauri:dev` run.
+fn persist_config(cfg: &Config, existing_text: Option<&str>) {
+    if existing_text.is_none() && cfg.convex_url.is_empty() && cfg.api_url.is_empty() {
+        return;
+    }
+
+    let resolved = serde_json::json!({
+        "convexUrl": cfg.convex_url,
+        "apiUrl": cfg.api_url,
+        "pollIntervalMs": cfg.poll_interval_ms,
+        "idleThresholdMs": cfg.idle_threshold_ms,
+        "flushIntervalMs": cfg.flush_interval_ms,
+        "maxQueueSize": cfg.max_queue_size,
+        "showTrayIcon": cfg.show_tray_icon,
+    });
+
+    // Compare parsed values, not raw text, so re-serializing with different
+    // whitespace/key order doesn't cause a rewrite (and a log/AV-scan trigger)
+    // on every single startup.
+    let unchanged = existing_text
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok())
+        .is_some_and(|existing| existing == resolved);
+    if unchanged {
+        return;
+    }
+
+    let _ = std::fs::create_dir_all(app_dir());
+    let _ = std::fs::write(config_file(), resolved.to_string());
 }
 
 /// Read the device token written after a successful pairing, if present.

@@ -73,9 +73,19 @@ pub fn log_file_rotated() -> PathBuf {
 /// here is swallowed, never panics, and never blocks writing the file itself.
 #[cfg(windows)]
 pub fn harden_secret_file(path: &std::path::Path) {
+    use std::os::windows::process::CommandExt;
     use std::process::Command;
 
-    let Ok(who) = Command::new("whoami").output() else {
+    // A GUI app has no console of its own, so spawning a console subprocess
+    // (whoami/icacls) would otherwise briefly flash a new console window on
+    // screen — exactly the visual footprint this whole module tries to avoid.
+    // CREATE_NO_WINDOW suppresses that without changing what runs.
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    let Ok(who) = Command::new("whoami")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+    else {
         return;
     };
     if !who.status.success() {
@@ -87,6 +97,7 @@ pub fn harden_secret_file(path: &std::path::Path) {
     }
 
     let _ = Command::new("icacls")
+        .creation_flags(CREATE_NO_WINDOW)
         .arg(path.as_os_str())
         .arg("/inheritance:r")
         .arg("/grant:r")
