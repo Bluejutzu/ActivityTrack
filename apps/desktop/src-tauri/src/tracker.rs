@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use crate::host;
 use crate::idle::get_idle_ms;
-use crate::model::{ActivitySample, ClaimOutcome, UiSample, AGENT_VERSION};
+use crate::model::{ActivitySample, ClaimOutcome, SampleKind, UiSample, AGENT_VERSION};
 use crate::queue::SampleQueue;
 use crate::sender;
 use crate::state::AppState;
@@ -20,6 +20,21 @@ const PAIR_BACKOFF_MAX_SECS: u64 = 300;
 // PAIR_BACKOFF_MAX_SECS. Without a cap a persistently-throttled device would
 // never come back to a normal cadence once an operator fixes the cause.
 const SEND_BACKOFF_MAX_SECS: u64 = 300;
+
+// Minimum idle-duration growth (while continuously idle, i.e. no active/idle
+// flip) that still earns a fresh durable sample. Keeps a long idle stretch
+// from being one opaque multi-hour gap in raw exports and the per-day
+// timeline while staying far below the old constant 15s cadence.
+const IDLE_RESAMPLE_MS: u64 = 5 * 60_000;
+
+// How often to send a cheap keepalive ping while state hasn't changed enough
+// to earn a durable sample. Two things depend on this staying comfortably
+// under the server's MAX_ATTRIBUTION_MS (120s, convex/activity/ingest.ts):
+// the offline threshold (offlineThresholdSeconds, default 120s) must never
+// see a 2-minute-plus silent gap, and dailyStats attribution — which credits
+// the gap between consecutive samples/keepalives, capped at 120s — must not
+// get truncated across a long unchanged stretch.
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(60);
 
 /// A failed flush, carrying the server's suggested wait (from `Retry-After`)
 /// when it gave one, so the caller can back off instead of retrying on the
@@ -58,12 +73,18 @@ pub fn start(state: Arc<AppState>) {
         let mut pair_fail_streak: u32 = 0;
         let mut next_pair_attempt = Instant::now();
 
+        // Run-length change detector: only a real active<->idle transition or
+        // a meaningful idleMs jump earns a durable sample; everything in
+        // between is covered by the cheap keepalive below.
+        let mut changes = ChangeState::new();
+        let mut last_keepalive = Instant::now();
+
         // Capture one sample immediately so a freshly-started agent shows up.
-        record(&state, &queue);
+        record(&state, &queue, &mut changes, &mut last_keepalive);
 
         loop {
             thread::sleep(poll);
-            record(&state, &queue);
+            record(&state, &queue, &mut changes, &mut last_keepalive);
 
             if last_flush.elapsed() >= flush_every {
                 if state.can_send() {
@@ -198,16 +219,83 @@ fn build_sample(state: &AppState) -> (ActivitySample, bool, u64) {
         tz_offset_minutes: host::tz_offset_minutes(),
         agent_version: AGENT_VERSION.to_string(),
         platform: host::platform(),
+        kind: None,
     };
     (sample, active, idle_ms)
 }
 
-fn record(state: &AppState, queue: &SampleQueue) {
+/// Tracks the (active, idleMs) of the last *durable* sample so `record` can
+/// decide, run-length style, whether the current reading is worth persisting
+/// or just a cheap keepalive.
+struct ChangeState {
+    last: Option<(bool, u64)>,
+}
+
+impl ChangeState {
+    fn new() -> Self {
+        ChangeState { last: None }
+    }
+
+    /// Whether `active`/`idle_ms` differs enough from the last durable sample
+    /// to warrant a new one: any active<->idle flip, or — while continuously
+    /// idle — idleMs growing by at least `IDLE_RESAMPLE_MS` since then. The
+    /// very first reading always counts, so a freshly-started agent shows up
+    /// immediately. Updates the tracked state whenever it returns true.
+    fn changed(&mut self, active: bool, idle_ms: u64) -> bool {
+        let changed = match self.last {
+            None => true,
+            Some((last_active, last_idle)) => {
+                active != last_active
+                    || (!active && idle_ms.saturating_sub(last_idle) >= IDLE_RESAMPLE_MS)
+            }
+        };
+        if changed {
+            self.last = Some((active, idle_ms));
+        }
+        changed
+    }
+}
+
+/// Best-effort cheap ping so the server can still tell this device is online
+/// and keep dailyStats attribution current while state is unchanged. Never
+/// touches the durable queue — a failure here is simply covered by the next
+/// keepalive or the next real sample.
+fn send_keepalive(state: &AppState, sample: &ActivitySample) {
+    if !state.can_send() {
+        return;
+    }
+    let Some(device_key) = state.device_key() else {
+        return;
+    };
+    let mut ping = sample.clone();
+    ping.kind = Some(SampleKind::Keepalive);
+    if sender::send_keepalive(&state.config.convex_url, &device_key, &ping).is_ok() {
+        let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
+        s.online = true;
+        s.last_sent_at = Some(host::now_ms());
+    }
+}
+
+fn record(
+    state: &AppState,
+    queue: &SampleQueue,
+    changes: &mut ChangeState,
+    last_keepalive: &mut Instant,
+) {
     let (sample, active, idle_ms) = build_sample(state);
-    if let Err(err) = queue.enqueue(&sample) {
-        // Local buffering failed — surface it and (throttled) tell the backend.
-        state.push_error("tracker.queue_io", err.clone());
-        state.report_event("error", "tracker.queue_io", &err);
+
+    if changes.changed(active, idle_ms) {
+        if let Err(err) = queue.enqueue(&sample) {
+            // Local buffering failed — surface it and (throttled) tell the backend.
+            state.push_error("tracker.queue_io", err.clone());
+            state.report_event("error", "tracker.queue_io", &err);
+        }
+        // A durable sample already refreshes lastSeen server-side; no need
+        // for an immediate follow-up keepalive.
+        *last_keepalive = Instant::now();
+    } else if last_keepalive.elapsed() >= KEEPALIVE_INTERVAL {
+        send_keepalive(state, &sample);
+        *last_keepalive = Instant::now();
     }
 
     let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());

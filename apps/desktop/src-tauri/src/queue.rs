@@ -135,6 +135,7 @@ mod tests {
             tz_offset_minutes: 0,
             agent_version: "0.0.0-test".into(),
             platform: "test".into(),
+            kind: None,
         }
     }
 
