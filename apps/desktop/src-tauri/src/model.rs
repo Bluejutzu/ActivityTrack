@@ -19,6 +19,19 @@ pub enum ClaimOutcome {
     AlreadyClaimed,
 }
 
+/// Distinguishes a durable, run-length "state changed" sample from a cheap
+/// online/attribution ping sent while state is unchanged. Omitted (`None`) on
+/// the wire for a normal sample — only keepalives set this explicitly — so
+/// the payload for the common case (and old-agent compatibility) is
+/// unchanged. Mirrors the optional `kind` field on the server's
+/// `activitySampleSchema`/`sampleValidator`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SampleKind {
+    Sample,
+    Keepalive,
+}
+
 /// The wire contract sent to Convex `/ingest`. Field names mirror
 /// `packages/shared` `activitySampleSchema` exactly (camelCase) so the
 /// server's zod validation accepts it. The agent does no validation itself.
@@ -34,6 +47,8 @@ pub struct ActivitySample {
     pub tz_offset_minutes: i32,
     pub agent_version: String,
     pub platform: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub kind: Option<SampleKind>,
 }
 
 /// A compact sample shown in the debug UI's "recently sent" table.

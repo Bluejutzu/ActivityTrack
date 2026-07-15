@@ -126,6 +126,31 @@ pub fn send_batch(convex_url: &str, device_key: &str, batch: &[ActivitySample]) 
     }
 }
 
+/// POST a single cheap keepalive ping to Convex /ingest — same endpoint and
+/// shape as `send_batch`, but fire-and-forget: no chunking, no queueing, no
+/// retry. If it fails, the next keepalive (or the next real sample) covers
+/// it a short while later, which is fine since keepalives only refresh
+/// online status and close a small attribution gap; retrying one would risk
+/// double-attributing the gap it closes.
+pub fn send_keepalive(convex_url: &str, device_key: &str, sample: &ActivitySample) -> Result<(), String> {
+    if convex_url.is_empty() {
+        return Err("not configured".into());
+    }
+    let url = format!("{}/ingest", convex_url.trim_end_matches('/'));
+    let response = agent()
+        .post(&url)
+        .timeout(Duration::from_secs(15))
+        .set("authorization", &format!("Bearer {}", device_key))
+        .set("content-type", "application/json")
+        .send_json(json!({ "samples": [sample] }));
+
+    match response {
+        Ok(_) => Ok(()),
+        Err(ureq::Error::Status(code, _)) => Err(format!("HTTP {code}")),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Report a local operational event to Convex /agent/event using the device
 /// token, so the dashboard's System Health page can show it centrally.
 /// Best-effort: the caller ignores the result.
