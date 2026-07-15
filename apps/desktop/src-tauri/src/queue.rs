@@ -9,8 +9,10 @@ use crate::paths::{app_dir, queue_file};
 /// Convex is down, samples accumulate here and are flushed later. The cap
 /// (`max_size`) guarantees the file can't grow without bound — oldest samples
 /// are dropped first. An in-memory mirror avoids re-reading and re-parsing the
-/// whole file on every tick (poll ~15s, flush ~30s); the file is only read
-/// once, at construction, to hydrate from a prior run.
+/// whole file on every tick; a sample is only enqueued on an active/idle
+/// transition or a meaningful idle-duration jump (see `tracker::ChangeState`),
+/// not on every poll, so writes here are the exception rather than the rule.
+/// The file is only read once, at construction, to hydrate from a prior run.
 pub struct SampleQueue {
     max_size: usize,
     samples: Mutex<Vec<ActivitySample>>,
