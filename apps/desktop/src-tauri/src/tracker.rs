@@ -78,13 +78,30 @@ pub fn start(state: Arc<AppState>) {
         // between is covered by the cheap keepalive below.
         let mut changes = ChangeState::new();
         let mut last_keepalive = Instant::now();
+        // Consecutive keepalive failures, mirroring `fail_streak` below —
+        // escalated to the backend after a few in a row so a keepalive stuck
+        // failing for minutes doesn't go unnoticed just because it's the
+        // best-effort path (a single miss is not itself reported).
+        let mut keepalive_fail_streak: u32 = 0;
 
         // Capture one sample immediately so a freshly-started agent shows up.
-        record(&state, &queue, &mut changes, &mut last_keepalive);
+        record(
+            &state,
+            &queue,
+            &mut changes,
+            &mut last_keepalive,
+            &mut keepalive_fail_streak,
+        );
 
         loop {
             thread::sleep(poll);
-            record(&state, &queue, &mut changes, &mut last_keepalive);
+            record(
+                &state,
+                &queue,
+                &mut changes,
+                &mut last_keepalive,
+                &mut keepalive_fail_streak,
+            );
 
             if last_flush.elapsed() >= flush_every {
                 if state.can_send() {
@@ -258,22 +275,12 @@ impl ChangeState {
 
 /// Best-effort cheap ping so the server can still tell this device is online
 /// and keep dailyStats attribution current while state is unchanged. Never
-/// touches the durable queue — a failure here is simply covered by the next
-/// keepalive or the next real sample.
-fn send_keepalive(state: &AppState, sample: &ActivitySample) {
-    if !state.can_send() {
-        return;
-    }
-    let Some(device_key) = state.device_key() else {
-        return;
-    };
+/// touches the durable queue — on failure the caller does not retry; the
+/// next keepalive or the next real sample covers it.
+fn send_keepalive(state: &AppState, device_key: &str, sample: &ActivitySample) -> Result<(), String> {
     let mut ping = sample.clone();
     ping.kind = Some(SampleKind::Keepalive);
-    if sender::send_keepalive(&state.config.convex_url, &device_key, &ping).is_ok() {
-        let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
-        s.online = true;
-        s.last_sent_at = Some(host::now_ms());
-    }
+    sender::send_keepalive(&state.config.convex_url, device_key, &ping)
 }
 
 fn record(
@@ -281,6 +288,7 @@ fn record(
     queue: &SampleQueue,
     changes: &mut ChangeState,
     last_keepalive: &mut Instant,
+    keepalive_fail_streak: &mut u32,
 ) {
     let (sample, active, idle_ms) = build_sample(state);
 
@@ -294,7 +302,22 @@ fn record(
         // for an immediate follow-up keepalive.
         *last_keepalive = Instant::now();
     } else if last_keepalive.elapsed() >= KEEPALIVE_INTERVAL {
-        send_keepalive(state, &sample);
+        if let Some(device_key) = state.device_key() {
+            match send_keepalive(state, &device_key, &sample) {
+                Ok(()) => {
+                    *keepalive_fail_streak = 0;
+                    let mut s = state.status.lock().unwrap_or_else(|e| e.into_inner());
+                    s.online = true;
+                    s.last_sent_at = Some(host::now_ms());
+                }
+                Err(err) => {
+                    *keepalive_fail_streak = keepalive_fail_streak.saturating_add(1);
+                    if *keepalive_fail_streak >= 3 {
+                        state.report_event("error", "tracker.keepalive_failed", &err);
+                    }
+                }
+            }
+        }
         *last_keepalive = Instant::now();
     }
 

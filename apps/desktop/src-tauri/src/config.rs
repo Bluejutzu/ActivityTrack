@@ -56,10 +56,23 @@ impl Default for Config {
                 .unwrap_or_else(|_| BUILD_CONVEX_URL.to_string()),
             api_url: std::env::var("ACTIVITYTRACK_API_URL")
                 .unwrap_or_else(|_| BUILD_API_URL.to_string()),
-            poll_interval_ms: 15_000,
+            // How often to check idle time and evaluate a state change (see
+            // tracker::ChangeState). No longer tied to send cadence — a
+            // sample is only queued on a transition or a meaningful idle
+            // jump — so this can run a bit coarser than the old constant-
+            // send loop did, trading a little transition-detection latency
+            // for fewer wakeups.
+            poll_interval_ms: 20_000,
             idle_threshold_ms: 60_000,
             flush_interval_ms: 30_000,
-            max_queue_size: 5_000,
+            // Change-only sampling generates at most a few hundred durable
+            // samples/day even in pathological cases (constant active/idle
+            // flapping, or a fully idle day resampled every
+            // tracker::IDLE_RESAMPLE_MS), versus 5,760/day under the old
+            // constant 15s cadence. 2,000 still covers several days of
+            // typical backlog during an outage without letting the on-disk
+            // queue file grow unbounded.
+            max_queue_size: 2_000,
             show_tray_icon: false,
         }
     }
