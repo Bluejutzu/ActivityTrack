@@ -17,5 +17,9 @@
     "typecheck": "pnpm -r typecheck",
     "bump-version": "node scripts/bump-version.js",
     "check-version-sync": "node scripts/check-version-sync.js"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }
