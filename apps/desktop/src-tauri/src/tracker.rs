@@ -29,12 +29,15 @@ const IDLE_RESAMPLE_MS: u64 = 5 * 60_000;
 
 // How often to send a cheap keepalive ping while state hasn't changed enough
 // to earn a durable sample. Two things depend on this staying comfortably
-// under the server's MAX_ATTRIBUTION_MS (120s, convex/activity/ingest.ts):
-// the offline threshold (offlineThresholdSeconds, default 120s) must never
-// see a 2-minute-plus silent gap, and dailyStats attribution — which credits
-// the gap between consecutive samples/keepalives, capped at 120s — must not
-// get truncated across a long unchanged stretch.
-const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(60);
+// under the server's MAX_ATTRIBUTION_MS (360s, convex/activity/ingest.ts):
+// the offline threshold (offlineThresholdSeconds, default 360s) must never
+// see a 6-minute-plus silent gap, and dailyStats attribution — which credits
+// the gap between consecutive samples/keepalives, capped at 360s — must not
+// get truncated across a long unchanged stretch. Raised from 60s to 180s
+// (same 2x margin under the server caps, which moved 120s -> 360s alongside
+// it) to cut idle-fleet /ingest call volume ~3x; if you tune this, update
+// MAX_ATTRIBUTION_MS and CONFIG_DEFAULTS.offlineThresholdSeconds to match.
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(180);
 
 /// A failed flush, carrying the server's suggested wait (from `Retry-After`)
 /// when it gave one, so the caller can back off instead of retrying on the
