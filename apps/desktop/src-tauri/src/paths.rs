@@ -27,6 +27,12 @@ pub fn config_file() -> PathBuf {
     app_dir().join("config.json")
 }
 
+/// Previous generation of `config.json`, kept on every rewrite so IT can see
+/// what a machine was actually running before a new baked URL took effect.
+pub fn config_backup_file() -> PathBuf {
+    app_dir().join("config.json.bak")
+}
+
 pub fn queue_file() -> PathBuf {
     app_dir().join("queue.jsonl")
 }

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::paths::{app_dir, config_file, device_key_file};
+use crate::paths::{app_dir, config_backup_file, config_file, device_key_file};
 
 // Values baked into the binary at build time by the release CI (via option_env!).
 // Empty strings in dev builds where the env vars are not set. Both are plain
@@ -154,6 +154,12 @@ pub fn load_config() -> Config {
 /// — matching the previous behavior — never creates the file for a fully
 /// unconfigured dev build (no baked/env/file URLs at all), to avoid a noisy
 /// empty file on every local `pnpm tauri:dev` run.
+///
+/// Before an actual rewrite, the prior contents are copied to
+/// `config.json.bak` (single generation, overwritten each time) so a bad
+/// baked URL can be diagnosed on-machine — "what was this device pointed at
+/// before the last update" — without needing the device's history from
+/// anywhere else.
 fn persist_config(cfg: &Config, existing_text: Option<&str>) {
     if existing_text.is_none() && cfg.convex_url.is_empty() && cfg.api_url.is_empty() {
         return;
@@ -177,6 +183,10 @@ fn persist_config(cfg: &Config, existing_text: Option<&str>) {
         .is_some_and(|existing| existing == resolved);
     if unchanged {
         return;
+    }
+
+    if let Some(old_text) = existing_text {
+        let _ = std::fs::write(config_backup_file(), old_text);
     }
 
     let _ = std::fs::create_dir_all(app_dir());
