@@ -33,6 +33,15 @@ pub fn config_backup_file() -> PathBuf {
     app_dir().join("config.json.bak")
 }
 
+/// Fixed drop path for a verified-but-not-yet-installed update (see
+/// `updater_apply.rs`). Must never change name/location across versions:
+/// the `ActivityTrackUpdate` scheduled task's action is registered once, at
+/// install time, pointed at this exact path — it is not (and must not be)
+/// reconfigurable by the unprivileged process that stages an update here.
+pub fn pending_update_file() -> PathBuf {
+    app_dir().join("update").join("pending-update.exe")
+}
+
 pub fn queue_file() -> PathBuf {
     app_dir().join("queue.jsonl")
 }

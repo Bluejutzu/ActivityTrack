@@ -68,16 +68,19 @@ jobs:
             '!macro NSIS_HOOK_POSTINSTALL',
             '  Push $0',
             '  CreateDirectory "$COMMONAPPDATA\ActivityTrack"',
+            '  CreateDirectory "$COMMONAPPDATA\ActivityTrack\update"',
             '  IfFileExists "$COMMONAPPDATA\ActivityTrack\config.json" nsis_at_config_exists',
             '  FileOpen $0 "$COMMONAPPDATA\ActivityTrack\config.json" w',
             "  FileWrite `$0 '$json'",
             '  FileClose $0',
             '  nsis_at_config_exists:',
             '  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "ActivityTrack" ''"$INSTDIR\ActivityTrack.exe"''',
+            '  nsExec::Exec `"$SYSDIR\schtasks.exe" /Create /TN "ActivityTrackUpdate" /TR "\"$INSTDIR\update\pending-update.exe\" /S /R /UPDATE /ARGS \"\"" /SC ONCE /ST 00:00 /SD 01/01/1980 /RL HIGHEST /RU SYSTEM /F`',
             '  Pop $0',
             '!macroend',
             '!macro NSIS_HOOK_PREUNINSTALL',
             '  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "ActivityTrack"',
+            '  nsExec::Exec `"$SYSDIR\schtasks.exe" /Delete /TN "ActivityTrackUpdate" /F`',
             '!macroend'
           )
           $nshLines -join "`r`n" | Out-File -Encoding UTF8 -FilePath 'apps/desktop/src-tauri/bundle/nsis/installer.nsh'

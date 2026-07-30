@@ -10,6 +10,7 @@ mod queue;
 mod sender;
 mod state;
 mod tracker;
+mod updater_apply;
 
 use std::sync::Arc;
 
@@ -30,16 +31,26 @@ async fn check_for_update(handle: tauri::AppHandle) -> tauri_plugin_updater::Res
             let _ = handle.emit("update:available", &version);
 
             let _ = handle.emit("update:installing", ());
-            match update
-                .download_and_install(|_chunk, _total| {}, || {})
-                .await
-            {
-                Ok(_) => {
-                    let _ = handle.emit("update:installed", ());
-                    println!("Update to {} installed successfully", version);
-                }
+            match update.download(|_chunk, _total| {}, || {}).await {
+                Ok(bytes) => match crate::updater_apply::stage_and_run(&bytes) {
+                    Ok(()) => {
+                        let _ = handle.emit("update:installed", ());
+                        println!("Update to {} staged, applying via scheduled task", version);
+                        // Mirrors what Update::install itself did (ShellExecute
+                        // then exit(0)): the installer's /UPDATE /ARGS flow (see
+                        // installer.nsh) detects and closes the running instance,
+                        // so exiting here just avoids racing it for our own
+                        // exe's file lock rather than depending on it.
+                        std::process::exit(0);
+                    }
+                    Err(e) => {
+                        let error_msg = format!("Update installation failed: {}", e);
+                        let _ = handle.emit("update:error", &error_msg);
+                        println!("{}", error_msg);
+                    }
+                },
                 Err(e) => {
-                    let error_msg = format!("Update installation failed: {}", e);
+                    let error_msg = format!("Update download failed: {}", e);
                     let _ = handle.emit("update:error", &error_msg);
                     println!("{}", error_msg);
                 }
