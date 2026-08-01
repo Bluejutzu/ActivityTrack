@@ -1,6 +1,6 @@
 [package]
 name = "activitytrack"
-version = "0.3.7"
+version = "0.3.8"
 description = "ActivityTrack tracker (tray-resident Windows activity agent)"
 authors = ["ActivityTrack"]
 edition = "2021"
